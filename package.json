@@ -1,0 +1,21 @@
+{
+  "name": "the-last-buyer",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "description": "An original multilingual pixel adventure about the price of a decision.",
+  "scripts": {
+    "dev": "node server.mjs",
+    "start": "node server.mjs",
+    "build": "node tools/build.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "check": "node tools/check.mjs",
+    "test:browser": "node tools/browser-smoke.mjs && node tools/browser-controls.mjs && node tools/browser-journey.mjs && node tools/browser-open-world.mjs && node tools/browser-audio.mjs && node tools/browser-endings.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "playwright-core": "1.63.0"
+  }
+}

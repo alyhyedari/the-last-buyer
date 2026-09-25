@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1115">
+  <meta name="description" content="آخرین خریدار — یک ماجراجویی پیکسلی دربارهٔ اختیار، اعتماد و بهای تصمیم‌ها. The Last Buyer, an original pixel adventure.">
+  <title>آخرین خریدار · THE LAST BUYER</title>
+  <link rel="icon" href="./assets/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./style.css">
+  <link rel="preload" href="./assets/Vazirmatn-Regular.woff2" as="font" type="font/woff2" crossorigin>
+  <script type="module" src="./src/main.js"></script>
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <a class="brand" href="#" id="brand" aria-label="The Last Buyer"><span class="brand-mark">↗</span><span>BUY<span class="brand-light">BUTTON</span><small>THE LAST BUYER</small></span></a>
+      <div class="top-tools">
+        <span class="edition" data-t="edition"></span>
+        <label class="language-wrap"><span aria-hidden="true">◎</span><select id="language" aria-label="Language"></select></label>
+        <button id="sound" class="icon-btn" aria-label="Sound">♪</button>
+        <button id="settings" class="icon-btn" aria-label="Settings">⚙</button>
+      </div>
+    </header>
+    <main>
+      <section id="menu" class="menu-screen">
+        <div class="menu-copy">
+          <div class="eyebrow"><span class="live-dot"></span><span data-t="tagline"></span><span class="line"></span></div>
+          <h1><span data-t="titleA"></span><span class="accent" data-t="titleB"></span></h1>
+          <p class="english-title">THE LAST BUYER<span>_</span></p>
+          <p class="menu-lead" data-t="premise"></p>
+          <div class="menu-actions"><button id="new-game" class="btn primary"><span data-t="newGame"></span><span>↗</span></button><button id="continue-game" class="btn secondary" hidden><span data-t="continue"></span><span>↵</span></button></div>
+          <div class="menu-meta"><span><b>08</b><span data-t="chapters"></span></span><span><b id="ending-total">24</b><span data-t="endings"></span></span><span><b>~60′</b><span data-t="targetLength"></span></span></div>
+          <div class="save-note"><span class="tiny-square"></span><span data-t="localSave"></span></div>
+        </div>
+        <div class="menu-art">
+          <div class="art-label"><span class="live-dot"></span><span data-t="archiveLive"></span><span class="art-code">ARCHIVE 028</span></div>
+          <canvas id="title-canvas" width="640" height="440" aria-hidden="true"></canvas>
+          <div class="art-caption"><span data-t="artCaption"></span><span class="coordinate">40°43′ N · 74°10′ W</span></div>
+          <div class="receipt-peek"><span>TRANSACTION / 001</span><strong>BUY</strong><div class="receipt-stripe"></div><span>STATUS: UNRESOLVED</span></div>
+        </div>
+        <footer class="menu-footer"><span data-t="footer"></span><button class="text-btn" id="music-room"></button><button class="text-btn" id="gallery"></button><button class="text-btn" id="about" data-t="about"></button><span class="version">BUILD 0.4 / 24 POSSIBLE FUTURES</span></footer>
+      </section>
+      <section id="game" class="game-screen" hidden>
+        <div class="game-top"><div class="chapter-display"><span id="chapter-no" class="chapter-no"></span><div><small id="chapter-era"></small><h2 id="chapter-name"></h2></div></div><div class="game-tools"><button id="return-commons" class="icon-btn" aria-label="Return to the commons">⌂</button><button id="objective-toggle" class="icon-btn" aria-label="Trails" aria-expanded="false">☷</button><button id="focus-mode" class="icon-btn" aria-label="Expand scene" aria-pressed="false">⛶</button><button id="journal" class="tool-btn"><span>▤</span><span data-t="journal"></span><kbd>J</kbd></button><button id="map-btn" class="tool-btn"><span>⌖</span><span data-t="map"></span><kbd>M</kbd></button><button id="pause" class="icon-btn" aria-label="Pause">Ⅱ</button></div></div>
+        <div class="play-layout"><div class="viewport-wrap" id="viewport-wrap"><canvas id="world" width="640" height="360" tabindex="0" role="application" aria-label="Game world"></canvas><div class="vignette" aria-hidden="true"></div><div class="floating-hud"><button id="floating-map-button" class="floating-map-button" aria-label="Map"><canvas id="floating-minimap" width="192" height="128" aria-hidden="true"></canvas></button><div id="trail-indicator" class="trail-indicator" hidden><span id="trail-arrow">↑</span><span id="trail-label" dir="auto"></span></div></div><button id="music-hud" class="music-hud" aria-label="Radio"><span class="music-bars" aria-hidden="true">▂▅▃</span><span id="music-track-name" dir="auto"></span><span aria-hidden="true">♫</span></button><div class="world-caption"><span class="live-dot"></span><span id="location"></span></div><div id="interaction-prompt" class="interaction-prompt" hidden><kbd>E</kbd><span></span></div><div id="chapter-banner" class="chapter-banner" hidden></div><div class="touch-controls" id="touch-controls"><div class="dpad"><button data-dir="up" aria-label="Move up">▲</button><button data-dir="left" aria-label="Move left">◀</button><button data-dir="down" aria-label="Move down">▼</button><button data-dir="right" aria-label="Move right">▶</button></div><div class="touch-actions"><div><button id="touch-crouch" aria-label="Crouch" aria-pressed="false">⌄</button><button id="touch-ward" aria-label="Receipt light">✦</button><button id="touch-run" aria-label="Run">»</button></div><button id="touch-interact" aria-label="Interact">E</button></div></div></div><aside class="mission-panel"><div class="panel-kicker" data-t="currentObjective"></div><h3 id="objective-title"></h3><p id="objective-desc"></p><div class="level-progress-row"><span id="level-progress-label">0 / 4</span><div class="meter"><i id="level-progress"></i></div></div><ol id="objective-list"></ol><div class="navigation-map"><canvas id="minimap" width="192" height="128" aria-hidden="true"></canvas><span id="minimap-label"></span></div><div id="threat-label" class="threat-label" role="status"></div><div class="mission-divider"></div><div class="inventory-head"><span data-t="satchel"></span><span id="receipt-count"></span></div><div id="inventory-icons"></div><div class="stamina-row"><span data-t="composure"></span><span id="composure-num"></span></div><div class="meter"><i id="composure-meter"></i></div><button id="hint" class="text-btn hint-btn"><span>◇</span><span data-t="hint"></span></button></aside></div>
+        <footer class="game-footer"><div class="controls-note"><span><kbd>W A S D</kbd> <span data-t="move"></span></span><span><kbd>E</kbd> <span data-t="interact"></span></span><span><kbd>SHIFT</kbd> <span data-t="run"></span></span><span><kbd>SPACE</kbd> <span data-t="ward"></span></span></div><span class="crouch-control"><kbd>C</kbd> <span id="crouch-label"></span></span><div class="save-status"><span id="save-indicator" class="live-dot"></span><span id="save-label"></span><span id="play-clock">00:00</span></div></footer>
+      </section>
+    </main>
+  </div>
+  <div id="modal-backdrop" class="modal-backdrop" hidden><section id="modal" class="modal" role="dialog" aria-modal="true" tabindex="-1"><button class="modal-close icon-btn" id="modal-close" aria-label="Close">×</button><div id="modal-content"></div></section></div>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <div id="announcer" class="sr-only" aria-live="polite"></div>
+  <noscript><div class="noscript">برای اجرای بازی JavaScript را فعال کنید. / Enable JavaScript to play.</div></noscript>
+</body>
+</html>

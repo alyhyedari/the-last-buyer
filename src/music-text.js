@@ -1,0 +1,43 @@
+import {L} from './i18n.js';
+export const MT={
+ title:L('رادیوی فردا','Tomorrow Radio','明日广播','راديو الغد','Radio del mañana','कल का रेडियो','Radio demain','Rádio do amanhã'),
+ body:L('نه قطعهٔ اصلی برای نه مکان؛ ملودی، ضرب و هارمونی در طول قطعه تغییر می‌کنند. همین‌جا گوش کن، لایه‌ها را عوض کن یا ریتم خودت را بساز.','Nine original pieces for nine places. Melody, rhythm and harmony evolve through each arrangement. Listen, change the layers, or make your own rhythm.','九个地点，九首原创曲。旋律、节奏与和声随编曲变化。在此聆听、调整声部，或创造自己的节奏。','تسع مقطوعات أصلية لتسعة أماكن. يتطور اللحن والإيقاع والتناغم. استمع أو غيّر الطبقات أو اصنع إيقاعك.','Nueve piezas originales para nueve lugares. Evolucionan melodía, ritmo y armonía. Escucha, cambia capas o crea tu ritmo.','नौ जगहों के लिए नौ मूल रचनाएँ। धुन, लय और सुर बदलते हैं। सुनें, परतें बदलें या अपनी लय बनाएँ।','Neuf morceaux originaux pour neuf lieux. Mélodie, rythme et harmonie évoluent. Écoutez, changez les couches ou créez votre rythme.','Nove peças originais para nove lugares. Melodia, ritmo e harmonia evoluem. Ouça, altere camadas ou crie seu ritmo.'),
+ play:L('پخش موسیقی','Play music','播放音乐','شغّل الموسيقى','Reproducir música','संगीत चलाएँ','Écouter','Tocar música'),
+ pause:L('بی‌صدا','Mute','静音','كتم','Silenciar','मौन','Couper le son','Silenciar'),
+ score:L('موسیقیِ همراهِ سفر','Follow the journey','跟随旅程','اتبع الرحلة','Seguir el viaje','यात्रा के साथ','Suivre le voyage','Seguir a jornada'),
+ track:L('قطعه','Track','曲目','المقطوعة','Pista','रचना','Morceau','Faixa'),
+ mixer:L('لایه‌های موسیقی','Music layers','音乐声部','طبقات الموسيقى','Capas musicales','संगीत की परतें','Couches musicales','Camadas musicais'),
+ music:L('بلندی موسیقی','Music volume','音乐音量','مستوى الموسيقى','Volumen de música','संगीत की आवाज़','Volume musical','Volume da música'),
+ effects:L('بلندی صدای محیط','World effects volume','环境音量','مستوى صوت البيئة','Volumen del entorno','परिवेश की आवाज़','Volume des effets','Volume dos efeitos'),
+ drums:L('ضرب','Drums','鼓组','الإيقاع','Batería','ताल','Batterie','Bateria'),
+ bass:L('باس','Bass','低音','الجهير','Bajo','बास','Basse','Baixo'),
+ harmony:L('هارمونی','Harmony','和声','التناغم','Armonía','संगति','Harmonie','Harmonia'),
+ lead:L('ملودی','Melody','旋律','اللحن','Melodía','धुन','Mélodie','Melodia'),
+ texture:L('آرپژ','Arpeggios','琶音','الأربيج','Arpegios','आर्पेजियो','Arpèges','Arpejos'),
+ studio:L('سازِ شهر','The city instrument','城市乐器','آلة المدينة','El instrumento de la ciudad','शहर का वाद्य','L’instrument de la ville','O instrumento da cidade'),
+ studioHelp:L('هر خانه یک شانزدهمِ میزان است. صداهای چهار ردیف را تغییر بده؛ ریتمت روی موسیقی می‌نشیند. این بازیِ آزاد است و امتیاز یا باخت ندارد.','Each cell is a sixteenth note. Change four rows of percussion and notes; your rhythm joins the score. This is free play, without points or failure.','每格是十六分音符。改变四行鼓点和音符，让节奏融入配乐。自由演奏，没有分数或失败。','كل خانة جزء من ستة عشر. غيّر الصفوف الأربعة ليمتزج إيقاعك بالموسيقى. عزف حر بلا نقاط أو خسارة.','Cada celda es una semicorchea. Cambia cuatro filas de sonidos para unir tu ritmo a la música. Juego libre, sin puntos ni derrota.','हर खाने में सोलहवाँ स्वर। चार कतारें बदलकर अपनी लय संगीत में जोड़ें। मुक्त वादन, बिना अंक या हार।','Chaque case est une double croche. Modifiez quatre lignes pour joindre votre rythme à la musique. Jeu libre sans score ni échec.','Cada célula é uma semicolcheia. Altere quatro linhas para unir seu ritmo à música. Toque livremente, sem pontos ou derrota.'),
+ enable:L('ریتم من فعال باشد','Use my rhythm','使用我的节奏','استخدم إيقاعي','Usar mi ritmo','मेरी लय चलाएँ','Utiliser mon rythme','Usar meu ritmo'),
+ tempo:L('سرعت ضرب','Tempo','速度','السرعة','Tempo','गति','Tempo','Andamento'),
+ reset:L('ریتم آغازین','Starter rhythm','初始节奏','إيقاع البداية','Ritmo inicial','प्रारंभिक लय','Rythme initial','Ritmo inicial'),
+ clear:L('صفحهٔ خالی','Blank pattern','空白节奏','نمط فارغ','Patrón vacío','खाली लय','Motif vide','Padrão vazio'),
+ save:L('ذخیرهٔ ریتم','Save rhythm','保存节奏','احفظ الإيقاع','Guardar ritmo','लय सहेजें','Enregistrer le rythme','Salvar ritmo'),
+ saved:L('ریتمت روی همین دستگاه ذخیره شد.','Your rhythm is saved on this device.','节奏已保存在本设备。','حُفظ إيقاعك على هذا الجهاز.','Tu ritmo se guardó en este dispositivo.','लय इस उपकरण पर सहेजी गई।','Votre rythme est enregistré sur cet appareil.','Seu ritmo foi salvo neste aparelho.'),
+ kick:L('کیک','Kick','底鼓','كِك','Bombo','किक','Grosse caisse','Bumbo'),
+ snare:L('اسنر','Snare','军鼓','سنير','Caja','स्नेयर','Caisse claire','Caixa'),
+ hat:L('های‌هت','Hi-hat','踩镲','هاي هات','Hi-hat','हाई हैट','Charleston','Chimbal'),
+ notes:L('نت‌ها','Notes','音符','النغمات','Notas','स्वर','Notes','Notas'),
+ original:L('موسیقی ساخته‌شده برای آخرین خریدار','Original score for The Last Buyer','为《最后的买家》创作的原声','موسيقى أصلية لآخر مشترٍ','Banda sonora original de El último comprador','अंतिम खरीदार का मूल संगीत','Musique originale du Dernier Acheteur','Trilha original de O último comprador'),
+ bar:L('میزان {n}','Bar {n}','第 {n} 小节','المازورة {n}','Compás {n}','ताल {n}','Mesure {n}','Compasso {n}'),
+ section:L('مقدمه / جریان / حرکت / اوج / نفس / بازگشت / شکوفه / فرود','Opening / Flow / Motion / Crest / Breathing / Return / Bloom / Landing','开场 / 流动 / 律动 / 高潮 / 呼吸 / 回归 / 绽放 / 落幕','بداية / تدفق / حركة / ذروة / نفس / عودة / ازدهار / هبوط','Inicio / Flujo / Movimiento / Cima / Respiro / Regreso / Floración / Cierre','आरंभ / प्रवाह / गति / शिखर / साँस / वापसी / खिलना / समापन','Ouverture / Flux / Mouvement / Sommet / Souffle / Retour / Éclosion / Descente','Abertura / Fluxo / Movimento / Auge / Respiro / Retorno / Flor / Pouso')
+};
+export const TRACK_NAMES=[
+ L('تماس بی‌پاسخ','Unanswered','未接来电','بلا جواب','Sin respuesta','अनुत्तरित','Sans réponse','Sem resposta'),
+ L('دست‌هایی پیش از پول','Hands before money','金钱之前的双手','أيدٍ قبل المال','Manos antes del dinero','पैसे से पहले हाथ','Les mains avant l’argent','Mãos antes do dinheiro'),
+ L('چراغ‌های بستهٔ داده','Packet lights','数据包之光','أنوار البيانات','Luces de paquetes','डेटा की रोशनी','Lumières de paquets','Luzes de pacotes'),
+ L('آب زیر کاغذ','Water beneath paper','纸下之水','ماء تحت الورق','Agua bajo el papel','काग़ज़ के नीचे पानी','L’eau sous le papier','Água sob papel'),
+ L('طلوعِ بی‌نام','Nameless genesis','无名创世','بداية بلا اسم','Génesis sin nombre','अनाम शुरुआत','Genèse sans nom','Gênese sem nome'),
+ L('دو صندلی گرم','Two warm chairs','两把温暖的椅子','مقعدان دافئان','Dos sillas cálidas','दो गर्म कुर्सियाँ','Deux chaises chaudes','Duas cadeiras quentes'),
+ L('پشت دکمهٔ خاموش','Behind the halted button','停止按钮之后','خلف الزر المتوقف','Tras el botón detenido','रुके बटन के पीछे','Derrière le bouton arrêté','Atrás do botão parado'),
+ L('رسیدی برای فردا','A receipt for tomorrow','给明天的收据','إيصال للغد','Un recibo para mañana','कल की रसीद','Un reçu pour demain','Um recibo para amanhã'),
+ L('شهری که نفس می‌کشد','A city that breathes','呼吸的城市','مدينة تتنفس','Una ciudad que respira','साँस लेता शहर','Une ville qui respire','Uma cidade que respira')
+];

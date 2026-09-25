@@ -1,0 +1,32 @@
+import {TRACKS,STEMS,DEFAULT_PATTERN,scoreStep,validatePattern} from './music-score.js';
+import {createAudioGraph,synthNote} from './audio-synth.js';
+export class Soundscape{
+ constructor(){this.ctx=null;this.on=true;this.volume=.36;this.musicVolume=.74;this.effectsVolume=.6;this.mutedByPause=false;this.trackIndex=8;this.worldTrack=8;this.trackPinned=false;this.intensity=0;this.discovery=0;this.absoluteStep=0;this.nextTime=0;this.scheduled=0;this.studio=false;this.customBpm=null;this.pattern=structuredClone(DEFAULT_PATTERN);this.stems=Object.fromEntries(STEMS.map(s=>[s,true]));this.lastBeat={step:0,bar:0,time:0};}
+ start(){if(!this.on||this.mutedByPause)return;try{if(!this.ctx){this.ctx=new (window.AudioContext||window.webkitAudioContext)();this.graph=createAudioGraph(this.ctx);this.master=this.graph.master;this.analyser=this.ctx.createAnalyser();this.analyser.fftSize=128;this.graph.compressor.connect(this.analyser);this.nextTime=this.ctx.currentTime+.08;this.syncMix();this.timer=setInterval(()=>this.schedule(),25);}if(this.ctx.state==='suspended')this.ctx.resume().then(()=>this.schedule()).catch(()=>{});else this.schedule();}catch{}}
+ get bpm(){return this.studio&&this.customBpm?this.customBpm:TRACKS[this.trackIndex].bpm;}
+ syncMix(){if(!this.ctx)return;const now=this.ctx.currentTime;this.graph.master.gain.setTargetAtTime(this.on&&!this.mutedByPause?this.volume:0,now,.12);this.graph.music.gain.setTargetAtTime(this.musicVolume*(this.scene?.48:1),now,.2);this.graph.effects.gain.setTargetAtTime(this.effectsVolume,now,.1);}
+ set(on,volume=this.volume){this.on=on;this.volume=volume;if(on)this.start();this.syncMix();if(!on&&this.ctx)this.ctx.suspend().catch(()=>{});}
+ mix(music,effects){this.musicVolume=Math.max(0,Math.min(1,music));this.effectsVolume=Math.max(0,Math.min(1,effects));this.syncMix();}
+ suspend(value){this.mutedByPause=value;this.syncMix();if(value)this.ctx?.suspend().catch(()=>{});else if(this.on)this.start();}
+ chapter(index){this.worldTrack=Math.max(0,Math.min(8,index));if(!this.trackPinned)this.selectTrack(this.worldTrack,false);this.start();}
+ selectTrack(index,pin=true){if(!Number.isInteger(index)||index<0||index>=TRACKS.length)return;this.trackPinned=pin;if(index===this.trackIndex)return;this.trackIndex=index;this.absoluteStep=0;this.nextTime=(this.ctx?.currentTime||0)+.15;this.lastBeat={step:0,bar:0,time:this.nextTime};if(this.ctx){this.graph.music.gain.cancelScheduledValues(this.ctx.currentTime);this.graph.music.gain.setValueAtTime(.03,this.ctx.currentTime);this.graph.music.gain.setTargetAtTime(this.musicVolume,this.nextTime,.7);}}
+ followWorld(){this.trackPinned=false;this.selectTrack(this.worldTrack,false);}
+ updateWorld({intensity=0,discovery=0}={}){this.intensity=Math.max(0,Math.min(1,intensity));this.discovery=Math.max(0,Math.min(3,discovery));if(this.ctx)this.graph.filter.frequency.setTargetAtTime(this.intensity>.5?4800:11000,this.ctx.currentTime,.8);}
+ setPattern(pattern){if(validatePattern(pattern))this.pattern=pattern.map(row=>[...row]);}
+ setStudio(value){this.studio=Boolean(value);this.start();}
+ schedule(){
+  if(!this.ctx||!this.on||this.mutedByPause||this.ctx.state!=='running')return;
+  const now=this.ctx.currentTime,beat=60/this.bpm;if(this.nextTime<now-.2)this.nextTime=now+.04;
+  let limit=0;while(this.nextTime<now+.13&&limit++<12){const score=scoreStep(TRACKS[this.trackIndex],this.absoluteStep,{intensity:this.intensity,discovery:this.discovery,studio:this.studio,pattern:this.pattern});this.graph.delay.delayTime.setTargetAtTime(beat*.75,now,.1);
+   for(const event of score.events){const stem=['kick','snare','hat','rim'].includes(event.kind)?'drums':['bass','pulse'].includes(event.kind)?'bass':['pad','keys'].includes(event.kind)?'harmony':event.kind==='lead'?'lead':'texture';if(!this.stems[stem])continue;synthNote(this.ctx,this.graph,event,this.nextTime+event.offset*beat/4,beat);this.scheduled++;}
+   this.lastBeat={step:score.step,bar:score.bar,section:score.section,time:this.nextTime};this.absoluteStep++;this.nextTime+=beat/4;
+  }
+ }
+ transport(){if(!this.ctx||!this.on||this.mutedByPause)return{step:0,bar:0,section:0,pulse:0,playing:false,bpm:this.bpm};const stepDuration=60/this.bpm/4,diff=(this.ctx.currentTime-this.lastBeat.time)/stepDuration,n=Math.floor(diff),step=((this.lastBeat.step+n)%16+16)%16,phase=((this.lastBeat.step+diff)%4+4)%4;return{step,bar:this.lastBeat.bar,section:this.lastBeat.section,pulse:Math.exp(-phase*2.7),playing:this.ctx.state==='running',bpm:this.bpm};}
+ sceneChannels(flags){if(!this.on)return;this.start();if(!this.ctx)return;if(!this.scene){this.scene=[196,246.94,329.63].map((frequency,i)=>{const oscillator=this.ctx.createOscillator(),gain=this.ctx.createGain();oscillator.type=i===1?'sine':'triangle';oscillator.frequency.value=frequency;gain.gain.value=0;oscillator.connect(gain);gain.connect(this.graph.effects);oscillator.start();return{oscillator,gain};});this.syncMix();}this.scene.forEach((channel,i)=>channel.gain.gain.setTargetAtTime(flags[i]?.022:0,this.ctx.currentTime,.08));}
+ stopScene(){if(!this.scene)return;for(const channel of this.scene){channel.gain.gain.setTargetAtTime(0,this.ctx.currentTime,.025);channel.oscillator.stop(this.ctx.currentTime+.15);channel.oscillator.onended=()=>{channel.oscillator.disconnect();channel.gain.disconnect();};}this.scene=null;this.syncMix();}
+ bell(note){if(!this.on)return;this.start();if(!this.ctx)return;const event={kind:'pluck',note:[62,65,69,74][note-1]||62,velocity:.65,duration:1.8,pan:0};synthNote(this.ctx,this.graph,event,this.ctx.currentTime+.006,60/this.bpm,this.graph.effects);}
+ step(quiet=false){if(!this.on||!this.ctx||this.mutedByPause)return;synthNote(this.ctx,this.graph,{kind:'rim',note:0,velocity:quiet?.08:.16,duration:.09},this.ctx.currentTime+.004,1,this.graph.effects);}
+ tone(kind='click'){if(!this.on)return;this.start();if(!this.ctx)return;const now=this.ctx.currentTime+.005,root=TRACKS[this.trackIndex].root+12;if(kind==='success'){[0,7,12].forEach((n,i)=>synthNote(this.ctx,this.graph,{kind:'keys',note:root+n,velocity:.35,duration:.8,pan:(i-1)*.2},now+i*.095,1,this.graph.effects));return;}synthNote(this.ctx,this.graph,{kind:kind==='paper'?'hat':'pluck',note:root+(kind==='error'?-1:kind==='ward'?19:7),velocity:kind==='paper'?.26:.25,duration:kind==='ward'?1.4:.2,pan:0},now,1,this.graph.effects);}
+ dispose(){clearInterval(this.timer);this.stopScene();return this.ctx?.close();}
+}
