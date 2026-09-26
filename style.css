@@ -39,3 +39,60 @@
 .reduced-motion .ending-frame{animation:none}
 @media(prefers-reduced-motion:reduce){.ending-frame{animation:none}}
 @media(max-width:560px){.ending-offers{grid-template-columns:1fr;gap:12px}.ending-offer .choice{min-height:0;padding:14px}.ending-shots button{font-size:.64rem;padding:10px 3px}.ending-frame{min-height:130px;font-size:.87rem!important}.ending-atlas{gap:8px}.ending-atlas .gallery-card{padding:10px}.ending-atlas summary strong{font-size:.71rem}.ending-atlas summary small{font-size:.59rem}.ending-atlas .gallery-card>summary{gap:6px}.ending-atlas .gallery-card>summary>span{font-size:15px}.ending-actions>.btn{width:100%}.ending-film-controls{gap:10px}}
+
+/* Device check: short, readable, and isolated from the game renderer. */
+.benchmark-canvas{display:block;width:100%;height:auto;image-rendering:pixelated;background:#0b1919;border:1px solid #4f7050;margin:17px 0 10px}.benchmark-progress{height:7px;background:#0b191b;border:1px solid #405943;overflow:hidden;border-radius:2px}.benchmark-progress i{display:block;width:0;height:100%;background:var(--green);transition:width .18s ease}.benchmark-status{color:#b6cc9e!important;font-size:.76rem!important;min-height:2.2em;margin-top:11px!important}.benchmark-complete{display:flex;align-items:center;gap:11px;border:1px solid #52714c;background:#13291f;padding:13px 15px;margin:17px 0}.benchmark-complete .success-mark{font-size:25px;margin:0}.benchmark-complete strong{color:#d8e7c1;font-size:.86rem;font-weight:500}.benchmark-complete small{color:#92ae91;font-size:.68rem;margin-inline-start:auto}.benchmark-result-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:16px 0}.benchmark-metric{border:1px solid #334e40;background:#10251f;padding:10px 8px;min-width:0}.benchmark-metric small{display:block;color:#8ea58d;font-size:.62rem;line-height:1.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.benchmark-metric strong{display:block;color:#d7e5c3;font:14px monospace;margin-top:5px;direction:ltr;overflow:hidden;text-overflow:ellipsis}.benchmark-note{border-inline-start:2px solid var(--green);padding-inline-start:12px;color:#c3d59d!important;font-size:.78rem!important;line-height:2!important}.benchmark-privacy{font-size:.69rem!important;color:#84998f!important;line-height:1.9!important;margin-top:13px!important}.modal:has(.benchmark-canvas),.modal:has(.benchmark-result-grid){width:min(720px,100%)}
+@media(max-width:560px){.benchmark-result-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.benchmark-metric{padding:9px 7px}.benchmark-complete{align-items:flex-start}.benchmark-complete small{margin-inline-start:0}.modal:has(.benchmark-canvas) .modal-actions,.modal:has(.benchmark-result-grid) .modal-actions{flex-direction:column}.modal:has(.benchmark-canvas) .modal-actions .btn,.modal:has(.benchmark-result-grid) .modal-actions .btn{width:100%}}
+
+/* Keep controls readable at large text sizes and in both writing directions. */
+.ending-index{padding-inline:32px;margin-bottom:14px}
+.ending-actions .btn:not(.primary){background:#1b3029;color:#d4e2bc;border:1px solid #4b6544}
+.benchmark-metric small{white-space:normal;overflow:visible;min-height:3.4em}
+.benchmark-metric strong{font-family:Vazirmatn,Tahoma,sans-serif;font-size:.84rem;white-space:normal}
+.benchmark-complete{flex-wrap:wrap}
+@media(max-width:560px){.ending-actions{flex-direction:column}.ending-actions>.btn{width:100%;flex:auto;min-height:44px}.benchmark-complete small{flex-basis:100%}}
+
+.error-page{max-width:660px;margin:15svh auto;padding:28px;line-height:2.2}.error-page h1{font-size:1.8rem;margin:20px 0}.error-page .btn{display:inline-block;text-decoration:none;margin-top:24px}
+
+/* Compact touch screens get a landscape stage without rotating pointer coordinates. */
+.rotate-card{padding:25px 22px;margin:0 0 18px;border:1px solid #577249;background:#10251f;text-align:center;border-radius:4px}
+.rotate-card h2{font-size:1.35rem;color:#d5e7be;line-height:1.8}
+.rotate-card p{font-size:.82rem;color:#a7bda5;line-height:1.9;max-width:460px;margin:10px auto}
+.rotate-card .rotate-status{font-size:.7rem;color:#8ca38d}
+.rotate-card .modal-actions{max-width:480px;margin:18px auto 0}
+.rotate-card .btn{justify-content:center;line-height:1.8;min-height:44px}
+.rotate-phone{position:relative;width:77px;height:52px;margin:0 auto 18px;color:#b7f578}
+.rotate-phone i{position:absolute;display:block;left:10px;top:8px;width:56px;height:31px;border:3px solid #adc983;border-radius:5px;box-shadow:inset 0 0 0 4px #142d24}
+.rotate-phone i::after{content:'';position:absolute;right:3px;top:11px;width:3px;height:3px;background:#b7f578}
+.rotate-phone>span{position:absolute;inset-inline-end:-9px;top:-8px;font:27px monospace;color:#728e60}
+.phone-landscape{overflow:hidden}
+.phone-landscape #app{max-width:none;padding:0}
+.phone-landscape .topbar,.phone-landscape .game-footer{display:none}
+.phone-landscape.playing .game-screen{padding:0}
+.phone-landscape .game-top{position:relative;inset:auto;height:48px;margin:0;padding:4px max(12px,env(safe-area-inset-right)) 4px max(12px,env(safe-area-inset-left));background:#0a1718;z-index:8}
+.phone-landscape .chapter-no{width:30px;height:30px;font-size:12px}
+.phone-landscape .chapter-display h2{font-size:.82rem;max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.phone-landscape .chapter-display small{font-size:.5rem}
+.phone-landscape .game-tools{gap:6px}
+.phone-landscape .game-tools kbd,.phone-landscape .game-tools [data-t]{display:none}
+.phone-landscape .game-tools .tool-btn,.phone-landscape .game-tools .icon-btn{width:40px;height:40px;min-height:40px;padding:0;justify-content:center}
+.phone-landscape .play-layout{margin:0}
+.phone-landscape .viewport-wrap{height:calc(100svh - 48px);height:calc(100dvh - 48px);max-height:none;width:100%;aspect-ratio:auto;border:0;border-radius:0}
+.phone-landscape #world{object-fit:contain}
+.phone-landscape .touch-controls{display:flex;bottom:max(12px,env(safe-area-inset-bottom));left:max(18px,env(safe-area-inset-left));right:max(18px,env(safe-area-inset-right))}
+.phone-landscape .dpad{grid-template-columns:44px 44px 44px;grid-template-rows:44px 44px;gap:4px}
+.phone-landscape #touch-ward,.phone-landscape #touch-run,.phone-landscape #touch-crouch{width:44px;height:44px}
+.phone-landscape #touch-interact{width:64px;height:64px}
+.phone-landscape .floating-hud{top:8px;right:max(14px,env(safe-area-inset-right));width:91px}
+.phone-landscape .floating-map-button canvas{width:74px}
+.phone-landscape .trail-indicator{max-width:111px;font-size:8px;padding:4px}
+.phone-landscape .world-caption{left:max(14px,env(safe-area-inset-left));top:9px;font-size:9px}
+.phone-landscape .music-hud{left:max(18px,env(safe-area-inset-left));bottom:120px;max-width:190px;font-size:8px}
+.phone-landscape .interaction-prompt{bottom:24px;max-width:43%;white-space:normal;text-align:center;font-size:11px}
+.phone-landscape .chapter-banner{top:58px;inset-inline:175px;font-size:.75rem}
+.phone-landscape.objectives-open .mission-panel{top:52px;max-height:calc(100dvh - 66px);inset-inline-end:max(12px,env(safe-area-inset-right))}
+.phone-landscape .modal-backdrop{padding:8px max(14px,env(safe-area-inset-right)) 8px max(14px,env(safe-area-inset-left))}
+.phone-landscape .modal{max-height:calc(100dvh - 16px);padding:27px}
+@media(max-width:560px){.rotate-card .modal-actions{flex-direction:column}.rotate-card .btn{width:100%}}
+
+.phone-landscape .chapter-display{min-width:0;flex:1}.phone-landscape .chapter-display>div{min-width:0}.phone-landscape .chapter-no{flex-shrink:0}.phone-landscape .game-tools{flex-shrink:0}.phone-landscape .game-tools .tool-btn,.phone-landscape .game-tools .icon-btn{width:44px;height:44px;min-height:44px}

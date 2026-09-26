@@ -1,5 +1,6 @@
 import {chromium} from 'playwright-core';
 import assert from 'node:assert/strict';
+import {BENCHMARK_FIXTURE} from './qa-fixture.mjs';
 import {mkdir,writeFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {CHAPTERS,ENDINGS} from '../src/content.js';
@@ -13,7 +14,7 @@ let page,collection=[],endingRecords={},count=0;
 async function load(state,{language='en',mobile=false}={}){
  if(page)await page.close();page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.status()>=400)missing.push(r.url());});
  if(mobile)await page.setViewportSize({width:390,height:844});
- await page.addInitScript(({state,language,mobile})=>{if(sessionStorage.getItem('ending-qa'))return;sessionStorage.setItem('ending-qa','yes');localStorage.setItem('last-buyer.save.v1',JSON.stringify(state));localStorage.setItem('last-buyer.settings.v1',JSON.stringify({language,sound:false,calm:true,reducedMotion:true,textSize:mobile?1.2:1}));},{state,language,mobile});
+ await page.addInitScript(({state,language,mobile,benchmark})=>{if(sessionStorage.getItem('ending-qa'))return;sessionStorage.setItem('ending-qa','yes');localStorage.setItem('last-buyer.save.v1',JSON.stringify(state));localStorage.setItem('last-buyer.settings.v1',JSON.stringify({language,sound:false,calm:true,reducedMotion:true,textSize:mobile?1.2:1}));localStorage.setItem('last-buyer.benchmark.v1',JSON.stringify(benchmark));},{state,language,mobile,benchmark:BENCHMARK_FIXTURE});
  await page.goto('http://localhost:4173',{waitUntil:'networkidle'});await page.locator('#continue-game').click();
 }
 async function openOffers(state,options){const entity=CHAPTERS[7].entities.find(e=>e.type==='npc'),blocks=obstacles(CHAPTERS[7]),near={x:entity.x,y:entity.y+23};state.position=walkable(near.x,near.y,blocks)?near:approachPath(CHAPTERS[7].start,entity,blocks).at(-1);await load(state,options);await page.locator('#world').focus();await page.keyboard.press('KeyE');await page.locator('.ending-offers').waitFor();}

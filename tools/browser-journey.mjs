@@ -1,6 +1,7 @@
 import {chromium} from 'playwright-core';
 import {mkdir,writeFile} from 'node:fs/promises';
 import assert from 'node:assert/strict';
+import {BENCHMARK_FIXTURE} from './qa-fixture.mjs';
 import {CHAPTERS,ENDINGS} from '../src/content.js';
 import {newState,obstacles,approachPath,walkable,canChooseEnding} from '../src/state.js';
 import {hash} from '../src/art.js';
@@ -15,7 +16,7 @@ let page=await context.newPage();
 page.on('pageerror',e=>errors.push(e.message));
 await page.goto('http://localhost:4173',{waitUntil:'networkidle'});
 let state=newState(),stages=0;
-async function loadAt(chapter,entity){const blocks=obstacles(chapter),path=approachPath(chapter.start,entity,blocks),close={x:entity.x,y:entity.y+(entity.type==='station'?42:23)};state.zone='chapter';if(!state.visited.includes(chapter.index))state.visited.push(chapter.index);state.chapter=chapter.index;state.unlocked=Math.max(state.unlocked,chapter.index);state.position=walkable(close.x,close.y,blocks)?close:path.at(-1);state.ending=null;await page.close();page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));await page.addInitScript(s=>{localStorage.setItem('last-buyer.save.v1',JSON.stringify(s));localStorage.setItem('last-buyer.settings.v1',JSON.stringify({language:'en',sound:false,calm:true,reducedMotion:true,quality:'high',textSize:1,volume:.2}));},state);await page.goto('http://localhost:4173',{waitUntil:'networkidle'});await page.locator('#continue-game').click();await page.locator('#world').focus();await page.keyboard.press('KeyE');await page.locator('#modal-backdrop:not([hidden])').waitFor();}
+async function loadAt(chapter,entity){const blocks=obstacles(chapter),path=approachPath(chapter.start,entity,blocks),close={x:entity.x,y:entity.y+(entity.type==='station'?42:23)};state.zone='chapter';if(!state.visited.includes(chapter.index))state.visited.push(chapter.index);state.chapter=chapter.index;state.unlocked=Math.max(state.unlocked,chapter.index);state.position=walkable(close.x,close.y,blocks)?close:path.at(-1);state.ending=null;await page.close();page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));await page.addInitScript(({state,benchmark})=>{localStorage.setItem('last-buyer.save.v1',JSON.stringify(state));localStorage.setItem('last-buyer.settings.v1',JSON.stringify({language:'en',sound:false,calm:true,reducedMotion:true,quality:'high',textSize:1,volume:.2}));localStorage.setItem('last-buyer.benchmark.v1',JSON.stringify(benchmark));},{state,benchmark:BENCHMARK_FIXTURE});await page.goto('http://localhost:4173',{waitUntil:'networkidle'});await page.locator('#continue-game').click();await page.locator('#world').focus();await page.keyboard.press('KeyE');await page.locator('#modal-backdrop:not([hidden])').waitFor();}
 async function capture(){state=await page.evaluate(()=>JSON.parse(localStorage.getItem('last-buyer.save.v1')));}
 async function solveStation(station){
  for(let round=0;round<station.rounds;round++){

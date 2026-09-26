@@ -1,15 +1,18 @@
 import {chromium} from 'playwright-core';
 import {mkdir,writeFile} from 'node:fs/promises';
 import assert from 'node:assert/strict';
+import {BENCHMARK_FIXTURE,denyAutomaticOrientation} from './qa-fixture.mjs';
 await mkdir('artifacts',{recursive:true});
 const browser=await chromium.launch({channel:'msedge',headless:true});
 const context=await browser.newContext({viewport:{width:1440,height:960},deviceScaleFactor:1});
 const page=await context.newPage(),errors=[],requests=[];
 page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.status()>=400)requests.push(r.url()+': '+r.status());});
+await page.addInitScript(value=>localStorage.setItem('last-buyer.benchmark.v1',JSON.stringify(value)),BENCHMARK_FIXTURE);
 try{
  await page.goto('http://localhost:4173',{waitUntil:'networkidle'});
  await page.locator('#new-game').waitFor();
- assert.equal(await page.locator('html').getAttribute('lang'),'fa');
+ assert.equal(await page.locator('html').getAttribute('lang'),'en');
+ await page.locator('#language').selectOption('fa');
  await page.screenshot({path:'artifacts/title-fa-desktop.png',fullPage:true});
  const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth);
  assert.equal(overflow,false);
@@ -34,11 +37,13 @@ try{
  await page.screenshot({path:'artifacts/game-zh-desktop.png',fullPage:true});
  // A fresh isolated context exercises real touch events and Persian default settings.
  const mobile=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true});
- const phone=await mobile.newPage();phone.on('pageerror',e=>errors.push('mobile: '+e.message));
+ const phone=await mobile.newPage();await phone.addInitScript(denyAutomaticOrientation);phone.on('pageerror',e=>errors.push('mobile: '+e.message));await phone.addInitScript(value=>localStorage.setItem('last-buyer.benchmark.v1',JSON.stringify(value)),BENCHMARK_FIXTURE);
  await phone.goto('http://localhost:4173',{waitUntil:'networkidle'});
+ assert.equal(await phone.locator('html').getAttribute('lang'),'en');await phone.locator('#language').selectOption('fa');
  await phone.screenshot({path:'artifacts/title-fa-mobile.png',fullPage:true});
  assert.equal(await phone.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
  await phone.locator('#new-game').tap();await phone.locator('#modal-content .btn.primary').tap();await phone.locator('#modal-content .btn.primary').tap();
+ await phone.locator('[data-portrait-continue]').tap();
  assert.equal(await phone.locator('#touch-controls').isVisible(),true);
  await phone.locator('#touch-ward').tap();
  assert.equal(await phone.locator('#touch-ward').isDisabled(),true);
@@ -53,5 +58,5 @@ try{
  await mobile.close();
  assert.deepEqual(errors,[]);assert.deepEqual(requests,[]);
  await writeFile('artifacts/browser-smoke.json',JSON.stringify({passed:true,desktop:'1440x960',mobile:'390x844, touch emulation',errors,requests},null,2));
- console.log('Browser smoke passed: Persian start, actual keyboard input, Chinese switching, resume, touch layout, Arabic RTL, no console or HTTP errors.');
+ console.log('Browser smoke passed: English default, Persian choice, actual keyboard input, Chinese switching, resume, touch layout, Arabic RTL, no console or HTTP errors.');
 }finally{await browser.close();}

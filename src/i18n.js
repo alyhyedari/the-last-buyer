@@ -1,6 +1,6 @@
 export const LANGUAGES = [
-  {id:'fa',name:'فارسی',dir:'rtl'},{id:'zh',name:'简体中文',dir:'ltr'},
-  {id:'en',name:'English',dir:'ltr'},{id:'ar',name:'العربية',dir:'rtl'},
+  {id:'en',name:'English',dir:'ltr'},{id:'fa',name:'فارسی',dir:'rtl'},
+  {id:'zh',name:'简体中文',dir:'ltr'},{id:'ar',name:'العربية',dir:'rtl'},
   {id:'es',name:'Español',dir:'ltr'},{id:'hi',name:'हिन्दी',dir:'ltr'},
   {id:'fr',name:'Français',dir:'ltr'},{id:'pt',name:'Português',dir:'ltr'}
 ];
@@ -122,8 +122,8 @@ export const UI = {
  consent:L('تأیید مستقل','Independent consent','独立同意','موافقة مستقلة','Consentimiento independiente','स्वतंत्र सहमति','Consentement indépendant','Consentimento independente'),
  restore:L('این سفر دوباره بارگذاری شد.','Your journey has been restored.','旅程已恢复。','استُعيدت رحلتك.','Tu viaje se ha restaurado.','यात्रा बहाल हो गई।','Votre voyage a été restauré.','Sua jornada foi restaurada.')
 };
-let current='fa';
-export function setLanguage(lang){current=ORDER.includes(lang)?lang:'fa';return current;}
+let current='en';
+export function setLanguage(lang){current=ORDER.includes(lang)?lang:'en';return current;}
 export function getLanguage(){return current;}
 export function tr(value, vars={}){let text=typeof value==='string'?(UI[value]?.[current] ?? value):(value?.[current] ?? '');for(const [k,v] of Object.entries(vars))text=text.replaceAll('{'+k+'}',String(v));return text;}
 export function direction(){return current==='fa'||current==='ar'?'rtl':'ltr';}

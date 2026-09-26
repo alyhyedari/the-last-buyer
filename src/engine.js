@@ -1,3 +1,4 @@
+import {AdaptiveQuality} from './quality.js';
 import {makeRoom,PALETTES,entityArt,character,glow,rng} from './art.js';
 import {obstacles,walkable,findPath,approachPath,chapterDone} from './state.js';
 import {HorrorDirector,ShadowAgent,sheltered} from './horror.js';
@@ -6,7 +7,7 @@ import {makeCommons,worldEntityArt,drawCommonsLife,drawCat} from './world-art.js
 import {canVisitChapter} from './open-world.js';
 export class Engine{
  constructor(canvas,{onInteract,onHud,onCaught,onShadow,onEvent,onStep,getBeat,settings}){
-  this.canvas=canvas;this.ctx=canvas.getContext('2d',{alpha:false});this.ctx.imageSmoothingEnabled=false;this.onInteract=onInteract;this.onHud=onHud;this.onCaught=onCaught;this.onShadow=onShadow;this.settings=settings;this.keys=new Set();this.active=false;this.paused=true;this.path=[];this.camera={x:0,y:0};this.time=0;this.last=0;this.accumulator=0;this.hudClock=0;this.composure=100;this.wardTime=0;this.wardCooldown=0;this.hurtCooldown=0;this.facing=1;this.walk=0;this.frames=[];this.effectiveQuality='high';this.shadowNotified=false;this.interactionTarget=null;
+  this.canvas=canvas;this.ctx=canvas.getContext('2d',{alpha:false});this.ctx.imageSmoothingEnabled=false;this.onInteract=onInteract;this.onHud=onHud;this.onCaught=onCaught;this.onShadow=onShadow;this.settings=settings;this.keys=new Set();this.active=false;this.paused=true;this.path=[];this.camera={x:0,y:0};this.time=0;this.last=0;this.accumulator=0;this.hudClock=0;this.composure=100;this.wardTime=0;this.wardCooldown=0;this.hurtCooldown=0;this.facing=1;this.walk=0;this.qualityController=new AdaptiveQuality();this.effectiveQuality='high';this.renderBudget=0;this.shadowNotified=false;this.interactionTarget=null;
   this.onEvent=onEvent;this.onStep=onStep;this.getBeat=getBeat;this.footClock=0;this.crouching=false;this.hidden=false;this.lightMask=document.createElement('canvas');this.lightMask.width=640;this.lightMask.height=360;this.maskCtx=this.lightMask.getContext('2d');
   this.loop=this.loop.bind(this);this.frame=requestAnimationFrame(this.loop);
   canvas.addEventListener('pointerdown',e=>this.pointer(e));
@@ -19,6 +20,7 @@ export class Engine{
  toggleCrouch(){if(this.paused)return;this.crouching=!this.crouching;this.onHud?.(this);}
  get hasShadow(){return !this.chapter.outdoor&&[2,3,4,6].includes(this.chapter.index)&&!this.settings.calm;}
  clearInput(){this.keys.clear();this.path=[];this.interactionTarget=null;}
+ recommend(quality){this.qualityController.reset(quality);this.effectiveQuality=this.settings.quality==='auto'?this.qualityController.quality:this.settings.quality;}
  setPaused(value){this.paused=value;this.pausedDrawn=false;this.clearInput();this.accumulator=0;this.last=0;}
  touch(dir,pressed){const codes={up:'ArrowUp',down:'ArrowDown',left:'ArrowLeft',right:'ArrowRight'};if(pressed)this.keys.add(codes[dir]);else this.keys.delete(codes[dir]);}
  screenPoint(e){const r=this.canvas.getBoundingClientRect(),scale=Math.min(r.width/640,r.height/360),ox=(r.width-640*scale)/2,oy=(r.height-360*scale)/2;const x=(e.clientX-r.left-ox)/scale,y=(e.clientY-r.top-oy)/scale;if(x<0||x>640||y<0||y>360)return null;return{x:x+this.camera.x,y:y+this.camera.y};}
@@ -26,9 +28,21 @@ export class Engine{
  nearest(){let best=null,distance=64;if(!this.chapter)return null;for(const e of this.visibleEntities()){const d=Math.hypot(this.player.x-e.x,this.player.y-e.y);if(d<distance){best=e;distance=d;}}return best;}
  interact(){if(this.paused||!this.active)return;const e=this.nearest();if(e)this.onInteract(e);}
  ward(){if(this.paused||this.wardCooldown>0)return false;this.wardTime=2.5;this.wardCooldown=5;this.onShadow?.('ward');return true;}
- loop(now){this.frame=requestAnimationFrame(this.loop);if(document.hidden||!this.active){this.last=0;return;}if(this.paused){if(!this.pausedDrawn){this.render();this.pausedDrawn=true;}this.last=0;return;}const raw=this.last?(now-this.last)/1000:1/60;this.last=now;this.frames.push(raw);if(this.frames.length>90)this.frames.shift();if(this.settings.quality==='auto'&&this.frames.length===90){const mean=this.frames.reduce((a,b)=>a+b,0)/90;this.effectiveQuality=mean>.025?'low':'high';}else if(this.settings.quality!=='auto')this.effectiveQuality=this.settings.quality;
-  if(!this.paused){this.accumulator+=Math.min(raw,.1);let n=0;while(this.accumulator>=1/60&&n++<6){this.update(1/60);this.accumulator-=1/60;}this.hudClock+=raw;if(this.hudClock>.17){this.onHud?.(this);this.hudClock=0;}}
-  if(this.effectiveQuality==='low'&&this.lastDraw&&now-this.lastDraw<30)return;this.lastDraw=now;this.render();
+ loop(now){
+  this.frame=requestAnimationFrame(this.loop);
+  if(document.hidden||!this.active){this.last=0;return;}
+  if(this.paused){if(!this.pausedDrawn){this.render();this.pausedDrawn=true;}this.last=0;return;}
+  const raw=this.last?(now-this.last)/1000:1/60;this.last=now;
+  this.effectiveQuality=this.settings.quality==='auto'?this.qualityController.sample(raw*1000):this.settings.quality;
+  const before=performance.now();
+  this.accumulator+=Math.min(raw,.1);let n=0;
+  while(this.accumulator>=1/60&&n++<6){this.update(1/60);this.accumulator-=1/60;}
+  this.hudClock+=raw;if(this.hudClock>.17){this.onHud?.(this);this.hudClock=0;}
+  const budget=this.effectiveQuality==='low'?1000/30:1000/60;
+  this.renderBudget=Math.min(100,this.renderBudget+raw*1000);
+  if(this.renderBudget+.4<budget)return;
+  this.renderBudget=Math.max(0,this.renderBudget-budget);
+  this.render();if(this.settings.quality==='auto')this.qualityController.rendered(performance.now()-before);
  }
  update(dt){
   this.time+=dt;this.wardTime=Math.max(0,this.wardTime-dt);this.wardCooldown=Math.max(0,this.wardCooldown-dt);this.hurtCooldown=Math.max(0,this.hurtCooldown-dt);
