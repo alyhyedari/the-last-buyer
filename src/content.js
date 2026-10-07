@@ -2,6 +2,7 @@ import { L } from './i18n.js';
 import {applyLayout} from './level-layouts.js';
 import {EXTRA_ENDINGS} from './episodes.js';
 import {NEW_ENDINGS} from './ending-content.js';
+import {placeChapterDetails} from './detail-content.js';
 export const TITLES=[
 L('مغازه‌ای که فردا خالی می‌شود','The shop that closes tomorrow','明天关闭的小店','المتجر الذي يغلق غداً','La tienda que cierra mañana','कल बंद होने वाली दुकान','La boutique qui ferme demain','A loja que fecha amanhã'),
 L('دست اول','The first hand','最初的手','اليد الأولى','La primera mano','पहला हाथ','La première main','A primeira mão'),
@@ -158,5 +159,7 @@ export const CHAPTERS=TITLES.map((name,index)=>{
  const records=[[105,338],[810,480],[780,127],[307,542]].map(([x,y],i)=>({id:`${index}:r${i}`,type:'record',x:x+(i%2?shift:0),y,slot:i}));
  const props=[{type:'shelf',x:65,y:95,w:74,h:63},{type:'shelf',x:395,y:95,w:68,h:51},{type:'crate',x:160,y:365,w:57,h:39},{type:'table',x:635,y:443,w:73,h:39},{type:'plant',x:905,y:178,solid:false},{type:'plant',x:65,y:450,solid:false},{type:'lamp',x:566,y:184,solid:false},{type:index===4?'server':'shelf',x:527,y:315,w:50,h:91},{type:index===3?'water':'crate',x:328,y:245,w:71,h:46,solid:index!==3},{type:index===4?'server':'shelf',x:877,y:337,w:37,h:70}];
  if(index%2)props.push({type:index===4?'server':'crate',x:613,y:160,w:53,h:74});
- return applyLayout({index,name,era:ERAS[index],intro:INTROS[index],records:RECORDS[index],choices:CHOICES[index],props,entities:[...stations,...records,{id:`${index}:npc`,type:'npc',x:492,y:210,kind:index===7?'cashier':index===5||index===0?'mina':index===4?'sage':'trader'},{id:`${index}:exit`,type:'exit',x:860,y:105}],start:{x:110,y:536}});
+ const chapter=applyLayout({index,name,era:ERAS[index],intro:INTROS[index],records:RECORDS[index],choices:CHOICES[index],props,entities:[...stations,...records,{id:`${index}:npc`,type:'npc',x:492,y:210,kind:index===7?'cashier':index===5||index===0?'mina':index===4?'sage':'trader'},{id:`${index}:exit`,type:'exit',x:860,y:105}],start:{x:110,y:536}});
+ chapter.detailEntities=placeChapterDetails(chapter,index);
+ return chapter;
 });

@@ -3,7 +3,7 @@ import {nextGuidance,guideComplete} from './guidance.js';
 import {createMobileDisplay} from './mobile.js';
 import {LANGUAGES,UI,tr,setLanguage,getLanguage,direction} from './i18n.js';
 import {CHAPTERS,ENDINGS,SOURCES,AFTERMATH} from './content.js';
-import {newState,readSave,writeSave,readSettings,validateState,SETTINGS_KEY,chapterDone,addDecision,addEpisodeDecision,decisionEvents,reflectionCounts,canChooseEnding,recordEnding,resumeBeforeEnding} from './state.js';
+import {newState,readSave,writeSave,readSettings,validateState,SETTINGS_KEY,chapterDone,addDecision,addEpisodeDecision,decisionEvents,reflectionCounts,canChooseEnding,recordEnding,resumeBeforeEnding,collectDetail} from './state.js';
 import {Engine} from './engine.js';
 import {drawTitle,character} from './art.js';
 import {Soundscape} from './audio.js';
@@ -26,6 +26,9 @@ import {MusicUI} from './music-ui.js';
 import {MT,TRACK_NAMES} from './music-text.js';
 import {INPUT} from './input-text.js';
 import {mountDynamicJoystick} from './joystick.js';
+import {DETAIL_UI,detailFor,DETAIL_IDS} from './detail-content.js';
+import {V,VILLAGE_ITEMS,VILLAGE_PROJECTS,VILLAGE_OUTCOMES} from './village-content.js';
+import {recordVillageEncounter,villageItem,villageProject} from './village-state.js';
 const $=id=>document.getElementById(id);
 let storage;try{storage=localStorage;}catch{storage={getItem:()=>null,setItem:()=>{throw new Error('Storage disabled');}};}
 let settings=readSettings(storage),state=readSave(storage),benchmark=readBenchmark(storage),playing=false,modalOpen=false,clockPaused=false,puzzle=null,episodeUI=null,musicUI=null,benchmarkUI=null,modalBuilder=null,previousFocus=null,saveOK=true,toastTimer,titleLast=0,session=0,hudSignature='',bannerTimer;
@@ -103,7 +106,7 @@ for(const event of ['pointerup','pointercancel','lostpointercapture'])$('touch-r
 function toast(text){clearTimeout(toastTimer);$('toast').textContent=text;$('toast').hidden=false;toastTimer=setTimeout(()=>{$('toast').hidden=true;},4200);}
 function updateHUD(){
  if(!state||!playing)return;
- const ch=state.zone==='commons'?COMMONS:CHAPTERS[state.chapter],signature=[state.zone,ch.index,getLanguage(),state.solved.join(','),state.records.join(','),state.episodes.join(','),state.discoveries.join(','),state.projects.join(','),state.tracked,Object.keys(state.decisions).join(','),saveOK].join('|');
+ const ch=state.zone==='commons'?COMMONS:CHAPTERS[state.chapter],villageSig=state.village?JSON.stringify(state.village):'',signature=[state.zone,ch.index,getLanguage(),state.solved.join(','),state.records.join(','),state.episodes.join(','),state.discoveries.join(','),state.detailNotes.join(','),state.projects.join(','),state.tracked,villageSig,Object.keys(state.decisions).join(','),saveOK].join('|');
  // Narrative DOM changes only when the data changes, independently of render FPS.
  if(signature!==hudSignature){
   hudSignature=signature;
@@ -112,10 +115,10 @@ function updateHUD(){
   $('objective-desc').textContent=chapterDone(state,ch.index)?tr(ch.index===7?'decision':'exit'):state.episodes.includes(ch.index)?tr('locked'):tr(D.episodeFirst);
   $('objective-list').replaceChildren(h('li',{class:'scene-objective '+(state.episodes.includes(ch.index)?'done':'')},'◉ '+tr(EPISODES[ch.index].title)),...ch.entities.filter(e=>e.type==='station').map(e=>h('li',{class:state.solved.includes(e.id)?'done':''},ch.index===7?tr('consent')+' '+(e.slot+1):puzzleName(e.puzzle))));
   const tasks=ch.entities.filter(e=>e.type==='station'&&state.solved.includes(e.id)).length+Number(state.episodes.includes(ch.index));$('level-progress').style.width=tasks*25+'%';$('level-progress-label').textContent=tasks+' / 4';$('minimap-label').textContent=tr(D.investigate)+' ◉';
-  $('receipt-count').textContent=state.records.length+'/32';
+   $('receipt-count').textContent=state.records.length+'/32'+(state.zone==='commons'&&state.village?' · $'+state.village.money:'');
   $('inventory-icons').replaceChildren(...Array.from({length:4},(_,i)=>h('span',{class:'inventory-item '+(state.records.includes(`${ch.index}:r${i}`)?'':'empty'),'aria-label':tr('echo')+' '+(i+1)},state.records.includes(`${ch.index}:r${i}`)?'▤':'·')));
   $('save-label').textContent=tr(saveOK?'saved':'savingError');
-  if(state.zone==='commons'){const done=settledChapters(state);$('chapter-no').textContent='∞';$('objective-desc').textContent=tr(W.explore);$('objective-list').replaceChildren(...[[W.workshop,'lights','fuse'],[W.mailbox,'letters','postcard'],[W.melody,'melody',null]].map(([label,id,item])=>h('li',{class:state.projects.includes(id)?'done':''},tr(label)+' · '+(item?projectCount(state,item)+'/3':state.projects.includes(id)?'4/4':state.bellSequence.length+'/4'))));$('level-progress').style.width=done.length/7*100+'%';$('level-progress-label').textContent=done.length+' / 7';$('minimap-label').textContent=tr(W.atlas);}
+  if(state.zone==='commons'){const done=settledChapters(state),village=state.village;$('chapter-no').textContent='∞';$('objective-desc').textContent=tr(W.explore)+' · '+tr(V.growth)+' '+(village?.growth||0)+'/4';$('objective-list').replaceChildren(...[[W.workshop,'lights','fuse'],[W.mailbox,'letters','postcard'],[W.melody,'melody',null]].map(([label,id,item])=>h('li',{class:state.projects.includes(id)?'done':''},tr(label)+' · '+(item?projectCount(state,item)+'/3':state.projects.includes(id)?'4/4':state.bellSequence.length+'/4'))),...(village?[h('li',{class:village.growth>=4?'done':''},tr(V.board)+' · '+village.growth+'/4'),h('li',{class:village.bond>=2?'done':''},tr(V.bond)+' · '+village.bond),h('li',{class:village.vehicle!=='foot'?'done':''},tr(V.vehicle)+' · '+village.vehicle)]:[]));$('level-progress').style.width=Math.max(done.length/7*100,(village?.growth||0)/4*100)+'%';$('level-progress-label').textContent=done.length+' / 7';$('minimap-label').textContent=tr(W.atlas);}
  }
  audio.updateWorld({intensity:engine.threat==='hunted'?1:0,discovery:state.projects.length});$('music-track-name').textContent=tr(TRACK_NAMES[audio.trackIndex]);$('music-hud').classList.toggle('muted',!audio.on);
  $('composure-num').textContent=Math.round(engine.composure)+'%';$('composure-meter').style.width=Math.round(engine.composure)+'%';
@@ -126,8 +129,117 @@ function updateHUD(){
  const near=engine.nearest();$('interaction-prompt').hidden=modalOpen||!near;
  if(near)$('interaction-prompt').querySelector('span').textContent=entityName(near);
 }
-function entityName(e){if(e.type==='music')return tr(MT.studio);if(e.type==='wayback')return tr(W.return);if(e.type==='portal')return tr(CHAPTERS[e.chapterIndex].name);if(e.type==='discovery')return tr(W[e.item]);if(e.type==='bell')return tr(W.bell)+' '+e.note;if(['workshop','mailbox'].includes(e.type))return tr(W[e.type]);if(e.type==='pondClue')return tr(W.melody);if(e.type==='notice')return tr(W.title);if(e.type==='episode')return tr(EPISODES[state.chapter].title);if(e.type==='station')return state.chapter===7?tr('consent')+' '+(e.slot+1):puzzleName(e.puzzle);if(e.type==='record')return tr('echo')+' · '+String(e.slot+1);if(e.type==='exit')return tr(state.chapter===7?'decision':'exit');return state.chapter===7?tr('decision'):tr('interact');}
-function interact(entity){if(modalOpen||!playing)return;if(state.zone==='commons'){interactCommons(entity);return;}if(entity.type==='wayback'){goCommons();return;}const ch=CHAPTERS[state.chapter];audio.tone('paper');if(entity.type==='record'){if(!state.records.includes(entity.id)){state.records.push(entity.id);save();}const note=ch.records[entity.slot];openModal(root=>{root.append(h('div',{class:'modal-kicker'},tr('echo')+' · '+String(entity.slot+1).padStart(2,'0')),h('span',{class:'source-tag'},tr(note.source?'sourceLabel':'fictionLabel')),h('h2',{},tr(ch.name)),h('p',{class:'body-copy'},tr(note.body)));if(note.source){const s=SOURCES.find(s=>s.id===note.source);root.append(h('a',{href:s.url,target:'_blank',rel:'noopener noreferrer',class:'text-btn'},s.title));}root.append(h('div',{class:'modal-actions'},button(tr('next'),closeModal,'btn primary')));},{clock:false});return;}
+function entityName(e){if(e.type==='detail'){const note=detailFor(e.id);return note?tr(note.title):tr(DETAIL_UI.kicker);}if(e.type==='villageShop')return tr(V.shop);if(e.type==='villageMina')return tr(V.mina);if(e.type==='richBoy')return tr(V.richBoy);if(e.type==='villageBoard')return tr(V.board);if(e.type==='buyKiosk')return tr(V.buy);if(e.type==='vehicleYard')return tr(V.yard);if(e.type==='weaponShop')return tr(V.weaponShop);if(e.type==='villageGate')return tr(V.gate);if(e.type==='forestShrine')return tr(V.forest);if(e.type==='ghost')return tr(V.ghost);if(e.type==='thief')return tr(V.thief);if(e.type==='animal')return tr(V.animal);if(e.type==='music')return tr(MT.studio);if(e.type==='wayback')return tr(W.return);if(e.type==='portal')return tr(CHAPTERS[e.chapterIndex].name);if(e.type==='discovery')return tr(W[e.item]);if(e.type==='bell')return tr(W.bell)+' '+e.note;if(['workshop','mailbox'].includes(e.type))return tr(W[e.type]);if(e.type==='pondClue')return tr(W.melody);if(e.type==='notice')return tr(W.title);if(e.type==='episode')return tr(EPISODES[state.chapter].title);if(e.type==='station')return state.chapter===7?tr('consent')+' '+(e.slot+1):puzzleName(e.puzzle);if(e.type==='record')return tr('echo')+' · '+String(e.slot+1);if(e.type==='exit')return tr(state.chapter===7?'decision':'exit');return state.chapter===7?tr('decision'):tr('interact');}
+function showDetail(entity){const note=detailFor(entity.id);if(!note)return;const fresh=collectDetail(state,entity.id);if(fresh){save();audio.tone('success');}openModal(root=>{root.append(h('div',{class:'modal-kicker'},tr(DETAIL_UI.kicker)),h('h2',{},tr(note.title)),h('p',{class:'body-copy'},tr(note.body)),h('p',{class:'modal-note'},tr(DETAIL_UI.found)+' · '+tr(DETAIL_UI.count,{n:state.detailNotes.length,total:DETAIL_IDS.length})),h('div',{class:'modal-actions'},button(tr('next'),closeModal,'btn primary'),button(tr(DETAIL_UI.archive),()=>showJournal('details'),'btn secondary')));},{clock:false});updateHUD();}
+function villageStat(){return state.village||{money:0,reputation:0,bond:0,growth:0,vehicle:'foot',weapon:'none',projects:[],encounters:[],animals:[],buyPresses:0,story:0,plan:null,outcome:null};}
+function villageToast(){save();hudSignature='';updateHUD();}
+function villageItemLabel(item){return tr(item.name)+' · $'+item.cost;}
+function buyVillageItem(id){
+ const village=villageStat(),item=villageItem(id);if(!item)return;
+ if(village.money<item.cost){toast(tr(V.needMoney));return;}
+ village.money-=item.cost;village.buyPresses++;
+ if(item.kind==='weapon')village.weapon=id;
+ if(item.kind==='vehicle')village.vehicle=id;
+ village.reputation+=item.kind==='vehicle'?1:0;
+ villageToast();audio.tone('success');toast(tr(V.purchased));closeModal();
+}
+function showVillageShop(filter='all'){
+ const items=VILLAGE_ITEMS.filter(item=>filter==='all'||item.kind===filter);
+ openModal(root=>{
+  const village=villageStat();root.append(h('div',{class:'modal-kicker'},tr(V.buy)),h('h2',{},tr(V.shop)),h('p',{class:'body-copy'},tr(V.workBody)),h('p',{class:'village-wallet'},tr(V.money)+' · $'+village.money));
+  const list=h('div',{class:'village-shop-list'});
+  for(const item of items){const owned=item.kind==='weapon'?village.weapon===item.id:village.vehicle===item.id;list.append(h('article',{class:'village-shop-card '+(owned?'owned':'')},h('div',{},h('h3',{},tr(item.name)),h('p',{},tr(item.body))),button(owned?'✓ '+tr(V.purchased):village.money>=item.cost?villageItemLabel(item):'× '+villageItemLabel(item),()=>{if(!owned)buyVillageItem(item.id);},'choice',{disabled:owned||village.money<item.cost,'data-village-buy':item.id})));}
+  root.append(list,h('div',{class:'modal-actions'},filter==='all'?button(tr(V.work),workVillageShift,'btn secondary'):null,button(tr('next'),closeModal,'btn primary')));
+ },{clock:false});
+}
+function workVillageShift(){
+ const village=villageStat(),earned=28+village.reputation*4+(village.vehicle==='bike'?4:village.vehicle==='motorcycle'?8:village.vehicle==='car'?12:0);
+ village.money+=earned;village.reputation++;village.bond=Math.min(9,village.bond+1);village.story=Math.max(1,village.story);village.buyPresses++;villageToast();audio.tone('success');
+ openModal(root=>root.append(h('div',{class:'modal-kicker'},tr(V.work)),h('h2',{},tr(V.mina)),h('p',{class:'body-copy'},tr(V.workBody)),h('p',{class:'village-wallet'},' +$'+earned+' · '+tr(V.money)+' $'+village.money),h('div',{class:'modal-actions'},button(tr(V.next),closeModal,'btn primary'))),{clock:false});
+}
+function buyVillageProject(id){
+ const village=villageStat(),project=villageProject(id);if(!project||village.projects.includes(id))return;
+ if(village.money<project.cost){toast(tr(V.needMoney));return;}
+ village.money-=project.cost;village.projects.push(id);village.growth++;village.reputation++;village.buyPresses++;villageToast();audio.tone('success');toast(tr(V.completed));showVillageBoard();
+}
+function showVillageBoard(){
+ openModal(root=>{
+  const village=villageStat();root.append(h('div',{class:'modal-kicker'},tr(V.board)),h('h2',{},tr(V.title)),h('p',{class:'body-copy'},tr(V.boardBody)),h('p',{class:'village-wallet'},tr(V.money)+' · $'+village.money+' · '+tr(V.growth)+' '+village.growth+'/4'));
+  const list=h('div',{class:'village-project-list'});
+  for(const project of VILLAGE_PROJECTS){const done=village.projects.includes(project.id);list.append(h('article',{class:'village-project '+(done?'done':'')},h('h3',{},(done?'✓ ':'')+tr(project.name)),h('p',{},tr(project.body)),done?null:button(village.money>=project.cost?tr(V.buy)+' · $'+project.cost:tr(V.needMoney),()=>buyVillageProject(project.id),'choice',{disabled:village.money<project.cost,'data-village-project':project.id})));}
+  root.append(list,h('div',{class:'modal-actions'},button(tr('next'),closeModal,'btn primary')));
+ },{clock:false});
+}
+function showVillageLoveScene(){
+ const village=villageStat();village.story=Math.max(1,village.story);
+ openModal(root=>{
+  root.append(h('div',{class:'modal-kicker'},tr(V.richBoy)),h('h2',{},tr(V.mina)),h('p',{class:'body-copy'},tr(V.richBody)),h('p',{class:'modal-note'},tr(V.planBody)));
+  const list=h('div',{class:'choice-list'});
+  list.append(button(tr(V.helpMina),()=>{village.bond+=2;village.reputation++;village.story=2;village.plan='listen';villageToast();closeModal();toast(tr(V.completed));}),button(tr(V.acceptOffer),()=>{if(village.money<80){toast(tr(V.needMoney));return;}village.money-=80;village.buyPresses++;village.story=2;village.plan='leave';villageToast();closeModal();toast(tr(V.purchased));}),button(tr(V.defendShop),()=>{village.reputation+=2;village.story=2;village.plan='stay';villageToast();closeModal();showVillageEncounter('thief');}));
+  root.append(list);
+ },{clock:false});
+}
+function finishVillageEncounter(result){
+ const village=villageStat();recordVillageEncounter(village,result);
+ if(result==='thief-won'){village.money+=35;village.reputation+=2;village.growth=Math.min(4,village.growth+1);village.story=Math.max(2,village.story);}
+ if(result==='thief-fled'){village.money=Math.max(0,village.money-10);village.reputation=Math.max(-9,village.reputation-1);}
+ if(result==='ghost-lit'){village.reputation++;village.growth=Math.min(4,village.growth+1);}
+ if(result==='ghost-listened'){village.bond++;village.story=Math.max(3,village.story);}
+ villageToast();audio.tone(result==='thief-won'||result==='ghost-lit'?'success':'paper');closeModal();toast(tr(result==='thief-won'||result==='ghost-lit'?V.completed:V.next));
+}
+function showVillageEncounter(kind){
+ let moves=0;
+ openModal(root=>{
+  const draw=()=>{
+   const village=villageStat();root.replaceChildren(h('div',{class:'modal-kicker'},tr(kind==='ghost'?V.ghost:V.thief)),h('h2',{},tr(kind==='ghost'?V.forest:V.protect)),h('p',{class:'body-copy'},tr(kind==='ghost'?V.ghostBody:kind==='thief'?V.thiefBody:V.encounterBody)),h('div',{class:'encounter-meter'},h('span',{},tr(V.weapon)+' · '+village.weapon),h('b',{},kind==='ghost'?moves+'/1':moves+'/3')));
+   const actions=h('div',{class:'modal-actions'});
+   if(kind==='ghost'){
+    if(['lantern','bow'].includes(village.weapon))actions.append(button(tr(V.light),()=>{moves=1;finishVillageEncounter('ghost-lit');},'btn primary'));
+    actions.append(button(tr(V.listen),()=>{moves=1;finishVillageEncounter('ghost-listened');},'btn secondary'),button(tr(V.run),()=>finishVillageEncounter('ghost-ran'),'text-btn'));
+   }else if(village.weapon==='none')actions.append(button(tr(V.run),()=>finishVillageEncounter('thief-fled'),'btn primary'));
+   else{
+    actions.append(button(tr(V.strike),()=>{moves++;if(moves>=3)finishVillageEncounter('thief-won');else draw();},'btn primary'),button(tr(V.run),()=>finishVillageEncounter('thief-fled'),'btn secondary'));
+   }
+   root.append(actions);
+  };draw();
+ },{clock:false});
+}
+function villageOutcomeId(){
+ const village=villageStat();if(village.outcome)return village.outcome;
+ let family=6;
+ if(village.plan==='leave'&&village.growth>=3&&village.bond>=2&&village.vehicle==='car'&&village.reputation>=2)family=0;
+ else if(village.plan==='stay'&&village.growth>=3)family=1;
+ else if(village.encounters.includes('ghost-listened'))family=2;
+ else if(village.encounters.includes('thief-won'))family=3;
+ else if(village.plan==='leave')family=4;
+ else if(village.encounters.includes('ghost-ran'))family=5;
+ const variant=family===0?0:Math.abs(village.buyPresses+village.animals.length+village.reputation+village.growth)%4;return `village-${family}-${variant}`;
+}
+function showVillageOutcome(){
+ const village=villageStat(),id=villageOutcomeId(),outcome=VILLAGE_OUTCOMES.find(item=>item.id===id)||VILLAGE_OUTCOMES[0];village.outcome=id;villageToast();
+ openModal(root=>{root.append(h('div',{class:'modal-kicker'},tr(V.outcome)),h('h2',{},tr(outcome.name)),h('p',{class:'body-copy'},tr(outcome.body)),h('p',{class:'modal-note'},tr(V.outcomeCount,{n:VILLAGE_OUTCOMES.indexOf(outcome)+1})),h('div',{class:'modal-actions'},button(tr(V.next),closeModal,'btn primary'),button(tr(V.chooseAgain),()=>{village.outcome=null;showVillageGate();},'btn secondary')));},{clock:false});
+}
+function showVillageGate(){
+ const village=villageStat();if(village.outcome){showVillageOutcome();return;}
+ openModal(root=>root.append(h('div',{class:'modal-kicker'},tr(V.gate)),h('h2',{},tr(V.choose)),h('p',{class:'body-copy'},tr(V.planBody)),h('div',{class:'choice-list'},button(tr(V.leave),()=>{village.plan='leave';showVillageOutcome();}),button(tr(V.stay),()=>{village.plan='stay';showVillageOutcome();}),button(tr(V.listen),()=>{village.plan='listen';showVillageOutcome();}))),{clock:false});
+}
+function interactVillage(entity){
+ if(entity.type==='villageShop'){showVillageShop();return;}
+ if(entity.type==='villageMina'){showVillageLoveScene();return;}
+ if(entity.type==='richBoy'){showVillageLoveScene();return;}
+ if(entity.type==='villageBoard'){showVillageBoard();return;}
+ if(entity.type==='buyKiosk'){showVillageShop();return;}
+ if(entity.type==='vehicleYard'){showVillageShop('vehicle');return;}
+ if(entity.type==='weaponShop'){showVillageShop('weapon');return;}
+ if(entity.type==='villageGate'){showVillageGate();return;}
+ if(entity.type==='forestShrine'||entity.type==='ghost'){showVillageEncounter('ghost');return;}
+ if(entity.type==='thief'){showVillageEncounter('thief');return;}
+ if(entity.type==='animal'){
+  const village=villageStat();if(village.animals.includes(entity.id)){toast(tr(V.completed));return;}
+  if(village.money<5){toast(tr(V.needMoney));return;}village.money-=5;village.animals.push(entity.id);village.bond++;villageToast();audio.tone('success');toast(tr(V.feed));return;
+ }
+}
+function interact(entity){if(modalOpen||!playing)return;if(entity.type==='detail'){showDetail(entity);return;}if(state.zone==='commons'){interactCommons(entity);return;}if(entity.type==='wayback'){goCommons();return;}const ch=CHAPTERS[state.chapter];audio.tone('paper');if(entity.type==='record'){if(!state.records.includes(entity.id)){state.records.push(entity.id);save();}const note=ch.records[entity.slot];openModal(root=>{root.append(h('div',{class:'modal-kicker'},tr('echo')+' · '+String(entity.slot+1).padStart(2,'0')),h('span',{class:'source-tag'},tr(note.source?'sourceLabel':'fictionLabel')),h('h2',{},tr(ch.name)),h('p',{class:'body-copy'},tr(note.body)));if(note.source){const s=SOURCES.find(s=>s.id===note.source);root.append(h('a',{href:s.url,target:'_blank',rel:'noopener noreferrer',class:'text-btn'},s.title));}root.append(h('div',{class:'modal-actions'},button(tr('next'),closeModal,'btn primary')));},{clock:false});return;}
  if(entity.type==='episode'){showEpisode();return;}
  if(entity.type==='station'){if(state.solved.includes(entity.id)){toast(tr('resolved'));return;}showPuzzle(entity);return;}
  if(entity.type==='npc'){if(ch.index===7)showEndingChoices();else{openModal(root=>{const portrait=h('canvas',{width:46,height:52,class:'portrait','aria-hidden':'true'}),c=portrait.getContext('2d');character(c,23,45,{kind:entity.kind,scale:1.3});root.append(h('div',{class:'speaker'},portrait,h('span',{},ch.index===0||ch.index===5?'MINA':ch.index===4?'SATOSHI · FICTION':'ARCHIVE')),h('h2',{},tr(ch.name)),h('p',{class:'body-copy'},tr(ch.intro)),h('div',{class:'modal-actions'},button(tr('next'),closeModal,'btn primary')));},{clock:false});}return;}
@@ -145,7 +257,7 @@ function showReflection(){openModal(root=>renderReflection(root,{state,onSave:sa
 function showGallery(){openModal(root=>renderEndingGallery(root,{state}));}
 
 function showEpisode(){const index=state.chapter,existing=state.microDecisions[index];openModal(root=>{episodeUI=new EpisodeUI({episode:EPISODES[index],container:root,settings,audio,existing,onComplete:option=>{if(addEpisodeDecision(state,index,option)){save();audio.tone('success');}showEpisode();}});episodeUI.render();if(existing!==undefined)root.append(h('div',{class:'modal-actions'},button(tr('next'),closeModal,'btn primary')));},{clock:false});}
-function showJournal(tab='records'){openModal(root=>{root.append(tnode('div','footer','modal-kicker'),tnode('h2','journal'));const tabs=h('div',{class:'journal-tabs',role:'tablist'});for(const k of ['records','decisions','sources'])tabs.append(button(tr(k),()=>showJournal(k),k===tab?'active':'',{role:'tab','aria-selected':tab===k}));root.append(tabs);if(tab==='records'){if(!state.records.length)root.append(tnode('p','emptyJournal','body-copy'));for(const id of [...state.records].sort()){const[index,n]=id.split(':r').map(Number),ch=CHAPTERS[index],note=ch.records[n];root.append(h('div',{class:'journal-entry'},h('h3',{},tr(ch.name)+' / '+(n+1)),h('p',{},tr(note.body)),h('small',{},tr(note.source?'sourceLabel':'fictionLabel'))));}}else if(tab==='decisions'){if(!decisionEvents(state).length)root.append(tnode('p','emptyJournal'));for(const event of decisionEvents(state))root.append(h('div',{class:'journal-entry'},h('h3',{},tr(event.title)),h('p',{},tr(event.text))));}else{root.append(tnode('p','aboutBody','body-copy'));for(const s of SOURCES)root.append(h('div',{class:'journal-entry'},h('a',{href:s.url,target:'_blank',rel:'noopener noreferrer'},s.title)));}},{clock:true});}
+function showJournal(tab='records'){openModal(root=>{root.append(tnode('div','footer','modal-kicker'),tnode('h2','journal'));const tabs=h('div',{class:'journal-tabs',role:'tablist'});for(const k of ['records','decisions','details','sources'])tabs.append(button(k==='details'?tr(DETAIL_UI.archive):tr(k),()=>showJournal(k),k===tab?'active':'',{role:'tab','aria-selected':tab===k}));root.append(tabs);if(tab==='records'){if(!state.records.length)root.append(tnode('p','emptyJournal','body-copy'));for(const id of [...state.records].sort()){const[index,n]=id.split(':r').map(Number),ch=CHAPTERS[index],note=ch.records[n];root.append(h('div',{class:'journal-entry'},h('h3',{},tr(ch.name)+' / '+(n+1)),h('p',{},tr(note.body)),h('small',{},tr(note.source?'sourceLabel':'fictionLabel'))));}}else if(tab==='decisions'){if(!decisionEvents(state).length)root.append(tnode('p','emptyJournal'));for(const event of decisionEvents(state))root.append(h('div',{class:'journal-entry'},h('h3',{},tr(event.title)),h('p',{},tr(event.text))));}else if(tab==='details'){root.append(h('p',{class:'body-copy'},tr(DETAIL_UI.archiveHelp)),h('p',{class:'modal-note'},tr(DETAIL_UI.count,{n:state.detailNotes.length,total:DETAIL_IDS.length})));if(!state.detailNotes.length)root.append(h('p',{class:'emptyJournal'},tr(DETAIL_UI.empty)));for(const id of [...state.detailNotes].sort()){const note=detailFor(id);if(note)root.append(h('div',{class:'journal-entry'},h('h3',{},tr(note.title)),h('p',{},tr(note.body)),button(tr('inspect'),()=>showDetail({id}),'text-btn')));}}else{root.append(tnode('p','aboutBody','body-copy'));for(const s of SOURCES)root.append(h('div',{class:'journal-entry'},h('a',{href:s.url,target:'_blank',rel:'noopener noreferrer'},s.title)));}},{clock:true});}
 function showMap(){engine.capturePosition();if(state.zone==='commons'){showCityMap();return;}openModal(root=>renderRoomMap(root,{state,engine,name:entityName,onTrack:id=>{manualGuide=id;closeModal();toast(tr(G.walking));},onCity:showCityMap,onClose:closeModal}),{clock:true});}
 function showCityMap(){openModal(root=>renderAtlas(root,{state,onVisit:visitMemory,onTrack:id=>{state.tracked=id;save();closeModal();if(state.zone==='chapter')toast(tr(G.return));else toast(tr(W.trail));},onReturn:goCommons,onClose:closeModal,onRoom:state.zone==='chapter'?showMap:null}),{clock:true});}
 function activeGuide(){
@@ -183,8 +295,8 @@ function showGuidance(){
 function visitMemory(index,via='map'){if(!canVisitChapter(state,index)){toast(tr(W.finalLock));return;}if(state.zone==='chapter'&&state.chapter===index){closeModal();return;}engine.capturePosition();engine.setPaused(true);if(!enterChapter(state,index,{via}))return;closeModal({resume:false});loadChapter();}
 function goCommons(){if(state.zone==='commons'){closeModal();return;}engine.capturePosition();engine.setPaused(true);returnToCommons(state);closeModal({resume:false});loadChapter(false);}
 function commonsMessage(title,body,action){openModal(root=>{root.append(h('div',{class:'modal-kicker'},tr(W.optional)),h('h2',{},tr(title)),h('p',{class:'body-copy'},tr(body)));if(action)root.append(h('div',{class:'modal-actions'},button(tr(action.label),action.run,'btn primary')));else root.append(h('div',{class:'modal-actions'},button(tr('next'),closeModal,'btn primary')));},{clock:false});}
-function interactCommons(entity){audio.tone('paper');if(entity.type==='music'){showMusic();return;}if(entity.type==='portal'){visitMemory(entity.chapterIndex,'door');return;}if(entity.type==='notice'){showMap();return;}if(entity.type==='discovery'){if(discover(state,entity.id)){save();audio.tone('success');}if(entity.item==='postcard')commonsMessage(W.postcard,POSTCARDS[entity.slot]);else toast(tr(W.fuse)+' · '+projectCount(state,'fuse')+'/3');updateHUD();return;}if(entity.type==='pondClue'){commonsMessage(W.melody,W.bellHint);return;}if(entity.type==='bell'){const completed=ringBell(state,entity.note);audio.bell(entity.note);save();if(completed)commonsMessage(W.melody,W.bellDone);else toast(tr(W.melody)+' · '+state.bellSequence.length+'/4');hudSignature='';updateHUD();return;}if(entity.type==='workshop'||entity.type==='mailbox'){const lamps=entity.type==='workshop',id=lamps?'lights':'letters',done=state.projects.includes(id),ready=projectCount(state,lamps?'fuse':'postcard')===3;commonsMessage(lamps?W.workshop:W.mailbox,done?(lamps?W.workshopDone:W.mailboxDone):(lamps?W.workshopNeed:W.mailboxNeed),!done&&ready?{label:lamps?W.repair:W.deliver,run:()=>{finishProject(state,id);save();engine.refreshScenery();audio.tone('success');commonsMessage(lamps?W.workshop:W.mailbox,lamps?W.workshopDone:W.mailboxDone);}}:null);}}
-function showPause(){if(!playing)return;openModal(root=>root.append(tnode('div','edition','modal-kicker'),tnode('h2','pauseTitle'),tnode('p','pauseBody','body-copy'),h('div',{class:'choice-list'},button(tr('continue'),closeModal,'btn primary'),button(tr('settings'),showSettings),button(tr(W.return),goCommons),button(tr('export'),exportSave),button(tr(D.gallery),showGallery),button(tr(MT.title),showMusic),button(tr(ENDINGS[4].name),()=>confirmEnding(ENDINGS[4])),button(tr('mainMenu'),titleScreen,'choice',{'data-main-menu':'true'}))),{clock:true});}
+function interactCommons(entity){audio.tone('paper');if(entity.type==='detail'){showDetail(entity);return;}if(['villageShop','villageMina','richBoy','villageBoard','buyKiosk','vehicleYard','weaponShop','villageGate','forestShrine','ghost','thief','animal'].includes(entity.type)){interactVillage(entity);return;}if(entity.type==='music'){showMusic();return;}if(entity.type==='portal'){visitMemory(entity.chapterIndex,'door');return;}if(entity.type==='notice'){showMap();return;}if(entity.type==='discovery'){if(discover(state,entity.id)){save();audio.tone('success');}if(entity.item==='postcard')commonsMessage(W.postcard,POSTCARDS[entity.slot]);else toast(tr(W.fuse)+' · '+projectCount(state,'fuse')+'/3');updateHUD();return;}if(entity.type==='pondClue'){commonsMessage(W.melody,W.bellHint);return;}if(entity.type==='bell'){const completed=ringBell(state,entity.note);audio.bell(entity.note);save();if(completed)commonsMessage(W.melody,W.bellDone);else toast(tr(W.melody)+' · '+state.bellSequence.length+'/4');hudSignature='';updateHUD();return;}if(entity.type==='workshop'||entity.type==='mailbox'){const lamps=entity.type==='workshop',id=lamps?'lights':'letters',done=state.projects.includes(id),ready=projectCount(state,lamps?'fuse':'postcard')===3;commonsMessage(lamps?W.workshop:W.mailbox,done?(lamps?W.workshopDone:W.mailboxDone):(lamps?W.workshopNeed:W.mailboxNeed),!done&&ready?{label:lamps?W.repair:W.deliver,run:()=>{finishProject(state,id);save();engine.refreshScenery();audio.tone('success');commonsMessage(lamps?W.workshop:W.mailbox,lamps?W.workshopDone:W.mailboxDone);}}:null);}}
+function showPause(){if(!playing)return;openModal(root=>root.append(tnode('div','edition','modal-kicker'),tnode('h2','pauseTitle'),tnode('p','pauseBody','body-copy'),h('div',{class:'choice-list'},button(tr('continue'),closeModal,'btn primary'),button(tr('settings'),showSettings),button(tr(W.return),goCommons),button(tr('export'),exportSave),button(tr(D.gallery),showGallery),button(tr(DETAIL_UI.archive),()=>showJournal('details')),button(tr(MT.title),showMusic),button(tr(ENDINGS[4].name),()=>confirmEnding(ENDINGS[4])),button(tr('mainMenu'),titleScreen,'choice',{'data-main-menu':'true'}))),{clock:true});}
 function settingsRow(title,desc,control){return h('label',{class:'settings-row'},h('span',{},tr(title),desc?h('small',{},tr(desc)):null),control);}
 function showSettings(){
  openModal(root=>{

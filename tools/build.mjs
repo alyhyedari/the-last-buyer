@@ -29,7 +29,9 @@ const assets=[];
 async function walk(dir){for(const name of (await readdir(dir)).sort()){const path=join(dir,name),info=await stat(path);if(info.isDirectory())await walk(path);else{const data=await readFile(path);assets.push({file:relative(out,path).split(sep).join('/'),bytes:data.length,gzipBytes:gzipSync(data).length});}}}
 await walk(out);
 const bytes=assets.reduce((n,a)=>n+a.bytes,0),gzipBytes=assets.reduce((n,a)=>n+a.gzipBytes,0);
-const limits={totalGzipBytes:350*1024,scriptGzipBytes:220*1024};
+// The village epilogue adds localized shop, vehicle and fate content; keep a tight
+// production ceiling while leaving room for that authored content.
+const limits={totalGzipBytes:350*1024,scriptGzipBytes:230*1024};
 const script=assets.find(a=>a.file===relative(out,resolve(root,js)).split(sep).join('/'));
 if(gzipBytes>limits.totalGzipBytes||script.gzipBytes>limits.scriptGzipBytes)throw new Error('Production size budget exceeded');
 await mkdir(join(root,'artifacts'),{recursive:true});

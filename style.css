@@ -155,3 +155,16 @@ body[data-accent=violet]{--green:#d2a6ff;--gold:#f0b6d0}
 .phone-landscape .chapter-banner{top:39px;font-size:.65rem;inset-inline:155px;padding:8px}
 .phone-landscape .music-hud{bottom:116px;max-width:160px;font-size:7px}
 .phone-landscape.objectives-open .mission-panel{top:96px;max-height:calc(100dvh - 106px)}
+
+/* Village economy cards keep the new side story readable on desktop and touch screens. */
+.village-wallet{display:flex;justify-content:space-between;gap:12px;direction:inherit;color:#d9e8b9!important;font:12px monospace!important;border-block:1px solid #304b3b;padding:10px 0;margin:12px 0 15px!important}
+.village-shop-list,.village-project-list{display:grid;gap:10px}
+.village-shop-card,.village-project{border:1px solid #365543;background:#142820;padding:11px 12px;border-radius:3px}
+.village-shop-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center}
+.village-shop-card.owned,.village-project.done{opacity:.6;border-color:#536a4c}
+.village-shop-card h3,.village-project h3{font-size:.82rem;color:#d6e7bd;font-weight:500;line-height:1.7;margin:0}
+.village-shop-card p,.village-project p{font-size:.7rem!important;line-height:1.8!important;margin:4px 0 0!important;color:#9eb69d!important}
+.village-shop-card .choice,.village-project .choice{width:auto;min-width:94px;text-align:center;padding:9px 10px;font-size:.69rem}
+.encounter-meter{display:flex;justify-content:space-between;align-items:center;color:#9fb991;border:1px solid #354e40;background:#10211d;padding:8px 10px;font:11px monospace;direction:ltr;margin:13px 0}
+.encounter-meter b{color:#d7e9b1;font-weight:400}
+@media(max-width:560px){.village-shop-card{grid-template-columns:1fr}.village-shop-card .choice,.village-project .choice{width:100%}.village-wallet{font-size:11px!important}.encounter-meter{font-size:10px}}

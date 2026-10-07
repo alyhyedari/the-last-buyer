@@ -47,5 +47,5 @@ export function routeAvailable(state,id){
  return state.chapter===7&&routeRequirements(state,id).every(r=>r.met);
 }
 export function endingSnapshot(state,date=new Date().toISOString()){
- return {decisions:{...state.decisions},microDecisions:{...state.microDecisions},records:[...state.records],projects:[...state.projects],episodes:[...state.episodes],solved:[...state.solved],playSeconds:state.playSeconds,discoveredAt:date,note:state.note,reflectionResponse:state.reflectionResponse};
+ return {decisions:{...state.decisions},microDecisions:{...state.microDecisions},records:[...state.records],projects:[...state.projects],episodes:[...state.episodes],solved:[...state.solved],village:structuredClone(state.village||{}),playSeconds:state.playSeconds,discoveredAt:date,note:state.note,reflectionResponse:state.reflectionResponse};
 }
