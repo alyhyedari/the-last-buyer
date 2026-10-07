@@ -3,6 +3,15 @@ import {CHAPTERS} from './content.js';
 import {canVisitChapter,settledChapters} from './open-world.js';
 import {tr} from './i18n.js';
 const rect=(c,color,x,y,w,h)=>{c.fillStyle=color;c.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));};
+function marketSign(c,x,y,lines,accent='#c8d88f'){
+ const rows=Array.isArray(lines)?lines:[lines],width=Math.max(92,...rows.map(v=>String(v).length*7+18));
+ rect(c,'#061614aa',x-width/2+4,y-rows.length*7+5,width,rows.length*14+10);
+ rect(c,'#102821',x-width/2,y-rows.length*7,width,rows.length*14+7);
+ rect(c,accent,x-width/2,y-rows.length*7,width,2);
+ c.save();c.textAlign='center';c.font='8px monospace';c.fillStyle=accent;
+ rows.forEach((line,i)=>c.fillText(String(line),x,y-rows.length*7+10+i*12));
+ c.restore();
+}
 const paths=[[[956,750],[633,615],[350,351]],[[640,610],[230,610],[230,875]],[[635,605],[659,238]],[[960,655],[1035,205]],[[1060,540],[1370,339]],[[1410,370],[1650,402],[1675,620]],[[1100,824],[1280,1012]],[[955,800],[710,1053]],[[390,960],[709,1053],[1275,1080],[1690,930],[1675,620]],[[230,340],[230,165],[690,165]],[[780,650],[1480,775],[1675,620]]];
 function path(c,points,width,color){c.strokeStyle=color;c.lineWidth=width;c.lineCap='round';c.lineJoin='round';c.beginPath();points.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.stroke();}
 function tree(c,x,y,bloom=false,variant=0){
@@ -12,7 +21,7 @@ function tree(c,x,y,bloom=false,variant=0){
  if(variant)rect(c,'#9fbe7022',x-18,y-52,52,8);
 }
 function building(c,p){
- const{x,y,w,h,variant}=p,colors=[['#66745b','#a4a679'],['#44656b','#97b3a1'],['#66745b','#b6b97c'],['#66736a','#b1b9a1'],['#3b6962','#96c4a4'],['#74644a','#c0a678'],['#76614c','#c4ae80']],[wall,trim]=colors[variant];
+  const{x,y,w,h,variant}=p,colors=[['#66745b','#a4a679'],['#44656b','#97b3a1'],['#66745b','#b6b97c'],['#66736a','#b1b9a1'],['#3b6962','#96c4a4'],['#74644a','#c0a678'],['#76614c','#c4ae80'],['#4e6b61','#a7c093']],[wall,trim]=colors[variant]||colors[0];
  rect(c,'#06181788',x+15,y+22,w+10,h+20);rect(c,wall,x,y,w,h);rect(c,trim,x,y,w,4);rect(c,'#293e39',x+7,y+11,w-14,h-17);
  for(let a=14;a<w-26;a+=39){rect(c,trim,x+a,y+18,28,35);rect(c,'#17332e',x+a+3,y+21,22,28);rect(c,variant===5||variant===6?'#c6ab6999':'#8cae7266',x+a+5,y+22,8,25);rect(c,'#718973',x+a+12,y+21,2,28);}
  rect(c,'#2a433c',x-9,y-27,w+18,25);rect(c,'#557163',x-5,y-32,w+10,7);for(let a=0;a<w;a+=15)rect(c,'#8ea88733',x+a,y-26,3,22);rect(c,trim,x-12,y-8,w+24,5);
@@ -34,13 +43,27 @@ export function makeCommons(world,state){
  for(let y=823;y<971;y+=26)for(let x=90;x<170;x+=22){rect(c,'#516541',x,y,11,13);rect(c,'#a9b773',x+2,y+2,6,3);}
  rect(c,'#233f41',49,1186,1821,65);for(let i=0;i<85;i++)rect(c,'#6b9b9233',55+i*22,1191+(i*19%48),14,1);
  rect(c,'#768566',48,1181,1824,5);for(let x=75;x<1870;x+=76){rect(c,'#6b8063',x,1165,4,20);rect(c,'#a8b98a',x-1,1162,6,3);}
- for(const p of world.props){
+  for(const p of world.props){
   if(p.type==='building')building(c,p);
   if(p.type==='tree')tree(c,p.x,p.y,false,p.x%2);
   if(p.type==='bench'){rect(c,'#10231b66',p.x+5,p.y+10,p.w,18);rect(c,'#8b8e65',p.x,p.y-11,p.w,8);rect(c,'#4b6450',p.x+5,p.y-3,4,28);rect(c,'#4b6450',p.x+p.w-10,p.y-3,4,28);rect(c,'#a2a074',p.x,p.y+6,p.w,6);}
   if(p.type==='pond'){rect(c,'#677b65',p.x-8,p.y-7,p.w+16,p.h+14);rect(c,'#183b40',p.x,p.y,p.w,p.h);rect(c,'#264f51',p.x+9,p.y+8,p.w-18,p.h-16);for(let i=0;i<42;i++)rect(c,'#83b1a442',p.x+11+r()*(p.w-40),p.y+12+r()*(p.h-29),12+r()*16,1);for(let i=0;i<12;i++){const x=p.x+28+(i*71%190),y=p.y+19+(i*43%140);rect(c,'#597b56',x,y,11,7);rect(c,'#89a66b',x+2,y+1,7,2);}}
   if(p.type==='monument'){rect(c,'#162e2888',p.x+7,p.y+16,p.w+13,p.h);rect(c,'#697b57',p.x,p.y,p.w,p.h);rect(c,'#a5ac79',p.x+5,p.y+4,p.w-10,6);rect(c,'#314f3d',p.x+13,p.y+17,p.w-26,p.h-30);rect(c,'#bbba82',p.x+31,p.y-33,22,59);rect(c,'#889a63',p.x+19,p.y-42,46,12);rect(c,'#d2cd90',p.x+25,p.y-46,34,6);}
- }
+  }
+  // Economic traces are part of the architecture: the city prices memory,
+  // queues people, and keeps one old buy button lit after the market closes.
+  const signs=[
+   ['GENESIS / 0.00000001','FIRST EXCHANGE'],
+   ['LIMIT / QUEUE','TIME IS A FEE'],
+   ['PRICE != VALUE','KEEP RECEIPTS'],
+   ['BUY BUTTON / PAUSED','JAN 28 2021'],
+   ['HOLD / EXIT','WHO DECIDES?'],
+   ['TRUST / LEDGER','TWO COPIES'],
+   ['WHO OWNS','THE EXIT?'],
+   ['FIRST ORDER / 2009','KEEP YOUR COPY']
+  ];
+  for(const [i,p] of world.props.map((v,n)=>[n,v]).filter(([,v])=>v.type==='building'))marketSign(c,p.x+p.w/2,p.y+p.h+18,signs[i%signs.length],i===3?'#e2b47c':'#b7d18e');
+  marketSign(c,956,484,['T+0 / PRESS ?','PRICE IS MEMORY'],'#d7c68d');
  tree(c,758,542,state.projects.includes('letters'));
  // Garlands and lanterns form visual landmarks without enclosing the square.
  for(let i=0;i<18;i++){const x=270+i*76,y=397+Math.sin(i/3)*26;c.strokeStyle='#142b26';c.lineWidth=2;c.beginPath();c.moveTo(x,y);c.quadraticCurveTo(x+35,y+20,x+76,397+Math.sin((i+1)/3)*26);c.stroke();rect(c,i%3?'#7f995c':'#b1ab75',x+33,y+13,8,11);if(lit)glow(c,x+36,y+23,'#dcc681',47,.19);}

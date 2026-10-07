@@ -9,6 +9,10 @@ test('English is the fresh and corrupt-settings fallback; chosen languages survi
  assert.equal(readSettings({getItem:()=>'{bad'}).language,'en');
  assert.equal(readSettings({getItem:()=>JSON.stringify({language:'unknown'})}).language,'en');
  for(const language of ORDER)assert.equal(readSettings({getItem:()=>JSON.stringify({language})}).language,language);
+ const custom=readSettings({getItem:()=>JSON.stringify({inputMode:'joystick',avatarTone:'ocean',accent:'violet',joystickScale:1.33})});
+ assert.deepEqual({inputMode:custom.inputMode,avatarTone:custom.avatarTone,accent:custom.accent,joystickScale:custom.joystickScale},{inputMode:'joystick',avatarTone:'ocean',accent:'violet',joystickScale:1.33});
+ const fallback=readSettings({getItem:()=>JSON.stringify({inputMode:'teleport',avatarTone:'unknown',accent:'neon',joystickScale:99})});
+ assert.deepEqual({inputMode:fallback.inputMode,avatarTone:fallback.avatarTone,accent:fallback.accent,joystickScale:fallback.joystickScale},{inputMode:'hybrid',avatarTone:'classic',accent:'green',joystickScale:1.4});
  setLanguage('invalid');assert.equal(getLanguage(),'en');assert.equal(direction(),'ltr');setLanguage('fa');assert.equal(direction(),'rtl');
 });
 test('compact touch detection follows the viewport and does not classify a narrow desktop as a phone',()=>{

@@ -11,6 +11,19 @@
 .touch-actions{display:flex;align-items:flex-end;gap:6px}.touch-actions>div{display:flex;flex-direction:column;gap:5px}#touch-ward,#touch-run{pointer-events:auto;touch-action:none;user-select:none;background:#10221de8;border:1px solid #6d956499;color:#d5eabd;border-radius:7px;width:36px;height:32px;font:20px monospace}
 @media(pointer:coarse){.touch-controls{display:flex}.controls-note{display:none}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* Touch movement modes: the fixed pad yields to a thumb-sized, dynamic stick. */
+body[data-input-mode=click] .dpad,body[data-input-mode=joystick] .dpad{display:none!important}
+.dynamic-stick{--stick-scale:1;position:absolute;left:0;top:0;width:116px;height:116px;z-index:6;display:none;pointer-events:none;transform:translate(-50%,-50%) scale(var(--stick-scale));filter:drop-shadow(0 5px 12px #0008)}
+.dynamic-stick.is-active{display:block}
+.dynamic-stick-base{position:absolute;inset:0;border:1px solid #b6d58c66;border-radius:50%;background:radial-gradient(circle at 50% 50%,#6b9a6555 0 20%,#1c3b31b8 21% 64%,#0b1d19cc 65% 100%);box-shadow:inset 0 0 0 7px #07171355,0 0 0 1px #d4e7a322}
+.dynamic-stick-ring{position:absolute;inset:22px;border:1px dashed #cce6a477;border-radius:50%;opacity:.72}
+.dynamic-stick-knob{position:absolute;left:50%;top:50%;width:45px;height:45px;border:1px solid #e3f4bdc9;border-radius:50%;background:radial-gradient(circle at 34% 28%,#d8efb6,#7ca773 48%,#355743 100%);box-shadow:0 3px 0 #11281c,0 0 16px #b7f57855;transform:translate(-50%,-50%)}
+body[data-accent=amber]{--green:#ffd089;--gold:#efaa72}
+body[data-accent=blue]{--green:#8ed9e5;--gold:#b9c7ff}
+body[data-accent=violet]{--green:#d2a6ff;--gold:#f0b6d0}
+@media(max-width:800px){.dynamic-stick{width:108px;height:108px}.dynamic-stick-knob{width:42px;height:42px}}
+@media(max-height:550px) and (min-width:600px){.dynamic-stick{width:100px;height:100px}.dynamic-stick-knob{width:38px;height:38px}}
 @media(max-height:550px) and (min-width:600px){.topbar{height:54px}.game-screen{padding-top:10px}.game-top{margin-bottom:8px}.play-layout{grid-template-columns:minmax(0,1fr) 190px;max-width:980px;margin:auto}.mission-panel{display:block;padding:10px}.mission-panel h3{font-size:.8rem}.mission-panel p{font-size:.64rem}.mission-panel ol{display:block;font-size:.62rem}.mission-panel li{margin:4px 0}.game-footer{padding:8px 0}.viewport-wrap{max-height:calc(100svh - 148px);aspect-ratio:16/9;width:100%}.touch-controls{display:flex}}
 
 /* Director edition: readable signals, tactile scene controls, no flashing effects. */
@@ -35,6 +48,8 @@
 /* The final choice is a readable route atlas, with three quiet cinematic frames. */
 .modal:has(.ending-offers),.modal:has(.ending-tableau),.modal:has(.ending-atlas){width:min(790px,100%)}
 .ending-count{color:#b8d296!important;font-size:.75rem!important;margin:0 0 16px!important}.ending-family{display:block;color:#abc38c;font-size:.64rem;line-height:1.9;margin-bottom:8px}.ending-offers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px;margin:18px 0}.ending-offer{background:#102320;border:1px solid #486340;border-radius:3px;min-width:0;overflow:hidden}.ending-offer.unavailable{background:#142122;border-color:#354747}.ending-offer .choice{border:0;border-radius:0;width:100%;height:auto;background:transparent;padding:16px;text-align:start;min-height:162px}.ending-offer .choice[aria-disabled=true]{opacity:1;color:#aebeb5;cursor:help}.ending-offer .choice[aria-disabled=true] .ending-family{color:#91a3a2}.ending-offer .choice strong{font-size:1rem;line-height:1.9}.ending-offer .choice small{font-size:.76rem;line-height:2;display:block;margin-top:9px}.ending-offer .choice:hover{background:#253a304d}.ending-offer .ending-clues{margin:0;border-top:1px solid #3b514145;padding:10px 15px}.ending-clues{margin:17px 0;padding:12px 15px;background:#0c1d1c;border:1px solid #364e42;border-radius:3px}.ending-clues>summary{font-size:.75rem;line-height:1.9;color:#becd9d;cursor:pointer;min-height:28px}.ending-clues p{font-size:.76rem!important;line-height:2!important;margin:8px 0}.ending-requirements{padding:0;margin:10px 0 0;list-style:none}.ending-requirements li{display:flex;align-items:flex-start;gap:9px;border-top:1px solid #334b403f;padding:7px 0}.ending-requirements li>span{padding-top:7px;color:#7e9790}.ending-requirements .met>span{color:#baf18f}.ending-requirements .fixed>span{color:#cda676}.ending-requirements li p{margin:0}.ending-requirements small{font-size:.67rem;line-height:1.9;color:#cba679;display:block;margin-top:5px}.modal select[data-ending-family]{display:block;width:100%;min-height:43px;border:1px solid #50654d;background:#122b23;color:#d4e2ba;border-radius:3px;padding:9px 12px;font-size:.83rem}.ending-tableau{display:block;width:100%;height:auto;image-rendering:pixelated;border:1px solid #65755b;margin:15px 0 0;background:#132720}.ending-shots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;border:1px solid #485b49;border-top:0;background:#485b49}.ending-shots button{padding:12px 7px;background:#112923;color:#9bada1;font-size:.72rem;line-height:1.8;min-height:47px}.ending-shots [aria-selected=true]{background:#a1bf82;color:#152c22}.ending-frame{min-height:105px;margin-top:19px!important;animation:ending-in .32s ease-out}.ending-film-controls{display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid #3c5140;padding-bottom:12px}.ending-shot-count{font:12px monospace;color:#97aa8d}.ending-film-controls .text-btn{font-size:.77rem;min-height:35px}.ending-actions{gap:9px}.ending-actions .btn{font-size:.78rem;line-height:1.8}.ending-atlas{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:18px;align-items:start}.ending-atlas .gallery-card{min-width:0;padding:13px;background:#11241f}.ending-atlas .gallery-card>summary{align-items:center;min-height:59px;gap:12px}.ending-atlas summary small{color:#8b9f88;font-size:.64rem;display:block;margin-bottom:5px}.ending-atlas summary strong{font-size:.82rem;line-height:1.9}.ending-atlas .body-copy{font-size:.78rem}.ending-atlas h3{font-size:.79rem;line-height:1.9;color:#b8d296;margin-top:18px}.ending-atlas .ending-clues{padding:10px}.ending-atlas .ending-tableau{margin-bottom:13px}.ending-atlas .gallery-card[open]{grid-column:1/-1}.ending-atlas .gallery-card[open]>.ending-tableau{max-width:510px;margin-inline:auto}.ending-atlas .gallery-card[open]>summary{border-bottom:1px solid #3b5141;margin-bottom:15px;padding-bottom:12px}
+.ending-glitch{margin:18px 0;padding:13px 15px;background:linear-gradient(90deg,#101e20,#192b24);border:1px solid #af9a5c88;box-shadow:inset 0 0 0 1px #6c8e5b22;position:relative;overflow:hidden}.ending-glitch::before{content:'00:00 / BUY?';display:block;color:#d4be79;font:8px monospace;letter-spacing:1.5px;margin-bottom:8px;opacity:.8}.ending-glitch>summary{cursor:pointer;color:#d4e4b4;font-size:.78rem;line-height:1.8}.ending-glitch p{margin:10px 0 0!important;font-size:.78rem!important;line-height:2!important}.ending-glitch[open]{animation:signal-flicker .5s steps(2,end)}
+@keyframes signal-flicker{0%{transform:translateX(0);filter:none}35%{transform:translateX(1px);filter:hue-rotate(8deg)}70%{transform:translateX(-1px);filter:none}100%{transform:translateX(0)}}
 @keyframes ending-in{from{opacity:.7;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
 .reduced-motion .ending-frame{animation:none}
 @media(prefers-reduced-motion:reduce){.ending-frame{animation:none}}
@@ -96,3 +111,47 @@
 @media(max-width:560px){.rotate-card .modal-actions{flex-direction:column}.rotate-card .btn{width:100%}}
 
 .phone-landscape .chapter-display{min-width:0;flex:1}.phone-landscape .chapter-display>div{min-width:0}.phone-landscape .chapter-no{flex-shrink:0}.phone-landscape .game-tools{flex-shrink:0}.phone-landscape .game-tools .tool-btn,.phone-landscape .game-tools .icon-btn{width:44px;height:44px;min-height:44px}
+
+/* Exploration assistance: always available, with a single clear next action. */
+.guide-rail{display:flex;gap:12px;align-items:stretch;justify-content:space-between;margin:0 0 10px;border:1px solid #57764d;background:#122720;border-radius:3px;min-height:54px;direction:inherit}
+.guide-main{display:flex;align-items:center;gap:12px;min-width:0;flex:1;text-align:start;padding:8px 12px;background:transparent;color:#d4e3b8}
+.guide-main>span:last-child{display:block;min-width:0}
+.guide-mark{display:grid;place-items:center;width:28px;height:28px;border:1px solid #7d995f;color:#c2e794;font:17px monospace;flex-shrink:0}
+.guide-main small{display:block;color:#8da985;font-size:.6rem;margin-bottom:3px}
+.guide-main strong{display:block;color:#d6e6be;font-size:.79rem;line-height:1.7;font-weight:400;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.guide-walk{display:flex;align-items:center;justify-content:center;gap:9px;background:#243c2a;color:#cfe6a5;border-inline-start:1px solid #57764d;padding:10px 15px;font-size:.74rem;line-height:1.5;min-width:44px}
+.guide-walk>span:first-child{font-size:20px}
+.guide-walk:hover,.guide-main:hover{background:#304631}
+.guide-place{color:#94b27c!important;font-size:.76rem!important}
+.guide-destination{font-size:1rem;line-height:1.8;color:#d8e6ba;margin:15px 0}
+.viewport-wrap{max-height:calc(100svh - 268px)}
+.immersive .guide-rail{position:absolute;top:70px;inset-inline:18px;z-index:9;max-width:560px;margin:0;background:#10271eea}
+.immersive .world-caption{top:142px}.immersive .floating-hud{top:142px}.immersive .chapter-banner{top:188px}
+.room-atlas{position:relative;border:1px solid #698050;background:#18312a;margin:18px 0}
+.room-atlas canvas{display:block;width:100%;height:auto;image-rendering:pixelated}
+.room-pin{position:absolute;transform:translate(-50%,-50%);min-width:27px;height:27px;display:grid;place-items:center;background:#153125e8;border:1px solid #c4d694;color:#e6e6b1;font:12px monospace;padding:0;border-radius:2px}
+.room-pin.done{color:#adc59a;background:#293b2a;border-color:#697e58}
+.room-pin:hover{background:#c4d894;color:#173020}
+.room-pin:active:not(:disabled){transform:translate(-50%,-50%)!important}
+.room-you{position:absolute;transform:translate(-50%,-50%);color:#efffd6;font-size:14px;text-shadow:0 0 4px #09251b;pointer-events:none}
+.room-legend{display:flex;gap:10px;flex-wrap:wrap;color:#a9be92;font-size:.68rem;line-height:1.8}
+.room-target-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:16px}
+.room-target-list .choice{font-size:.72rem;line-height:1.8}
+.code-sequence{display:block;direction:ltr;unicode-bidi:isolate;white-space:nowrap;font:24px monospace;color:#dbeaab;text-align:center;margin:13px 0;letter-spacing:3px}
+.code-clue{text-align:start}
+.code-order{font-size:.72rem!important;color:#b4c78f!important;line-height:1.9!important}
+.dial-row,.ledger-board,.ledger-card,.sequence-display,.sequence-pad{direction:ltr;unicode-bidi:isolate}
+.dial-label{font-family:var(--font);font-size:.63rem;color:#9ab082;line-height:1.8}
+#play-clock,#receipt-count,#level-progress-label,.choice-no,.frequency,.route-readout,.puzzle-progress{direction:ltr;unicode-bidi:isolate}
+@media(max-width:560px){.guide-rail{gap:0;min-height:58px}.guide-main{padding:7px 9px;gap:8px}.guide-main strong{font-size:.71rem}.guide-main small{font-size:.55rem}.guide-walk{padding:8px 10px;max-width:105px;font-size:.62rem}.guide-mark{width:23px;height:23px}.viewport-wrap{max-height:none}.room-pin{min-width:24px;height:24px;font-size:11px}.room-target-list{grid-template-columns:1fr}.immersive .guide-rail{inset-inline:10px;top:68px}.immersive .floating-hud{top:139px}.immersive .chapter-banner{top:215px}.dial-row{gap:9px}.dial output,.dial button{width:51px}}
+.phone-landscape .guide-rail{position:relative;top:auto;inset-inline:auto;min-height:44px;height:44px;margin:0;border-radius:0;border-inline:0;max-width:none}
+.phone-landscape .guide-main{padding:3px max(12px,env(safe-area-inset-left));gap:9px}
+.phone-landscape .guide-main small{font-size:.5rem;margin:0}
+.phone-landscape .guide-main strong{font-size:.69rem;line-height:1.45}
+.phone-landscape .guide-mark{width:24px;height:24px}
+.phone-landscape .guide-walk{font-size:.65rem;min-height:44px;max-width:none;padding:4px max(14px,env(safe-area-inset-right));}
+.phone-landscape .viewport-wrap{height:calc(100dvh - 92px);max-height:none}
+.phone-landscape .world-caption{top:8px}.phone-landscape .floating-hud{top:8px}
+.phone-landscape .chapter-banner{top:39px;font-size:.65rem;inset-inline:155px;padding:8px}
+.phone-landscape .music-hud{bottom:116px;max-width:160px;font-size:7px}
+.phone-landscape.objectives-open .mission-panel{top:96px;max-height:calc(100dvh - 106px)}

@@ -31,7 +31,7 @@ test('revisiting the final choice preserves story decisions and keeps independen
 test('all 24 discoveries fit an import, old saves retain their endings without fabricated history',()=>{
  let collection=[],records={};for(const e of ENDINGS){const s=endingJourney(e.id);s.collection=[...collection];s.endingRecords=structuredClone(records);recordEnding(s,e.id);collection=s.collection;records=s.endingRecords;}
  const s=newState(collection,records);assert.equal(collection.length,24);assert.ok(validateState(s));assert.ok(Buffer.byteLength(JSON.stringify(s))<200000);
- const old=endingJourney('witness');old.version=3;old.ending='witness';old.collection=['witness','shared'];delete old.endingRecords;const migrated=validateState(old);assert.equal(migrated.version,4);assert.deepEqual(migrated.collection,['witness','shared']);assert.deepEqual(migrated.endingRecords,{});assert.equal(migrated.ending,'witness');
+ const old=endingJourney('witness');old.version=3;old.ending='witness';old.collection=['witness','shared'];delete old.endingRecords;const migrated=validateState(old);assert.equal(migrated.version,5);assert.deepEqual(migrated.collection,['witness','shared']);assert.deepEqual(migrated.endingRecords,{});assert.equal(migrated.ending,'witness');
 });
 test('ending histories reject corrupt evidence, extra keys, invalid timestamps and unsatisfied routes',()=>{
  const s=endingJourney('palimpsest');recordEnding(s,'palimpsest');

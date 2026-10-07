@@ -50,7 +50,8 @@ export function renderFinale(root,{ending,state,afterword,onReflection,onReplay,
  const select=index=>{for(const [i,node]of [...tabs.children].entries()){node.setAttribute('aria-selected',String(i===index));node.tabIndex=i===index?0:-1;}text.textContent=frames[index];text.setAttribute('aria-labelledby',`ending-shot-${index}`);drawFinale(canvas.getContext('2d'),ending.id,index);status.textContent=`${index+1} / ${frames.length}`;next.hidden=index===frames.length-1;next.onclick=()=>select(index+1);};
  for(let i=0;i<frames.length;i++){const tab=button(tr(ET['act'+i]),()=>select(i),'',{role:'tab',id:`ending-shot-${i}`,'data-ending-shot':i,'aria-controls':'ending-frame'});tab.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();const n=e.key==='Home'?0:e.key==='End'?frames.length-1:(i+(e.key==='ArrowRight'?1:-1)+frames.length)%frames.length;select(n);tabs.children[n].focus();}});tabs.append(tab);}
  const next=button(tr(ET.nextAct),()=>{},'text-btn',{'data-ending-next':''});
- root.append(canvas,tabs,text,h('div',{class:'ending-film-controls'},status,next),clues(state,ending.id,true));if(afterword)root.append(h('p',{class:'modal-note'},afterword));
+  root.append(canvas,tabs,text,h('div',{class:'ending-film-controls'},status,next),clues(state,ending.id,true));if(afterword)root.append(h('p',{class:'modal-note'},afterword));
+  if(state?.records?.length>=12&&state.projects?.includes('melody'))root.append(h('details',{class:'ending-glitch',open:state.records.length>=24},h('summary',{},tr(ET.signalTitle)),h('p',{class:'body-copy'},tr(ET.signalBody))));
  root.append(h('p',{class:'modal-note'},tr(ET.replayNote)),h('div',{class:'modal-actions ending-actions'},button(tr('showReflection'),onReflection,'btn primary'),button(tr(ET.replay),onReplay,'btn',{'data-ending-replay':''}),button(tr(ET.title),onGallery),button(tr('mainMenu'),onMenu)));
  select(0);
 }

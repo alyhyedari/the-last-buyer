@@ -62,7 +62,7 @@ function scenery(){
 function draw(c,base,step,reduced){
  const t=reduced?0:step/60,x=80+Math.sin(t*.5)*70,y=100+Math.cos(t*.4)*55;
  c.drawImage(base,x,y,640,360,0,0,640,360);
- for(let i=0;i<16;i++)character(c,24+i*43%600,90+i*59%244,{kind:i%3?'sam':'mina',walk:reduced?0:t*4+i,facing:i%2?1:-1});
+ for(let i=0;i<16;i++)character(c,24+i*43%600,90+i*59%244,{kind:i%3?'vlad':'mina',walk:reduced?0:t*4+i,facing:i%2?1:-1});
  for(let i=0;i<96;i++){c.fillStyle=i%4?'#62816b':'#c4d5a0';c.fillRect((i*71+t*17)%640,(i*41+t*9)%360,2,2);}
  for(let i=0;i<4;i++)glow(c,85+i*149,95+i%2*150,'#c8d397',72,.15);
 }

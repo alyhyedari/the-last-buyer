@@ -1,6 +1,6 @@
 {
   "name": "the-last-buyer",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
   "description": "An original multilingual pixel adventure about the price of a decision.",
@@ -10,7 +10,8 @@
     "build": "node tools/build.mjs",
     "test": "node --test tests/*.test.mjs",
     "check": "node tools/check.mjs",
-    "test:browser": "node tools/browser-mobile.mjs && node tools/browser-benchmark.mjs && node tools/browser-smoke.mjs && node tools/browser-controls.mjs && node tools/browser-journey.mjs && node tools/browser-open-world.mjs && node tools/browser-audio.mjs && node tools/browser-endings.mjs",
+    "test:browser": "node tools/browser-mobile.mjs && node tools/browser-benchmark.mjs && node tools/browser-smoke.mjs && node tools/browser-input.mjs && node tools/browser-controls.mjs && node tools/browser-journey.mjs && node tools/browser-open-world.mjs && node tools/browser-audio.mjs && node tools/browser-endings.mjs",
+    "test:input": "node tools/browser-input.mjs",
     "preview": "node server.mjs --dist",
     "test:release": "node tools/browser-release.mjs && node tools/browser-mobile.mjs --dist",
     "test:mobile": "node tools/browser-mobile.mjs"
