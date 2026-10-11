@@ -11,7 +11,7 @@ try{const info=await lstat(out);if(info.isSymbolicLink()||await realpath(out)!==
 await rm(out,{recursive:true,force:true});await mkdir(join(out,'assets'),{recursive:true});
 const result=await build({
  absWorkingDir:root,entryPoints:['src/main.js','style.css'],outdir:'dist/assets',
- entryNames:'[name]-[hash]',assetNames:'[name]-[hash]',bundle:true,minify:true,
+ entryNames:'[name]-[hash]',assetNames:'[name]-[hash]',chunkNames:'chunk-[hash]',bundle:true,minify:true,splitting:true,
  charset:'utf8',format:'esm',platform:'browser',target:['es2022'],loader:{'.woff2':'file'},
  metafile:true,legalComments:'none',sourcemap:false
 });
@@ -29,11 +29,16 @@ const assets=[];
 async function walk(dir){for(const name of (await readdir(dir)).sort()){const path=join(dir,name),info=await stat(path);if(info.isDirectory())await walk(path);else{const data=await readFile(path);assets.push({file:relative(out,path).split(sep).join('/'),bytes:data.length,gzipBytes:gzipSync(data).length});}}}
 await walk(out);
 const bytes=assets.reduce((n,a)=>n+a.bytes,0),gzipBytes=assets.reduce((n,a)=>n+a.gzipBytes,0);
-// The village epilogue adds localized shop, vehicle and fate content; keep a tight
-// production ceiling while leaving room for that authored content.
-const limits={totalGzipBytes:350*1024,scriptGzipBytes:230*1024};
+// Afterlight is downloaded only at the gate. The initial script budget includes
+// every statically imported shared chunk, not just the small entry wrapper.
+const limits={totalGzipBytes:400*1024,scriptGzipBytes:232*1024};
 const script=assets.find(a=>a.file===relative(out,resolve(root,js)).split(sep).join('/'));
-if(gzipBytes>limits.totalGzipBytes||script.gzipBytes>limits.scriptGzipBytes)throw new Error('Production size budget exceeded');
+const initial=new Set();
+function visitInitial(path){if(initial.has(path))return;initial.add(path);for(const imported of result.metafile.outputs[path]?.imports||[])if(!imported.external&&imported.kind!=='dynamic-import')visitInitial(imported.path);}
+visitInitial(js);
+const initialScriptGzipBytes=assets.filter(a=>[...initial].some(path=>a.file===relative(out,resolve(root,path)).split(sep).join('/'))).reduce((sum,a)=>sum+a.gzipBytes,0);
 await mkdir(join(root,'artifacts'),{recursive:true});
-await writeFile(join(root,'artifacts/build-report.json'),JSON.stringify({assets,bytes,gzipBytes,limits,entry:script.file,generatedAt:new Date().toISOString()},null,2));
+await writeFile(join(root,'artifacts/build-report.json'),JSON.stringify({assets,bytes,gzipBytes,initialScriptGzipBytes,limits,entry:script.file,generatedAt:new Date().toISOString()},null,2));
+if(gzipBytes>limits.totalGzipBytes||initialScriptGzipBytes>limits.scriptGzipBytes)throw new Error('Production size budget exceeded: total '+(gzipBytes/1024).toFixed(1)+' KiB; initial scripts '+(initialScriptGzipBytes/1024).toFixed(1)+' KiB');
 console.log('Static production build: '+(bytes/1024).toFixed(1)+' KiB raw, '+(gzipBytes/1024).toFixed(1)+' KiB gzip estimate; '+assets.length+' files. Hashed assets; no runtime dependencies.');
+console.log('Initial JavaScript including shared chunks: '+(initialScriptGzipBytes/1024).toFixed(1)+' KiB gzip; Afterlight loaded at the gate.');

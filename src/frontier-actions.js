@@ -1,0 +1,6 @@
+import {VEHICLES,hash,gameDay,advanceTime,earn} from './frontier-state.js';
+export function startDelivery(state){const f=state.frontier;if(f.job)return false;const v=VEHICLES[state.village.vehicle]||VEHICLES.foot,dest=['clinic','club','inn'][Math.floor(hash(f.seed,100+f.jobSerial)*3)];f.jobSerial++;f.job={type:'delivery',destination:dest,reward:24+v.cargo*9,acceptedAt:f.minutes};f.target=dest;return true;}
+export function completeDelivery(state,place){const f=state.frontier;if(!f.job||f.job.destination!==place)return 0;const reward=f.job.reward;f.job=null;f.deliveries++;earn(state,reward);state.village.reputation=Math.min(99,state.village.reputation+1);advanceTime(f,15);return reward;}
+export function repairResult(state,correct){if(!correct)return false;const f=state.frontier;f.repairs++;earn(state,32+Math.min(18,f.repairs*2));advanceTime(f,45);return true;}
+export function catchFish(state,release=false){const f=state.frontier;advanceTime(f,20);if(release)f.released++;else{f.fish++;earn(state,12+Math.floor(hash(f.seed,f.fish+gameDay(f))*19));}return true;}
+export function talk(state,choice){const f=state.frontier;if(f.lastTalkDay===gameDay(f))return false;f.lastTalkDay=gameDay(f);f.trust=Math.max(0,Math.min(6,f.trust+(choice==='listen'?1:-1)));advanceTime(f,30);return true;}

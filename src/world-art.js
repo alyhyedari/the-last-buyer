@@ -116,7 +116,7 @@ export function worldEntityArt(c,e,state,time){
   }else if(e.type==='weaponShop'){
    weaponHut(c,{x:x-45,y:y-18,w:90,h:58});c.fillStyle='#d1bb7f';c.font='7px monospace';c.textAlign='center';c.fillText('DEFEND',x,y-28);
   }else if(e.type==='richBoy'){
-   rect(c,'#0b1b1a88',x-46,y+5,91,15);rect(c,'#6a6e62',x-44,y-13,78,17);rect(c,'#b4b788',x-35,y-10,56,11);rect(c,'#273d38',x-28,y-7,42,7);rect(c,'#1a2a28',x-31,y+2,10,7);rect(c,'#1a2a28',x+18,y+2,10,7);character(c,x+4,y-19,{kind:'trader',walk:0,scale:.9,facing:-1});marketSign(c,x,y-48,['BUY HER?','OFFER'], '#e0b36f');
+   rect(c,'#0b1b1a88',x-46,y+5,91,15);rect(c,'#6a6e62',x-44,y-13,78,17);rect(c,'#b4b788',x-35,y-10,56,11);rect(c,'#273d38',x-28,y-7,42,7);rect(c,'#1a2a28',x-31,y+2,10,7);rect(c,'#1a2a28',x+18,y+2,10,7);character(c,x+4,y-19,{kind:'trader',walk:0,scale:.9,facing:-1});marketSign(c,x,y-48,['CITY JOB','OFFER'], '#e0b36f');
   }else if(e.type==='forestShrine'){
    rect(c,'#6f7352',x-28,y-5,56,12);rect(c,'#b4a879',x-34,y-13,68,7);rect(c,'#385b49',x-19,y-35,38,23);rect(c,'#a7bd7d',x-9,y-29,18,4);rect(c,'#6d8d62',x-3,y-24,6,10);marketSign(c,x,y-46,['LISTEN','NO PRICE'],'#b8d18d');
   }else if(e.type==='ghost'){

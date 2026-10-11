@@ -1,3 +1,6 @@
+import {ft} from './frontier-entry-text.js';
+import {transact,toggleMount,advanceTime,earn} from './frontier-state.js';
+import {createBuyAnimation} from './buy-animation.js';
 import {G} from './guidance-text.js';
 import {nextGuidance,guideComplete} from './guidance.js';
 import {createMobileDisplay} from './mobile.js';
@@ -35,15 +38,19 @@ let settings=readSettings(storage),state=readSave(storage),benchmark=readBenchma
 const audio=new Soundscape();audio.on=settings.sound;audio.volume=settings.volume;audio.mix(settings.musicVolume,settings.effectsVolume);audio.setPattern(settings.musicPattern);
 const engine=new Engine($('world'),{settings,onInteract:interact,onHud:updateHUD,onCaught:()=>toast(tr('caught')),onShadow:kind=>{if(kind==='near')toast(tr(D.hideHelp));else audio.tone('ward');},onEvent:kind=>{toast(tr(D[kind+'Cue']));audio.tone('paper');save();},onStep:quiet=>audio.step(quiet),getBeat:()=>audio.transport()});
 const joystick=mountDynamicJoystick({surface:$('world'),root:$('dynamic-stick'),onVector:vector=>engine.setAnalog(vector.x,vector.y),onEnd:()=>engine.setAnalog(0,0)});
-let benchmarkSkipped=false,displayBlocked=false,manualGuide=null;
+let benchmarkSkipped=false,displayBlocked=false,manualGuide=null,frontierUI=null,frontierLoading=false;
+const buyAnimation=createBuyAnimation(()=>settings,()=>audio.tone('click'));
+const journeyButton=button('',showTravelGuide,'tool-btn frontier-explore',{id:'frontier-travel','aria-label':ft('travel'),title:ft('travel')});
+journeyButton.append(h('span',{'aria-hidden':'true'},'↗'),h('span',{},ft('travel')));
+$('map-btn').before(journeyButton);
 const mobileDisplay=createMobileDisplay({
- getState:()=>({playing,modalOpen,ending:state?.ending}),
- onBlock:blocked=>{displayBlocked=blocked;engine.setPaused(blocked||modalOpen||!playing||document.hidden);syncInputMode();if(blocked)save();}
+ getState:()=>({playing,modalOpen:modalOpen||Boolean(frontierUI)||frontierLoading,ending:state?.ending}),
+ onBlock:blocked=>{displayBlocked=blocked;engine.setPaused(blocked||modalOpen||!playing||document.hidden||Boolean(frontierUI)||frontierLoading);syncInputMode();if(blocked)save();}
 });
 engine.recommend(benchmark?.quality);
 function tnode(tag,key,cls){return h(tag,{class:cls||''},tr(key));}
 function storeSettings(){try{storage.setItem(SETTINGS_KEY,JSON.stringify(settings));}catch{}}
-function save(){if(!state)return;saveOK=writeSave(storage,state);$('save-label').textContent=tr(saveOK?'saved':'savingError');$('save-indicator').style.background=saveOK?'':'#ee8d7f';$('continue-game').hidden=!state;}
+function save(){if(!state)return;saveOK=writeSave(storage,state);$('save-label').textContent=tr(saveOK?'saved':'savingError');$('save-indicator').style.background=saveOK?'':'#ee8d7f';$('continue-game').hidden=!state;return saveOK;}
 function applyTheme(){
  const themes={green:{green:'#b7f578',gold:'#dba765'},amber:{green:'#ffd089',gold:'#efaa72'},blue:{green:'#8ed9e5',gold:'#b9c7ff'},violet:{green:'#d2a6ff',gold:'#f0b6d0'}};
  const theme=themes[settings.accent]||themes.green;
@@ -53,16 +60,16 @@ function applyTheme(){
 function syncInputMode(){
  const mode=['hybrid','click','joystick'].includes(settings.inputMode)?settings.inputMode:'hybrid';
  settings.inputMode=mode;document.body.dataset.inputMode=mode;
- joystick.setScale(settings.joystickScale);joystick.setEnabled(mode==='joystick'&&playing&&!modalOpen&&!displayBlocked);
- const label=tr(INPUT[mode]);$('input-mode-label').textContent=label;$('input-mode').dataset.mode=mode;$('input-mode').setAttribute('aria-label',tr(INPUT.inputMode)+' ? '+label);$('input-mode').title=tr(INPUT.inputMode)+' ? '+label;
+ joystick.setScale(settings.joystickScale);joystick.setEnabled(mode==='joystick'&&playing&&!modalOpen&&!displayBlocked&&!frontierUI&&!frontierLoading);
+ const label=tr(INPUT[mode]);$('input-mode-label').textContent=label;$('input-mode').dataset.mode=mode;$('input-mode').setAttribute('aria-label',tr(INPUT.inputMode)+' · '+label);$('input-mode').title=tr(INPUT.inputMode)+' · '+label;
 }
 function cycleInputMode(){
  const modes=['hybrid','click','joystick'],index=modes.indexOf(settings.inputMode),mode=modes[(index+1)%modes.length];
  settings.inputMode=mode;storeSettings();syncInputMode();toast(tr(INPUT[mode]));
 }
 function translate(){
- setLanguage(settings.language);document.documentElement.lang=getLanguage()==='zh'?'zh-Hans':getLanguage();document.documentElement.dir=direction();document.title=tr('titleA')+' '+tr('titleB')+' ? THE LAST BUYER';document.body.classList.toggle('reduced-motion',settings.reducedMotion);document.documentElement.style.setProperty('--text-scale',settings.textSize);document.querySelectorAll('[data-t]').forEach(el=>el.textContent=tr(el.dataset.t));
- $('gallery').textContent=tr(ET.title);$('ending-total').textContent=String(ENDINGS.length).padStart(2,'0');$('music-room').textContent=tr(MT.title);$('benchmark-menu').textContent=tr(BT.menu);$('benchmark-menu').setAttribute('aria-label',tr(BT.menu));$('music-hud').setAttribute('aria-label',tr(MT.title));$('focus-mode').setAttribute('aria-label',tr(D.focus));$('focus-mode').title=tr(D.focus);$('objective-toggle').setAttribute('aria-label',tr(W.tasks));$('journal').setAttribute('aria-label',tr('journal'));$('map-btn').setAttribute('aria-label',tr(W.atlas));$('return-commons').setAttribute('aria-label',tr(W.return));$('floating-map-button').setAttribute('aria-label',tr(W.atlas));$('crouch-label').textContent=tr(D.crouch);$('language').value=settings.language;$('language').setAttribute('aria-label',tr('language'));$('sound').setAttribute('aria-label',tr('sound'));$('settings').setAttribute('aria-label',tr('settings'));$('pause').setAttribute('aria-label',tr('pauseTitle'));$('modal-close').setAttribute('aria-label',tr('close'));$('world').setAttribute('aria-label',tr('move')+' ? '+tr('interact'));$('touch-interact').setAttribute('aria-label',tr('interact'));document.querySelector('.mission-panel').dir=direction();$('sound').textContent=settings.sound?'?':'?';$('sound').setAttribute('aria-pressed',settings.sound);applyTheme();syncInputMode();mobileDisplay.translate();if(playing)updateHUD();
+ setLanguage(settings.language);journeyButton.lastElementChild.textContent=ft('travel');journeyButton.setAttribute('aria-label',ft('travel'));journeyButton.title=ft('travel');document.documentElement.lang=getLanguage()==='zh'?'zh-Hans':getLanguage();document.documentElement.dir=direction();document.title=tr('titleA')+' '+tr('titleB')+' · THE LAST BUYER';document.body.classList.toggle('reduced-motion',settings.reducedMotion);document.documentElement.style.setProperty('--text-scale',settings.textSize);document.querySelectorAll('[data-t]').forEach(el=>el.textContent=tr(el.dataset.t));
+ $('gallery').textContent=tr(ET.title);$('ending-total').textContent=String(ENDINGS.length).padStart(2,'0');$('music-room').textContent=tr(MT.title);$('benchmark-menu').textContent=tr(BT.menu);$('benchmark-menu').setAttribute('aria-label',tr(BT.menu));$('music-hud').setAttribute('aria-label',tr(MT.title));$('focus-mode').setAttribute('aria-label',tr(D.focus));$('focus-mode').title=tr(D.focus);$('objective-toggle').setAttribute('aria-label',tr(W.tasks));$('journal').setAttribute('aria-label',tr('journal'));$('map-btn').setAttribute('aria-label',tr(W.atlas));$('return-commons').setAttribute('aria-label',tr(W.return));$('floating-map-button').setAttribute('aria-label',tr(W.atlas));$('crouch-label').textContent=tr(D.crouch);$('language').value=settings.language;$('language').setAttribute('aria-label',tr('language'));$('sound').setAttribute('aria-label',tr('sound'));$('settings').setAttribute('aria-label',tr('settings'));$('pause').setAttribute('aria-label',tr('pauseTitle'));$('modal-close').setAttribute('aria-label',tr('close'));$('world').setAttribute('aria-label',tr('move')+' · '+tr('interact'));$('touch-interact').setAttribute('aria-label',tr('interact'));document.querySelector('.mission-panel').dir=direction();$('sound').textContent=settings.sound?'♫':'♪';$('sound').setAttribute('aria-pressed',settings.sound);applyTheme();syncInputMode();mobileDisplay.translate();if(playing)updateHUD();
 }
 for(const lang of LANGUAGES)$('language').append(h('option',{value:lang.id},lang.name));
 $('language').addEventListener('change',()=>{settings.language=$('language').value;storeSettings();translate();});
@@ -74,12 +81,12 @@ $('new-game').addEventListener('click',()=>{if(state)openModal(root=>root.append
 $('continue-game').addEventListener('click',()=>{if(!state)return;ensureBenchmark(()=>{audio.start();enterGame();loadChapter(false);if(state.ending)showEnding(state.ending);});});
 function beginNew(){ensureBenchmark(beginNewAfterBenchmark);}
 function beginNewAfterBenchmark(){closeModal();session++;state=newState(state?.collection||[],state?.endingRecords||{});save();enterGame();loadChapter(false);openModal(root=>{root.append(tnode('div','edition','modal-kicker'),tnode('h2','startTitle'),tnode('p','startBody','body-copy'),h('div',{class:'onboarding-keys'},h('span',{},h('kbd',{},'W A S D'),tr('move')),h('span',{},h('kbd',{},'E'),tr('interact')),h('span',{},h('kbd',{},'SPACE'),tr('ward'))),tnode('p','startNote','modal-note'),h('div',{class:'modal-actions'},button(tr('settings'),showSettings),button(tr('newGame'),()=>{closeModal();showChapterIntro();},'btn primary')));},{clock:true});}
-function enterGame(){playing=true;document.body.classList.add('playing');$('menu').hidden=true;$('game').hidden=false;engine.active=true;audio.set(settings.sound,settings.volume);syncInputMode();window.scrollTo({top:0,behavior:'instant'});mobileDisplay.sync();void mobileDisplay.requestLandscape();}
-function loadChapter(intro=true){const location=state.zone==='commons'?COMMONS:CHAPTERS[state.chapter];manualGuide=null;engine.load(location,state);document.body.classList.toggle('in-commons',state.zone==='commons');audio.chapter(state.zone==='commons'?8:state.chapter);engine.setPaused(displayBlocked||document.hidden);hudSignature='';updateHUD();save();$('world').focus({preventScroll:true});clearTimeout(bannerTimer);$('chapter-banner').textContent=state.zone==='commons'?tr(W.title):tr(D.level)+' '+(state.chapter+1)+' · '+tr(CHAPTERS[state.chapter].name);$('chapter-banner').hidden=false;bannerTimer=setTimeout(()=>{$('chapter-banner').hidden=true;},4200);if(intro)showChapterIntro();}
+function enterGame(){playing=true;document.body.classList.add('playing');if(window.matchMedia('(pointer:fine) and (min-width:900px)').matches){document.body.classList.add('immersive');$('focus-mode').setAttribute('aria-pressed','true');try{document.documentElement.requestFullscreen?.().catch(()=>{});}catch{}}$('menu').hidden=true;$('game').hidden=false;engine.active=true;audio.set(settings.sound,settings.volume);syncInputMode();window.scrollTo({top:0,behavior:'instant'});mobileDisplay.sync();void mobileDisplay.requestLandscape();}
+function loadChapter(intro=true){const location=state.zone==='commons'?COMMONS:CHAPTERS[state.chapter];manualGuide=null;engine.load(location,state);document.body.classList.toggle('in-commons',state.zone==='commons');audio.chapter(state.zone==='commons'?8:state.chapter);engine.setPaused(displayBlocked||document.hidden||Boolean(frontierUI)||frontierLoading);hudSignature='';updateHUD();save();$('world').focus({preventScroll:true});clearTimeout(bannerTimer);$('chapter-banner').textContent=state.zone==='commons'?tr(W.title):tr(D.level)+' '+(state.chapter+1)+' · '+tr(CHAPTERS[state.chapter].name);$('chapter-banner').hidden=false;bannerTimer=setTimeout(()=>{$('chapter-banner').hidden=true;},4200);if(state.frontier.active)void enterFrontier(true);else if(intro)showChapterIntro();}
 function showChapterIntro(){const outdoors=state.zone==='commons',chapter=outdoors?COMMONS:CHAPTERS[state.chapter];openModal(root=>{root.append(h('div',{class:'modal-kicker',dir:'ltr'},outdoors?chapter.era:`${String(chapter.index+1).padStart(2,'0')} / 08 · ${chapter.era}`),h('h2',{},tr(chapter.name)),h('p',{class:'body-copy'},tr(chapter.intro)),h('div',{class:'modal-actions'},button(tr('next'),closeModal,'btn primary')));},{clock:false});}
 function titleScreen(){document.body.classList.remove('immersive','playing','objectives-open');$('focus-mode').setAttribute('aria-pressed','false');closeModal();playing=false;engine.active=false;engine.setPaused(true);mobileDisplay.leave();save();$('menu').hidden=false;$('game').hidden=true;$('continue-game').hidden=!state;audio.suspend(false);$('continue-game').focus();}
 function openModal(builder,{clock=true}={}){if(!modalOpen)previousFocus=document.activeElement;puzzle?.dispose();puzzle=null;episodeUI?.dispose();episodeUI=null;musicUI?.dispose();musicUI=null;benchmarkUI?.dispose();benchmarkUI=null;modalBuilder=builder;modalOpen=true;clockPaused=clock;engine.setPaused(true);syncInputMode();$('interaction-prompt').hidden=true;$('modal-backdrop').hidden=false;$('app').inert=true;$('modal-content').replaceChildren();builder($('modal-content'));$('modal').focus({preventScroll:true});mobileDisplay.sync();}
-function closeModal({resume=true}={}){puzzle?.dispose();puzzle=null;episodeUI?.dispose();episodeUI=null;musicUI?.dispose();musicUI=null;benchmarkUI?.dispose();benchmarkUI=null;modalBuilder=null;modalOpen=false;clockPaused=false;$('modal-backdrop').hidden=true;$('app').inert=false;engine.setPaused(!resume||!playing||document.hidden||displayBlocked);syncInputMode();if(resume)save();if(playing&&resume){$('world').focus({preventScroll:true});updateHUD();}else if(previousFocus?.isConnected)previousFocus.focus({preventScroll:true});mobileDisplay.sync();}
+function closeModal({resume=true}={}){puzzle?.dispose();puzzle=null;episodeUI?.dispose();episodeUI=null;musicUI?.dispose();musicUI=null;benchmarkUI?.dispose();benchmarkUI=null;modalBuilder=null;modalOpen=false;clockPaused=false;$('modal-backdrop').hidden=true;$('app').inert=false;engine.setPaused(!resume||!playing||document.hidden||displayBlocked||Boolean(frontierUI)||frontierLoading);syncInputMode();if(resume)save();if(playing&&resume){$('world').focus({preventScroll:true});updateHUD();}else if(previousFocus?.isConnected)previousFocus.focus({preventScroll:true});mobileDisplay.sync();}
 function dismissModal(){if(playing&&state?.ending)titleScreen();else closeModal();}
 $('modal-close').addEventListener('click',dismissModal);
 function ensureBenchmark(after=()=>{}){if(benchmark||benchmarkSkipped)after();else showBenchmark(after);}
@@ -93,8 +100,8 @@ function showBenchmark(after=()=>{}){
  });},{clock:true});
 }
 $('benchmark-menu').addEventListener('click',()=>showBenchmark());
-document.addEventListener('keydown',e=>{if(modalOpen){if(e.code==='Escape'){e.preventDefault();dismissModal();return;}if(e.code==='Tab'){const nodes=[...$('modal').querySelectorAll('button:not(:disabled),a[href],input,select,textarea,summary,[tabindex="0"]')].filter(el=>!el.hidden&&el.getClientRects().length);if(!nodes.length){e.preventDefault();return;}const first=nodes[0],last=nodes.at(-1);if(e.shiftKey&&(document.activeElement===first||document.activeElement===$('modal'))){e.preventDefault();last.focus();}else if(!e.shiftKey&&(document.activeElement===last||document.activeElement===$('modal'))){e.preventDefault();first.focus();}}return;}if(!playing||e.target.matches('input,select,textarea'))return;if(e.code==='Escape'){e.preventDefault();showPause();}if(e.code==='KeyJ'){e.preventDefault();showJournal();}if(e.code==='KeyM'){e.preventDefault();showMap();}if(e.code==='KeyH'){e.preventDefault();showGuidance();}});
-document.addEventListener('visibilitychange',()=>{engine.setPaused(document.hidden||modalOpen||!playing||displayBlocked);audio.suspend(document.hidden);if(document.hidden)save();});
+document.addEventListener('keydown',e=>{if(frontierUI||frontierLoading)return;if(modalOpen){if(e.code==='Escape'){e.preventDefault();dismissModal();return;}if(e.code==='Tab'){const nodes=[...$('modal').querySelectorAll('button:not(:disabled),a[href],input,select,textarea,summary,[tabindex="0"]')].filter(el=>!el.hidden&&el.getClientRects().length);if(!nodes.length){e.preventDefault();return;}const first=nodes[0],last=nodes.at(-1);if(e.shiftKey&&(document.activeElement===first||document.activeElement===$('modal'))){e.preventDefault();last.focus();}else if(!e.shiftKey&&(document.activeElement===last||document.activeElement===$('modal'))){e.preventDefault();first.focus();}}return;}if(!playing||e.target.matches('input,select,textarea'))return;if(e.code==='Escape'){e.preventDefault();showPause();}if(e.code==='KeyJ'){e.preventDefault();showJournal();}if(e.code==='KeyM'){e.preventDefault();showMap();}if(e.code==='KeyH'){e.preventDefault();showGuidance();}});
+document.addEventListener('visibilitychange',()=>{engine.setPaused(document.hidden||modalOpen||!playing||displayBlocked||Boolean(frontierUI)||frontierLoading);audio.suspend(document.hidden);if(document.hidden)save();});
 window.addEventListener('pagehide',save);
 for(const b of document.querySelectorAll('[data-dir]')){b.addEventListener('pointerdown',e=>{e.preventDefault();b.setPointerCapture(e.pointerId);engine.touch(b.dataset.dir,true);});for(const event of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(event,()=>engine.touch(b.dataset.dir,false));}
 $('touch-interact').addEventListener('click',()=>engine.interact());
@@ -105,7 +112,8 @@ $('touch-run').addEventListener('pointerdown',e=>{e.preventDefault();$('touch-ru
 for(const event of ['pointerup','pointercancel','lostpointercapture'])$('touch-run').addEventListener(event,()=>engine.keys.delete('ShiftLeft'));
 function toast(text){clearTimeout(toastTimer);$('toast').textContent=text;$('toast').hidden=false;toastTimer=setTimeout(()=>{$('toast').hidden=true;},4200);}
 function updateHUD(){
- if(!state||!playing)return;
+ if(!state||!playing||frontierUI)return;
+ journeyButton.hidden=state.zone!=='commons';
  const ch=state.zone==='commons'?COMMONS:CHAPTERS[state.chapter],villageSig=state.village?JSON.stringify(state.village):'',signature=[state.zone,ch.index,getLanguage(),state.solved.join(','),state.records.join(','),state.episodes.join(','),state.discoveries.join(','),state.detailNotes.join(','),state.projects.join(','),state.tracked,villageSig,Object.keys(state.decisions).join(','),saveOK].join('|');
  // Narrative DOM changes only when the data changes, independently of render FPS.
  if(signature!==hudSignature){
@@ -136,10 +144,11 @@ function villageToast(){save();hudSignature='';updateHUD();}
 function villageItemLabel(item){return tr(item.name)+' · $'+item.cost;}
 function buyVillageItem(id){
  const village=villageStat(),item=villageItem(id);if(!item)return;
- if(village.money<item.cost){toast(tr(V.needMoney));return;}
- village.money-=item.cost;village.buyPresses++;
+ const owned=item.kind==='weapon'?village.weapons:village.vehicles;if(owned.includes(id)){if(item.kind==='weapon')village.weapon=id;else village.vehicle=id;villageToast();closeModal();return;}
+ if(!transact(state,item.cost)){toast(tr(V.needMoney));return;}
+ owned.push(id);buyAnimation.play();
  if(item.kind==='weapon')village.weapon=id;
- if(item.kind==='vehicle')village.vehicle=id;
+ if(item.kind==='vehicle'){village.vehicle=id;state.frontier.mounted=false;}
  village.reputation+=item.kind==='vehicle'?1:0;
  villageToast();audio.tone('success');toast(tr(V.purchased));closeModal();
 }
@@ -148,19 +157,25 @@ function showVillageShop(filter='all'){
  openModal(root=>{
   const village=villageStat();root.append(h('div',{class:'modal-kicker'},tr(V.buy)),h('h2',{},tr(V.shop)),h('p',{class:'body-copy'},tr(V.workBody)),h('p',{class:'village-wallet'},tr(V.money)+' · $'+village.money));
   const list=h('div',{class:'village-shop-list'});
-  for(const item of items){const owned=item.kind==='weapon'?village.weapon===item.id:village.vehicle===item.id;list.append(h('article',{class:'village-shop-card '+(owned?'owned':'')},h('div',{},h('h3',{},tr(item.name)),h('p',{},tr(item.body))),button(owned?'✓ '+tr(V.purchased):village.money>=item.cost?villageItemLabel(item):'× '+villageItemLabel(item),()=>{if(!owned)buyVillageItem(item.id);},'choice',{disabled:owned||village.money<item.cost,'data-village-buy':item.id})));}
-  root.append(list,h('div',{class:'modal-actions'},filter==='all'?button(tr(V.work),workVillageShift,'btn secondary'):null,button(tr('next'),closeModal,'btn primary')));
+  for(const item of items){const owned=(item.kind==='weapon'?village.weapons:village.vehicles).includes(item.id),selected=(item.kind==='weapon'?village.weapon:village.vehicle)===item.id;list.append(h('article',{class:'village-shop-card '+(owned?'owned':'')},h('div',{},h('h3',{},tr(item.name)),h('p',{},tr(item.body))),button(owned?'✓ '+tr(V.purchased):village.money>=item.cost?villageItemLabel(item):'× '+villageItemLabel(item),()=>buyVillageItem(item.id),'choice',{disabled:selected||(!owned&&village.money<item.cost),'data-village-buy':item.id})));}
+  root.append(list,h('div',{class:'modal-actions'},filter==='vehicle'?button(ft('mount'),()=>{if(toggleMount(state)){closeModal();villageToast();}else toast(ft('mountBlocked'));},'btn primary',{disabled:village.vehicle==='foot'}):null,filter==='all'?button(tr(V.work),workVillageShift,'btn secondary'):null,button(tr('next'),closeModal,'btn primary')));
  },{clock:false});
 }
 function workVillageShift(){
- const village=villageStat(),earned=28+village.reputation*4+(village.vehicle==='bike'?4:village.vehicle==='motorcycle'?8:village.vehicle==='car'?12:0);
- village.money+=earned;village.reputation++;village.bond=Math.min(9,village.bond+1);village.story=Math.max(1,village.story);village.buyPresses++;villageToast();audio.tone('success');
- openModal(root=>root.append(h('div',{class:'modal-kicker'},tr(V.work)),h('h2',{},tr(V.mina)),h('p',{class:'body-copy'},tr(V.workBody)),h('p',{class:'village-wallet'},' +$'+earned+' · '+tr(V.money)+' $'+village.money),h('div',{class:'modal-actions'},button(tr(V.next),closeModal,'btn primary'))),{clock:false});
+ const village=villageStat(),sequence=[1+(state.frontier.repairs%3),2,4];let index=0,done=false;
+ openModal(root=>{
+  root.append(h('div',{class:'modal-kicker'},tr(V.work)),h('h2',{},tr(V.mina)),h('p',{class:'body-copy'},ft('repairHelp')),h('p',{class:'frontier-sequence',dir:'ltr'},sequence.join(' → ')));
+  const feedback=h('p',{role:'status'},'0 / 3'),row=h('div',{class:'frontier-note-keys',dir:'ltr'});
+  for(let n=1;n<=4;n++)row.append(button(String(n),()=>{if(done)return;audio.tone('click');if(n!==sequence[index]){index=0;feedback.textContent=ft('retry');return;}index++;feedback.textContent=index+' / 3';if(index!==3)return;done=true;
+   const earned=Math.max(20,28+Math.min(10,village.reputation)*2+(village.vehicle==='bike'?4:village.vehicle==='motorcycle'?8:village.vehicle==='car'?12:0));earn(state,earned);state.frontier.repairs++;advanceTime(state.frontier,45);village.reputation=Math.min(99,village.reputation+1);village.bond=Math.min(9,village.bond+1);village.story=Math.max(1,village.story);villageToast();audio.tone('success');
+   row.replaceChildren();feedback.textContent=ft('complete')+' · +$'+earned;root.append(button(tr(V.next),closeModal,'btn primary'));
+  },'frontier-note'));root.append(row,feedback);
+ },{clock:true});
 }
 function buyVillageProject(id){
  const village=villageStat(),project=villageProject(id);if(!project||village.projects.includes(id))return;
- if(village.money<project.cost){toast(tr(V.needMoney));return;}
- village.money-=project.cost;village.projects.push(id);village.growth++;village.reputation++;village.buyPresses++;villageToast();audio.tone('success');toast(tr(V.completed));showVillageBoard();
+ if(!transact(state,project.cost)){toast(tr(V.needMoney));return;}
+ buyAnimation.play();village.projects.push(id);village.growth=Math.min(4,village.growth+1);village.reputation=Math.min(99,village.reputation+1);engine.refreshScenery();villageToast();audio.tone('success');toast(tr(V.completed));showVillageBoard();
 }
 function showVillageBoard(){
  openModal(root=>{
@@ -171,16 +186,16 @@ function showVillageBoard(){
  },{clock:false});
 }
 function showVillageLoveScene(){
- const village=villageStat();village.story=Math.max(1,village.story);
+ const village=villageStat();if(village.loveChoice){toast(tr(V.completed));return;}village.story=Math.max(1,village.story);
  openModal(root=>{
   root.append(h('div',{class:'modal-kicker'},tr(V.richBoy)),h('h2',{},tr(V.mina)),h('p',{class:'body-copy'},tr(V.richBody)),h('p',{class:'modal-note'},tr(V.planBody)));
   const list=h('div',{class:'choice-list'});
-  list.append(button(tr(V.helpMina),()=>{village.bond+=2;village.reputation++;village.story=2;village.plan='listen';villageToast();closeModal();toast(tr(V.completed));}),button(tr(V.acceptOffer),()=>{if(village.money<80){toast(tr(V.needMoney));return;}village.money-=80;village.buyPresses++;village.story=2;village.plan='leave';villageToast();closeModal();toast(tr(V.purchased));}),button(tr(V.defendShop),()=>{village.reputation+=2;village.story=2;village.plan='stay';villageToast();closeModal();showVillageEncounter('thief');}));
+  list.append(button(tr(V.helpMina),()=>{village.bond+=2;village.reputation++;village.story=2;village.plan='listen';village.loveChoice='listen';villageToast();closeModal();toast(tr(V.completed));}),button(tr(V.acceptOffer),()=>{if(!transact(state,80)){toast(tr(V.needMoney));return;}buyAnimation.play();village.story=2;village.plan='leave';village.loveChoice='leave';villageToast();closeModal();toast(tr(V.purchased));}),button(tr(V.defendShop),()=>{village.reputation+=2;village.story=2;village.plan='stay';village.loveChoice='stay';villageToast();closeModal();showVillageEncounter('thief');}));
   root.append(list);
  },{clock:false});
 }
 function finishVillageEncounter(result){
- const village=villageStat();recordVillageEncounter(village,result);
+ const village=villageStat();if(!recordVillageEncounter(village,result)){closeModal();toast(tr(V.completed));return;}
  if(result==='thief-won'){village.money+=35;village.reputation+=2;village.growth=Math.min(4,village.growth+1);village.story=Math.max(2,village.story);}
  if(result==='thief-fled'){village.money=Math.max(0,village.money-10);village.reputation=Math.max(-9,village.reputation-1);}
  if(result==='ghost-lit'){village.reputation++;village.growth=Math.min(4,village.growth+1);}
@@ -194,7 +209,7 @@ function showVillageEncounter(kind){
    const village=villageStat();root.replaceChildren(h('div',{class:'modal-kicker'},tr(kind==='ghost'?V.ghost:V.thief)),h('h2',{},tr(kind==='ghost'?V.forest:V.protect)),h('p',{class:'body-copy'},tr(kind==='ghost'?V.ghostBody:kind==='thief'?V.thiefBody:V.encounterBody)),h('div',{class:'encounter-meter'},h('span',{},tr(V.weapon)+' · '+village.weapon),h('b',{},kind==='ghost'?moves+'/1':moves+'/3')));
    const actions=h('div',{class:'modal-actions'});
    if(kind==='ghost'){
-    if(['lantern','bow'].includes(village.weapon))actions.append(button(tr(V.light),()=>{moves=1;finishVillageEncounter('ghost-lit');},'btn primary'));
+    if(village.weapons.includes('lantern'))actions.append(button(tr(V.light),()=>{moves=1;finishVillageEncounter('ghost-lit');},'btn primary'));
     actions.append(button(tr(V.listen),()=>{moves=1;finishVillageEncounter('ghost-listened');},'btn secondary'),button(tr(V.run),()=>finishVillageEncounter('ghost-ran'),'text-btn'));
    }else if(village.weapon==='none')actions.append(button(tr(V.run),()=>finishVillageEncounter('thief-fled'),'btn primary'));
    else{
@@ -213,15 +228,29 @@ function villageOutcomeId(){
  else if(village.encounters.includes('thief-won'))family=3;
  else if(village.plan==='leave')family=4;
  else if(village.encounters.includes('ghost-ran'))family=5;
- const variant=family===0?0:Math.abs(village.buyPresses+village.animals.length+village.reputation+village.growth)%4;return `village-${family}-${variant}`;
+ const variant=Math.abs(village.buyPresses+village.animals.length+village.reputation+village.growth)%4;return `village-${family}-${variant}`;
 }
 function showVillageOutcome(){
  const village=villageStat(),id=villageOutcomeId(),outcome=VILLAGE_OUTCOMES.find(item=>item.id===id)||VILLAGE_OUTCOMES[0];village.outcome=id;villageToast();
  openModal(root=>{root.append(h('div',{class:'modal-kicker'},tr(V.outcome)),h('h2',{},tr(outcome.name)),h('p',{class:'body-copy'},tr(outcome.body)),h('p',{class:'modal-note'},tr(V.outcomeCount,{n:VILLAGE_OUTCOMES.indexOf(outcome)+1})),h('div',{class:'modal-actions'},button(tr(V.next),closeModal,'btn primary'),button(tr(V.chooseAgain),()=>{village.outcome=null;showVillageGate();},'btn secondary')));},{clock:false});
 }
 function showVillageGate(){
- const village=villageStat();if(village.outcome){showVillageOutcome();return;}
- openModal(root=>root.append(h('div',{class:'modal-kicker'},tr(V.gate)),h('h2',{},tr(V.choose)),h('p',{class:'body-copy'},tr(V.planBody)),h('div',{class:'choice-list'},button(tr(V.leave),()=>{village.plan='leave';showVillageOutcome();}),button(tr(V.stay),()=>{village.plan='stay';showVillageOutcome();}),button(tr(V.listen),()=>{village.plan='listen';showVillageOutcome();}))),{clock:false});
+ const village=villageStat();
+ openModal(root=>root.append(h('div',{class:'modal-kicker'},ft('travel')),h('h2',{},ft('title')),h('p',{class:'body-copy'},ft('travelHelp')),h('div',{class:'choice-list'},button(ft(village.vehicle==='foot'?'needVehicle':'enter'),()=>village.vehicle==='foot'?showTravelGuide():void enterFrontier(),'btn primary',{'data-frontier-enter':'true'}),button(tr(V.leave),()=>{village.plan='leave';showVillageOutcome();}),button(tr(V.stay),()=>{village.plan='stay';showVillageOutcome();}),button(tr(V.listen),()=>{village.plan='listen';showVillageOutcome();}))),{clock:true});
+}
+function showTravelGuide(){
+ if(!playing||state.zone!=='commons')return;
+ const target=COMMONS.entities.find(e=>e.id===(state.village.vehicle==='foot'?(state.village.money<60?'village-shop':'vehicle-yard'):'village-gate'));
+ state.tracked=target.id;manualGuide=null;closeModal();engine.navigateTo(target);save();updateHUD();toast(target.id==='village-shop'?tr(V.work):ft(state.village.vehicle==='foot'?'needVehicle':'travel'));
+}
+async function enterFrontier(resume=false){
+ if(frontierUI||frontierLoading||!state||state.zone!=='commons')return;
+ if(!resume&&state.village.vehicle==='foot'){showTravelGuide();return;}
+ engine.capturePosition();frontierLoading=true;closeModal({resume:false});$('app').inert=true;engine.setPaused(true);syncInputMode();toast(ft('loading'));
+ try{const {mountFrontier}=await import('./frontier-ui.js');frontierLoading=false;
+  frontierUI=mountFrontier({state,settings,audio,onSave:save,onBuy:()=>buyAnimation.play(),sourceCanvas:$('world'),onSettings:()=>{storeSettings();translate();},onReturn:()=>{frontierUI=null;state.frontier.active=false;mobileDisplay.sync();loadChapter(false);syncInputMode();}});
+  $('toast').hidden=true;mobileDisplay.sync();syncInputMode();
+ }catch(error){frontierLoading=false;frontierUI=null;document.body.classList.remove('in-frontier');$('app').inert=false;state.frontier.active=false;engine.setPaused(document.hidden||displayBlocked);syncInputMode();toast(ft('failed'));console.error('Frontier load failed',error);}
 }
 function interactVillage(entity){
  if(entity.type==='villageShop'){showVillageShop();return;}
@@ -236,7 +265,7 @@ function interactVillage(entity){
  if(entity.type==='thief'){showVillageEncounter('thief');return;}
  if(entity.type==='animal'){
   const village=villageStat();if(village.animals.includes(entity.id)){toast(tr(V.completed));return;}
-  if(village.money<5){toast(tr(V.needMoney));return;}village.money-=5;village.animals.push(entity.id);village.bond++;villageToast();audio.tone('success');toast(tr(V.feed));return;
+  if(!transact(state,5)){toast(tr(V.needMoney));return;}buyAnimation.play();village.animals.push(entity.id);village.bond++;villageToast();audio.tone('success');toast(tr(V.feed));return;
  }
 }
 function interact(entity){if(modalOpen||!playing)return;if(entity.type==='detail'){showDetail(entity);return;}if(state.zone==='commons'){interactCommons(entity);return;}if(entity.type==='wayback'){goCommons();return;}const ch=CHAPTERS[state.chapter];audio.tone('paper');if(entity.type==='record'){if(!state.records.includes(entity.id)){state.records.push(entity.id);save();}const note=ch.records[entity.slot];openModal(root=>{root.append(h('div',{class:'modal-kicker'},tr('echo')+' · '+String(entity.slot+1).padStart(2,'0')),h('span',{class:'source-tag'},tr(note.source?'sourceLabel':'fictionLabel')),h('h2',{},tr(ch.name)),h('p',{class:'body-copy'},tr(note.body)));if(note.source){const s=SOURCES.find(s=>s.id===note.source);root.append(h('a',{href:s.url,target:'_blank',rel:'noopener noreferrer',class:'text-btn'},s.title));}root.append(h('div',{class:'modal-actions'},button(tr('next'),closeModal,'btn primary')));},{clock:false});return;}
@@ -319,6 +348,6 @@ function showSettings(){
 function showMusic(){openModal(root=>{musicUI=new MusicUI({container:root,audio,settings,onSettings:storeSettings,onToggle:()=>{settings.sound=!settings.sound;audio.set(settings.sound,settings.volume);storeSettings();translate();},onSaved:()=>toast(tr(MT.saved))});},{clock:true});}
 function exportSave(){if(!state)return;save();const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=h('a',{href:url,download:'last-buyer-save.json'});document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 function importSave(){const input=h('input',{type:'file',accept:'.json,application/json'});input.addEventListener('change',async()=>{const file=input.files?.[0];if(!file)return;if(file.size>200000){toast(tr('invalidSave'));return;}try{const candidate=validateState(JSON.parse(await file.text()));if(!candidate){toast(tr('invalidSave'));return;}openModal(root=>root.append(tnode('h2','import'),tnode('p','overwrite','body-copy'),h('div',{class:'modal-actions'},button(tr('cancel'),closeModal),button(tr('confirm'),()=>{state=candidate;session++;closeModal();save();enterGame();loadChapter(false);if(state.ending)showEnding(state.ending);toast(tr('restore'));},'btn primary'))));}catch{toast(tr('invalidSave'));}});input.click();}
-let lastClock=performance.now(),saveClock=0;setInterval(()=>{const now=performance.now(),dt=Math.min(1.5,(now-lastClock)/1000);lastClock=now;if(playing&&state&&!document.hidden&&!clockPaused&&!displayBlocked){state.playSeconds+=dt;saveClock+=dt;if(saveClock>10){save();saveClock=0;}}if(playing)updateHUD();},500);
+let lastClock=performance.now(),saveClock=0;setInterval(()=>{const now=performance.now(),dt=Math.min(1.5,(now-lastClock)/1000);lastClock=now;if(playing&&state&&!document.hidden&&!clockPaused&&!displayBlocked&&!frontierLoading&&!frontierUI?.paused){state.playSeconds+=dt;if(!frontierUI)advanceTime(state.frontier,dt*1.2);saveClock+=dt;if(saveClock>10){save();saveClock=0;}}if(playing)updateHUD();},500);
 function animateTitle(now){requestAnimationFrame(animateTitle);if(playing||modalOpen||document.hidden||now-titleLast<80)return;titleLast=now;drawTitle($('title-canvas').getContext('2d',{alpha:false}),now/1000,settings.reducedMotion);}
 translate();$('continue-game').hidden=!state;requestAnimationFrame(animateTitle);

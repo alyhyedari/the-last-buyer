@@ -1,0 +1,82 @@
+import {hash} from './frontier-state.js';
+export const SIZE=96;
+export const PLACES=[
+ {id:'gate',x:32.5,y:57.5,color:'#c8e397',kind:'gate'},
+ {id:'garage',x:28.5,y:49.5,color:'#dba05f',kind:'garage'},
+ {id:'market',x:36.5,y:43.5,color:'#bddc83',kind:'market'},
+ {id:'workshop',x:26.5,y:38.5,color:'#d1936e',kind:'garage'},
+ {id:'club',x:39.5,y:31.5,color:'#ec8bc5',kind:'club'},
+ {id:'inn',x:27.5,y:28.5,color:'#efcf95',kind:'inn'},
+ {id:'pond',x:47.5,y:23.5,color:'#8bcec7',kind:'pond'},
+ {id:'range',x:16.5,y:37.5,color:'#e1a87a',kind:'range'},
+ {id:'grove',x:15.5,y:18.5,color:'#83b59a',kind:'grove'},
+ {id:'tower',x:32.5,y:12.5,color:'#ccbcff',kind:'tower'},
+ {id:'clinic',x:43.5,y:42.5,color:'#e4d8c4',kind:'clinic'},
+ {id:'overlook',x:48.5,y:9.5,color:'#efcb8b',kind:'overlook'},
+ {id:'square',x:73.5,y:43.5,color:'#e4bd81',kind:'market'},
+ {id:'homes',x:66.5,y:56.5,color:'#c69877',kind:'house'},
+ {id:'manor',x:84.5,y:32.5,color:'#d0c5a1',kind:'manor'},
+ {id:'stable',x:59.5,y:68.5,color:'#cda578',kind:'stable'},
+ {id:'shelter',x:78.5,y:70.5,color:'#b3c891',kind:'house'},
+ {id:'camp',x:66.5,y:20.5,color:'#e2ae78',kind:'camp'},
+ {id:'summit',x:81.5,y:8.5,color:'#d7e0c6',kind:'summit'},
+ {id:'nightmarket',x:89.5,y:56.5,color:'#b596cc',kind:'market'}
+];
+export const placeById=id=>PLACES.find(p=>p.id===id);
+export function makeFrontierWorld(seed){
+ const tiles=new Uint8Array(SIZE*SIZE),sprites=[],colliders=[],buildings=[];
+ for(let y=0;y<SIZE;y++)for(let x=0;x<SIZE;x++){
+  const edge=x<2||y<2||x>SIZE-3||y>SIZE-3;tiles[y*SIZE+x]=edge?1:0;
+  if(!edge&&hash(seed,x+y*SIZE)<.07)sprites.push({x:x+.5,y:y+.5,kind:'tree',variant:Math.floor(hash(seed,x*y+401)*3)});
+ }
+ // One connected trunk, with broad branches to every destination. Roads are walkable.
+ const road=(ax,ay,bx,by)=>{const steps=Math.ceil(Math.hypot(bx-ax,by-ay)*2);for(let n=0;n<=steps;n++){const x=Math.floor(ax+(bx-ax)*n/steps),y=Math.floor(ay+(by-ay)*n/steps);for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)if(x+dx>1&&x+dx<SIZE-2&&y+dy>1&&y+dy<SIZE-2)tiles[(y+dy)*SIZE+x+dx]=2;}};
+ road(32,58,32,10);for(const p of PLACES.filter(p=>p.x<55))road(32,p.y,p.x,p.y);
+ road(32,43,74,43);road(74,43,74,72);road(74,43,85,43);road(85,43,85,58);road(85,58,74,58);road(74,43,74,20);road(74,20,81,20);road(81,20,81,8);
+ for(const p of PLACES.filter(p=>p.x>=55))road(74,p.y,p.x,p.y);
+ for(let y=15;y<23;y++)for(let x=45;x<56;x++)if(((x-50)/5.5)**2+((y-19)/4)**2<1)tiles[y*SIZE+x]=3;
+ const addBuilding=(x,y,kind,id,width=5,depth=4)=>{const left=Math.floor(x-width/2),top=Math.floor(y-depth),style=kind==='manor'?5:kind==='house'?4:kind==='clinic'?6:7;for(let yy=top;yy<Math.floor(y);yy++)for(let xx=left;xx<left+width;xx++)tiles[yy*SIZE+xx]=style;buildings.push({id,x:left+width/2,y:top+depth/2,left,top,width,depth,kind});};
+ for(const p of PLACES){
+  // Clear approach; facades sit behind the interactable doorstep.
+  for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)tiles[(Math.floor(p.y)+dy)*SIZE+Math.floor(p.x)+dx]=2;
+  if(!['pond','grove','overlook','gate','range','camp','summit'].includes(p.kind))addBuilding(p.x,p.y-1.5,p.kind,p.id,p.kind==='manor'?7:5);
+  sprites.push({...p,x:p.x+(p.id==='square'?-1.02:1.02),kind:'sign',radius:.1});
+  if(['pond','range','camp'].includes(p.kind))sprites.push({...p,x:p.x,y:p.y-2,kind:p.kind,landmark:true,radius:p.kind==='camp'?.8:.6});
+ }
+ // Homes have solid footprints, lit windows and an unobstructed front path.
+ for(const [x,y,kind]of [[63,48,'house'],[65,64,'house'],[82,65,'house'],[88,39,'manor'],[79,26,'manor'],[67,35,'house']]){road(74,y+2,x,y+2);addBuilding(x,y,kind,'home-'+x+'-'+y,kind==='manor'?7:4);sprites.push({x,y:y+1.1,kind:'resident',id:'resident-'+x,homeX:x,homeY:y+1.1,phase:hash(seed,x)*6.28});}
+ // A later driveway must never carve through an existing neighbour's house.
+ for(const b of buildings)for(let y=b.top;y<b.top+b.depth;y++)for(let x=b.left;x<b.left+b.width;x++)tiles[y*SIZE+x]=b.kind==='manor'?5:b.kind==='house'?4:b.kind==='clinic'?6:7;
+ for(let y=45;y<73;y+=6)for(const x of [71.5,77.5])if(tiles[Math.floor(y)*SIZE+Math.floor(x)]===0&&!PLACES.some(p=>Math.hypot(p.x-x,p.y-y)<2))sprites.push({x,y:y+.5,kind:'streetlamp',radius:.12});
+ for(const [x,y,kind,radius]of [[65.5,57.7,'laundry',.12],[69.5,47.5,'bench',.5],[81.5,46.5,'bench',.5],[70.5,60.5,'trafficCar',.55],[87.5,44.5,'trafficCar',.55]])if(tiles[Math.floor(y)*SIZE+Math.floor(x)]===0)sprites.push({x,y,kind,radius,variant:1});
+ for(let i=0;i<52;i++){const x=61+hash(seed,2000+i)*30,y=30+hash(seed,2100+i)*44;if(tiles[Math.floor(y)*SIZE+Math.floor(x)]===0)sprites.push({x,y,kind:'flowers',variant:i%3});}
+ const animals=['deer','fox','rabbit','boar','owl','heron'];
+ for(let i=0;i<72;i++){const kind=animals[i%6],x=kind==='heron'?43+hash(seed,700+i)*2:5+hash(seed,801+i)*84,y=kind==='heron'?17+hash(seed,900+i)*6:5+hash(seed,1001+i)*77;if(tiles[Math.floor(y)*SIZE+Math.floor(x)]===0)sprites.push({id:'animal-'+i,kind,x,y,animal:true,phase:hash(seed,1200+i)*6.28});}
+ for(const [kind,x,y]of [['dog',77,69],['cat',67,56],['horse',60,68]])sprites.push({id:kind+'-local',kind,x,y,animal:true,domestic:true,phase:0});
+ for(let i=0;i<6;i++)sprites.push({id:'bird-'+i,kind:'bird',x:58+i*4,y:36+i%3,airborne:true,phase:i*1.9});
+ sprites.push({id:'paper-target',kind:'target',x:17.5,y:35.5,radius:.25},{id:'robber',kind:'robber',x:58.5,y:43.5});
+ sprites.push({x:30.4,y:45.5,kind:'stranger',id:'stranger'},{x:14.5,y:17.5,kind:'ghost',id:'ghost'});
+ const filtered=sprites.filter(s=>s.kind!=='tree'||tiles[Math.floor(s.y)*SIZE+Math.floor(s.x)]===0&&!PLACES.some(p=>Math.hypot(p.x-s.x,p.y-s.y)<4));
+ for(const s of filtered)if(s.kind==='tree'||s.radius)colliders.push({x:s.x,y:s.y,radius:s.kind==='tree'?.2:s.radius,id:s.id||s.kind});
+ const buckets=new Map();for(const o of colliders){const key=Math.floor(o.x)+','+Math.floor(o.y);if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(o);}
+ const traffic=[{id:'traffic-car',kind:'trafficCar',phase:0,speed:2.4,radius:.62},{id:'traffic-bike',kind:'trafficBike',phase:17,speed:1.8,radius:.35},{id:'traffic-motor',kind:'trafficMotor',phase:39,speed:2.9,radius:.4}];
+ return{tiles,sprites:filtered,seed,colliders,buckets,buildings,traffic};
+}
+export const tileAt=(world,x,y)=>x<0||y<0||x>=SIZE||y>=SIZE?1:world.tiles[Math.floor(y)*SIZE+Math.floor(x)];
+export const solid=(world,x,y)=>{const t=tileAt(world,x,y);return t!==0&&t!==2;};
+export function canStand(world,x,y,radius=.22){if(!Number.isFinite(x)||!Number.isFinite(y))return false;for(let yy=Math.floor(y-radius);yy<=Math.floor(y+radius);yy++)for(let xx=Math.floor(x-radius);xx<=Math.floor(x+radius);xx++)if(solid(world,xx,yy)&&Math.hypot(x-Math.max(xx,Math.min(xx+1,x)),y-Math.max(yy,Math.min(yy+1,y)))<radius)return false;for(let yy=Math.floor(y)-2;yy<=Math.floor(y)+2;yy++)for(let xx=Math.floor(x)-2;xx<=Math.floor(x)+2;xx++)for(const o of world.buckets?.get(xx+','+yy)||[])if(Math.hypot(x-o.x,y-o.y)<radius+o.radius)return false;return true;}
+export function moveInWorld(world,f,dx,dy,radius=.22){const before={x:f.x,y:f.y},steps=Math.max(1,Math.ceil(Math.hypot(dx,dy)/.12));for(let i=0;i<steps;i++){if(canStand(world,f.x+dx/steps,f.y,radius))f.x+=dx/steps;if(canStand(world,f.x,f.y+dy/steps,radius))f.y+=dy/steps;}return Math.hypot(f.x-before.x,f.y-before.y);}
+export function clearSight(world,a,b){const d=Math.hypot(b.x-a.x,b.y-a.y),steps=Math.ceil(d/.1);for(let i=1;i<steps;i++)if(solid(world,a.x+(b.x-a.x)*i/steps,a.y+(b.y-a.y)*i/steps))return false;return true;}
+export function nearestOpen(world,point,radius=.22){if(canStand(world,point.x,point.y,radius))return{x:point.x,y:point.y};for(let r=.3;r<8;r+=.3)for(let a=0;a<Math.PI*2;a+=.3){const x=point.x+Math.cos(a)*r,y=point.y+Math.sin(a)*r;if(canStand(world,x,y,radius))return{x,y};}return{x:32.5,y:57.5};}
+export function elevationAt(x,y){return Math.max(0,1-Math.hypot((x-82)/17,(y-6)/20))*12;}
+export function trafficAt(world,minutes){const corners=[[74.15,43.85],[85.15,43.85],[85.15,58.85],[74.15,58.85]],lengths=[11,15,11,15];return world.traffic.map(v=>{let d=((minutes*1.1*v.speed+v.phase)%52+52)%52,i=0;while(d>lengths[i])d-=lengths[i++];const a=corners[i],b=corners[(i+1)%4],t=d/lengths[i];return{...v,x:a[0]+(b[0]-a[0])*t,y:a[1]+(b[1]-a[1])*t,angle:Math.atan2(b[1]-a[1],b[0]-a[0])};});}
+export function route(world,start,target,radius=.22){
+ const reachable=(a,b)=>{const count=Math.max(1,Math.ceil(Math.hypot(b.x-a.x,b.y-a.y)/.1));for(let i=0;i<=count;i++)if(!canStand(world,a.x+(b.x-a.x)*i/count,a.y+(b.y-a.y)*i/count,radius))return false;return true;};
+ if(!canStand(world,start.x,start.y,radius)||!canStand(world,target.x,target.y,radius))return[];
+ // Join the grid from the actual position: a tree may occupy its cell centre.
+ const joins=[];for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){const p={x:Math.floor(start.x)+dx+.5,y:Math.floor(start.y)+dy+.5};joins.push({...p,d:Math.hypot(p.x-start.x,p.y-start.y)});}const join=joins.sort((a,b)=>a.d-b.d).find(p=>reachable(start,p));if(!join)return[];
+ const caches=world.routeEdges??=new Map();if(!caches.has(radius))caches.set(radius,new Int8Array(SIZE*SIZE*4));const edges=caches.get(radius);
+ const sx=Math.floor(join.x),sy=Math.floor(join.y),gx=Math.floor(target.x),gy=Math.floor(target.y),from=sy*SIZE+sx,to=gy*SIZE+gx,parents=new Int32Array(SIZE*SIZE).fill(-2),queue=[from];parents[from]=-1;
+ for(let i=0;i<queue.length;i++){const id=queue[i];if(id===to){const points=[];for(let n=to;n!==from;n=parents[n])points.push({x:n%SIZE+.5,y:Math.floor(n/SIZE)+.5});points.push({x:join.x,y:join.y});points.reverse();if(reachable(points.at(-1),target))points.push({x:target.x,y:target.y});return points;}const x=id%SIZE,y=Math.floor(id/SIZE);let direction=0;for(const [dx,dy]of [[1,0],[-1,0],[0,1],[0,-1]]){const edge=id*4+direction++,xx=x+dx,yy=y+dy,n=yy*SIZE+xx;if(xx<1||yy<1||xx>=SIZE-1||yy>=SIZE-1||parents[n]!==-2||edges[edge]===-1)continue;if(!edges[edge]){const middle={x:x+.5,y:y+.5};moveInWorld(world,middle,dx,dy,radius);edges[edge]=canStand(world,xx+.5,yy+.5,radius)&&Math.hypot(middle.x-xx-.5,middle.y-yy-.5)<.02?1:-1;}if(edges[edge]!==1)continue;parents[n]=id;queue.push(n);}}
+ return[];
+}

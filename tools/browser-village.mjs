@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {BENCHMARK_FIXTURE} from './qa-fixture.mjs';
 import {COMMONS} from '../src/open-world.js';
 import {newState,obstacles,approachPath,walkable} from '../src/state.js';
-import {VILLAGE_ENTITIES} from '../src/village-content.js';
+import {VILLAGE_ENTITIES,VILLAGE_ITEMS} from '../src/village-content.js';
 
 await mkdir('artifacts',{recursive:true});
 const browser=await chromium.launch({channel:'msedge',headless:true});
@@ -25,7 +25,7 @@ async function capture(){state=await page.evaluate(()=>JSON.parse(localStorage.g
 
 try{
  const shop=VILLAGE_ENTITIES.find(entity=>entity.id==='village-shop');
- await openAt(shop);assert.equal(await page.locator('[data-village-buy]').count(),6);assert.equal(await page.getByRole('button',{name:'Work a shift',exact:true}).count(),1);await page.getByRole('button',{name:'Work a shift',exact:true}).click();await page.getByRole('button',{name:'Next',exact:true}).click();await capture();assert.ok(state.village.money>120);
+ await openAt(shop);assert.equal(await page.locator('[data-village-buy]').count(),VILLAGE_ITEMS.length);assert.equal(await page.getByRole('button',{name:'Work a shift',exact:true}).count(),1);await page.getByRole('button',{name:'Work a shift',exact:true}).click();for(const n of [1,2,4])await page.locator('.frontier-note-keys').getByRole('button',{name:String(n),exact:true}).click();await page.getByRole('button',{name:'Next',exact:true}).click();await capture();assert.ok(state.village.money>120);
  await openAt(shop);await page.locator('[data-village-buy="stick"]').click();await capture();assert.equal(state.village.weapon,'stick');
  await openAt(VILLAGE_ENTITIES.find(entity=>entity.id==='village-board'));await page.locator('[data-village-project="lamps"]').click();await capture();assert.ok(state.village.projects.includes('lamps'));
  await openAt(VILLAGE_ENTITIES.find(entity=>entity.id==='village-rich-boy'));await page.getByRole('button',{name:'Help Mina choose for herself',exact:true}).click();await capture();assert.equal(state.village.story,2);
