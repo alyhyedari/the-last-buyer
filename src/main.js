@@ -1,3 +1,4 @@
+import {MENU_TEXT} from './menu-text.js';
 import {ft} from './frontier-entry-text.js';
 import {transact,toggleMount,advanceTime,earn} from './frontier-state.js';
 import {createBuyAnimation} from './buy-animation.js';
@@ -8,7 +9,7 @@ import {LANGUAGES,UI,tr,setLanguage,getLanguage,direction} from './i18n.js';
 import {CHAPTERS,ENDINGS,SOURCES,AFTERMATH} from './content.js';
 import {newState,readSave,writeSave,readSettings,validateState,SETTINGS_KEY,chapterDone,addDecision,addEpisodeDecision,decisionEvents,reflectionCounts,canChooseEnding,recordEnding,resumeBeforeEnding,collectDetail} from './state.js';
 import {Engine} from './engine.js';
-import {drawTitle,character} from './art.js';
+import {drawTitle,setTitleScene,character} from './art.js';
 import {Soundscape} from './audio.js';
 import {PuzzleUI,puzzleName} from './puzzle-ui.js';
 import {h,button} from './dom.js';
@@ -32,6 +33,8 @@ import {mountDynamicJoystick} from './joystick.js';
 import {DETAIL_UI,detailFor,DETAIL_IDS} from './detail-content.js';
 import {V,VILLAGE_ITEMS,VILLAGE_PROJECTS,VILLAGE_OUTCOMES} from './village-content.js';
 import {recordVillageEncounter,villageItem,villageProject} from './village-state.js';
+Object.assign(UI,MENU_TEXT);
+for(const name of ['city','forest','water'])document.getElementById('preview-'+name)?.addEventListener('click',()=>{setTitleScene(name);for(const b of document.querySelectorAll('.world-preview-tabs button'))b.setAttribute('aria-pressed',String(b.id==='preview-'+name));});
 const $=id=>document.getElementById(id);
 let storage;try{storage=localStorage;}catch{storage={getItem:()=>null,setItem:()=>{throw new Error('Storage disabled');}};}
 let settings=readSettings(storage),state=readSave(storage),benchmark=readBenchmark(storage),playing=false,modalOpen=false,clockPaused=false,puzzle=null,episodeUI=null,musicUI=null,benchmarkUI=null,modalBuilder=null,previousFocus=null,saveOK=true,toastTimer,titleLast=0,session=0,hudSignature='',bannerTimer;

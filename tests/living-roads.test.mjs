@@ -10,13 +10,13 @@ test('visible tree trunks, signposts and buildings block swept movement instead 
  const world=makeFrontierWorld(91);
  for(const obstacle of world.colliders){assert.equal(canStand(world,obstacle.x,obstacle.y),false,obstacle.id);}
  for(const building of world.buildings)assert.equal(canStand(world,building.x,building.y),false,building.id);
- const isolated=world.colliders.find(o=>o.id==='tree'&&canStand(world,o.x-1,o.y)&&canStand(world,o.x+1,o.y));assert.ok(isolated);
+ const isolated=world.colliders.find(o=>o.kind==='tree'&&canStand(world,o.x-1,o.y)&&canStand(world,o.x+1,o.y));assert.ok(isolated);
  for(const radius of [.22,.29,.48]){const p={x:isolated.x-1,y:isolated.y};moveInWorld(world,p,2,0,radius);assert.ok(p.x<isolated.x-radius);assert.ok(canStand(world,p.x,p.y,radius));}
  const restored=nearestOpen(world,isolated);assert.ok(canStand(world,restored.x,restored.y));assert.ok(Math.hypot(restored.x-isolated.x,restored.y-isolated.y)<2,'old saves relocate locally, never to the village gate');
 });
 
 test('expanded destinations and moving traffic have physically clear routes including the full car footprint',()=>{
- const world=makeFrontierWorld(5);assert.equal(SIZE,96);assert.equal(PLACES.length,20);
+ const world=makeFrontierWorld(5);assert.equal(SIZE,192);assert.equal(PLACES.length,35);
  for(const p of PLACES){assert.ok(canStand(world,p.x,p.y,.48),p.id);const road=route(world,{x:32.5,y:57.5},p,.48);if(p.id!=='gate')assert.ok(road.length,p.id);const vehicle={x:32.5,y:57.5};for(const step of road)moveInWorld(world,vehicle,step.x-vehicle.x,step.y-vehicle.y,.48);assert.ok(Math.hypot(vehicle.x-p.x,vehicle.y-p.y)<.01,p.id);}
  for(let minute=0;minute<100;minute+=.25)for(const car of trafficAt(world,minute))assert.ok(canStand(world,car.x,car.y,car.radius),car.id+' at '+car.x+','+car.y);
 });
@@ -32,11 +32,11 @@ test('guided travel crosses waypoint boundaries without reporting a false collis
 });
 
 test('navigation joins roads from off-centre saves and supports clicks within the same tile',()=>{
- const w=makeFrontierWorld(91),goal=PLACES[0];const trunk=w.colliders.find(c=>c.id==='tree'&&canStand(w,c.x+.45,c.y+.2,.22));assert.ok(trunk);const start={x:trunk.x+.45,y:trunk.y+.2},path=route(w,start,goal);assert.ok(path.length);const p={...start};for(const step of path)moveInWorld(w,p,step.x-p.x,step.y-p.y);assert.ok(Math.hypot(p.x-goal.x,p.y-goal.y)<.01);const close={x:32.7,y:57.6},short=route(w,goal,close);assert.deepEqual(short.at(-1),close);
+ const w=makeFrontierWorld(91),goal=PLACES[0];const trunk=w.colliders.find(c=>c.kind==='tree'&&canStand(w,c.x+.45,c.y+.2,.22));assert.ok(trunk);const start={x:trunk.x+.45,y:trunk.y+.2},path=route(w,start,goal);assert.ok(path.length);const p={...start};for(const step of path)moveInWorld(w,p,step.x-p.x,step.y-p.y);assert.ok(Math.hypot(p.x-goal.x,p.y-goal.y)<.01);const close={x:32.7,y:57.6},short=route(w,goal,close);assert.deepEqual(short.at(-1),close);
 });
 
 test('theft cannot mint endless money; restitution, traffic injuries and recovery persist',()=>{
- const s=sample(),l=s.frontier.life;assert.ok(['caught','stolen'].includes(crime(s)));const money=s.village.money,debt=l.debts;assert.ok(debt>0&&l.heat>0);assert.equal(crime(s),null);assert.equal(s.village.money,money);assert.ok(restitution(s));assert.ok(l.debts<debt);trafficImpact(s,{});const health=l.health;assert.ok(health<100);assert.equal(trafficImpact(s,{}),null);assert.equal(l.health,health);assert.ok(injure(s,200));assert.equal(s.frontier.x,43.5);assert.equal(l.health,45);assert.ok(validateState(s));
+ const s=sample(),l=s.frontier.life;assert.ok(['caught','stolen'].includes(crime(s)));const money=s.village.money,debt=l.debts;assert.ok(debt>0&&l.heat>0);assert.equal(crime(s),null);assert.equal(s.village.money,money);assert.ok(restitution(s));assert.ok(l.debts<debt);trafficImpact(s,{});const health=l.health;assert.ok(health<100);assert.equal(trafficImpact(s,{}),null);assert.equal(l.health,health);assert.ok(injure(s,200));assert.equal(s.frontier.x,32.5);assert.equal(l.health,100);assert.equal(l.combat.drops.length,1);assert.ok(validateState(s));
 });
 
 test('camping, adoption and impairing fictional items retain meaningful restrictions across a save',()=>{

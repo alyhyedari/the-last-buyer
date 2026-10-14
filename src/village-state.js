@@ -1,7 +1,8 @@
+import {EXTRA_WEAPONS} from './frontier-combat-state.js';
 import {VILLAGE_ITEMS,VILLAGE_PROJECTS,VILLAGE_OUTCOME_IDS} from './village-content.js';
 
 export const VILLAGE_VEHICLES=['foot','bike','motorcycle','car','horse'];
-export const VILLAGE_WEAPONS=['none',...VILLAGE_ITEMS.filter(item=>item.kind==='weapon').map(item=>item.id)];
+export const VILLAGE_WEAPONS=['none',...EXTRA_WEAPONS,...VILLAGE_ITEMS.filter(item=>item.kind==='weapon').map(item=>item.id)];
 export const VILLAGE_PROJECT_IDS=VILLAGE_PROJECTS.map(project=>project.id);
 export const VILLAGE_ENCOUNTER_IDS=['thief-won','thief-fled','ghost-lit','ghost-listened','ghost-ran'];
 

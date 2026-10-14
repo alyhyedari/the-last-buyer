@@ -162,36 +162,33 @@ export function entityArt(c,e,time,done,palette,chapterIndex=0){
 }
 export function glow(c,x,y,color,radius=65,alpha=.17){const g=c.createRadialGradient(x,y,2,x,y,radius);g.addColorStop(0,color);g.addColorStop(1,'transparent');c.save();c.globalAlpha=alpha;c.fillStyle=g;c.fillRect(x-radius,y-radius,radius*2,radius*2);c.restore();}
 function drawArchitecture(c,p,palette){const{x,y,w,h,type}=p;if(type==='rock'){rect(c,'#101e2244',x+5,y+7,w,h);rect(c,'#536047',x,y+7,w,h-7);rect(c,'#7d8260',x+5,y,w-10,11);rect(c,'#65714f',x+3,y+8,w-8,h-12);rect(c,'#989473',x+9,y+3,w-21,3);return;}rect(c,'#0a1c1acc',x+7,y+8,w,h);rect(c,palette.wall,x,y,w,h);rect(c,'#7f937055',x,y,3,h);rect(c,palette.trim,x,y,w,4);for(let yy=y+19;yy<y+h;yy+=24)rect(c,'#0b232b66',x+2,yy,w-4,2);if(type==='pillar'){rect(c,'#81916b',x-3,y-4,w+6,7);rect(c,'#546c4c',x-3,y+h-4,w+6,8);}}
+let titleScene='city';
+export const setTitleScene=scene=>{if(['city','forest','water'].includes(scene))titleScene=scene;};
 export function drawTitle(c,time=0,reduced=false){
- const w=640,h=440,r=rng(91);c.imageSmoothingEnabled=false;rect(c,'#132323',0,0,w,h);
- // A small repair shop under a much larger, indifferent city.
- for(let i=0;i<14;i++){const x=i*52-18,height=75+r()*100;rect(c,i%2?'#1b3031':'#1c3433',x,166-height,47,height+90);for(let a=0;a<4;a++)for(let b=0;b<8;b++)if(r()>.4)rect(c,r()>.6?'#6e8251':'#415e4c',x+6+a*10,170-height+b*16,4,6);}
- rect(c,'#263e37',0,190,640,250);for(let y=204;y<440;y+=15){rect(c,'#3d534044',0,y,640,1);for(let x=(y%30)*2;x<640;x+=46)rect(c,'#0a211a44',x,y,1,15);}
- // Shop front silhouette and roof.
- rect(c,'#0e1d1e',119,129,391,235);rect(c,'#354b38',126,125,370,226);rect(c,'#71805a',109,112,407,10);rect(c,'#293e31',105,123,419,8);rect(c,'#98a171',116,111,395,2);rect(c,'#1a3027',129,153,363,190);
- // Brick pillars.
- for(let y=137;y<348;y+=11){rect(c,y%22?'#50613f':'#617049',130,y,23,9);rect(c,y%22?'#566645':'#667751',469,y,24,9);rect(c,'#879064',150,y,2,9);}
- rect(c,'#858e62',157,142,305,31);rect(c,'#2d432f',160,145,299,25);
- c.fillStyle='#d0d89d';c.font='bold 17px monospace';c.textAlign='center';c.fillText('VLAD’S REPAIR SHOP',310,164);
- // Warm interior window.
- rect(c,'#9b9d66',158,185,191,127);rect(c,'#243d32',163,190,181,117);rect(c,'#728652',168,195,171,107);rect(c,'#adb276',172,199,163,91);rect(c,'#718454',172,246,163,49);
- bookcase(c,177,210,46,62);bookcase(c,273,213,51,58);table(c,197,264,116,25);terminal(c,246,250,'#c6f597');lamp(c,292,269);rect(c,'#293e2e',225,190,6,118);rect(c,'#293e2e',282,190,6,118);rect(c,'#4c5f3d',164,250,179,5);
- // Glass door and its inviting, unsettling BUY sign.
- rect(c,'#809361',360,182,99,151);rect(c,'#1b332c',365,187,89,140);rect(c,'#466847',372,194,75,115);rect(c,'#1b302b',377,200,64,101);rect(c,'#adc878',434,257,3,10);
- rect(c,'#122a23',370,201,78,37);rect(c,'#527c43',374,205,70,29);rect(c,'#192f23',378,209,62,21);
- c.fillStyle='#caff8d';c.font='bold 25px monospace';c.textAlign='center';c.fillText('BUY',409,229);rect(c,'#a9d079',378,235,63,1);
- rect(c,'#c7c28f',377,270,30,18);c.fillStyle='#4c5540';c.font='5px monospace';c.fillText('OPEN',392,281);
- // Awning and pavement.
- rect(c,'#7d8555',152,174,313,7);for(let x=154;x<461;x+=22){rect(c,(x/22|0)%2?'#697b4d':'#889161',x,179,20,5);}
- rect(c,'#526c48',119,342,392,12);rect(c,'#6e8053',110,354,410,9);rect(c,'#30432f',99,363,431,7);
- plant(c,152,341);plant(c,472,341);drawProp(c,{type:'crate',x:80,y:314,w:26,h:28},PALETTES[0]);
- // Telephone pole, hanging cable and pools of light.
- rect(c,'#314736',65,65,7,312);rect(c,'#6f7b53',67,65,2,312);rect(c,'#344b36',42,86,56,5);c.strokeStyle='#0e251e';c.lineWidth=2;c.beginPath();c.moveTo(0,91);c.quadraticCurveTo(160,151,350,68);c.quadraticCurveTo(493,121,640,53);c.stroke();
- lamp(c,545,347);rect(c,'#ecda93',538,316,15,3);glow(c,546,319,'#e8d480',64,.2);glow(c,254,243,'#d5d77b',114,.2);glow(c,409,220,'#b7f578',62,.19);
- character(c,352,376,{walk:0,scale:1.45});character(c,399,287,{kind:'cashier',alpha:.65});
- // Wet pavement, paper, rain and a single blue cable.
- for(let i=0;i<90;i++){let x=r()*640,y=368+r()*69;rect(c,i%4?'#52734955':'#bcd17a40',x,y,3+r()*18,1);}
- rect(c,'#b4b898',303,394,11,7);rect(c,'#536b6f',285,380,4,35);rect(c,'#536b6f',287,412,43,3);
- if(!reduced)for(let i=0;i<70;i++){const x=(i*97)%640,y=((i*43+time*37)%450);rect(c,'#abcaad20',x,y,1,6);}
- const grad=c.createLinearGradient(0,0,0,440);grad.addColorStop(0,'#07171922');grad.addColorStop(.7,'transparent');grad.addColorStop(1,'#07131970');c.fillStyle=grad;c.fillRect(0,0,640,440);
+ const r=rng(91),t=reduced?0:time,water=titleScene==='water',forest=titleScene==='forest',px=(x,y,w,h,col)=>rect(c,col,x,y,w,h);c.imageSmoothingEnabled=false;
+ px(0,0,640,440,water?'#113344':'#101f32');
+ for(let i=0;i<90;i++){const x=r()*640,y=r()*177;px(x,y,1,1,water?'#88bab57a':'#a3c3c17a');}
+ if(!water){px(466,36,33,30,'#d6d7bc');px(474,32,23,36,'#d6d7bc');px(481,30,22,29,'#101f32');}
+ if(!water&&!forest){
+  for(let layer=0;layer<2;layer++)for(let i=0;i<18;i++){const x=i*39-5+layer*13,h=47+r()*130,y=217-h;px(x,y,34,h+layer*20,layer?'#26414c':'#1b303f');px(x,y,34,2,'#486273');for(let yy=y+10;yy<212;yy+=11)for(let xx=x+5;xx<x+31;xx+=8)if(r()>.32)px(xx,yy,3,4,r()>.72?'#ddb9a0':'#6b9ba28a');}
+  for(const [x,y,col,label]of [[80,101,'#c498ce','BUY'],[244,81,'#8dd6c4','LIVE'],[503,125,'#e6b28a','BUY']]){px(x-2,y-2,54,24,'#101d30');px(x,y,50,20,col);px(x+2,y+2,46,16,'#233349');c.fillStyle=col;c.font='bold 13px monospace';c.textAlign='center';c.fillText(label,x+25,y+15);}
+ }
+ px(0,223,640,217,water?'#174e5d':'#233c43');
+ if(!water){
+  c.fillStyle='#66858b';c.beginPath();c.moveTo(312,219);c.lineTo(348,219);c.lineTo(521,440);c.lineTo(156,440);c.fill();
+  for(let y=238;y<440;y+=22){const width=(y-210)*.015;px(327-width,y,width*2,10,'#c7c49888');}
+  for(let i=0;i<62;i++){const x=r()*640,y=229+r()*211;px(x,y,5+r()*18,1,i%3?'#7dabaa44':'#d8b59644');}
+  const tree=(x,y,scale,col)=>{px(x-3*scale,y-44*scale,6*scale,44*scale,'#546057');for(let j=0;j<4;j++){const width=(j+2)*9*scale;px(x-width/2,y-90*scale+j*17*scale,width,19*scale,col);}px(x-8*scale,y-82*scale,9*scale,6*scale,'#6a9e8877');};
+  for(let i=0;i<(forest?35:12);i++){const x=i%2?r()*168:465+r()*175,y=249+r()*174;tree(x,y,.55+r()*.8,forest?'#2b655d':'#2a514e');}
+  if(forest){for(let i=0;i<50;i++){const x=r()*640,y=140+r()*240;px(x+Math.sin(t+i)*2,y,2,2,i%3?'#afe6bf88':'#b8b2d9aa');}px(361,141,80,12,'#658994');px(374,130,53,13,'#90c4c7');px(384,123,32,9,'#acd0d0');px(355,150,91,3,'#c6e4ce');for(let i=0;i<7;i++)px(365+i*11,158,3,3,'#9bebd5');}
+  else{const x=246+Math.sin(t*.09)*9;px(x,284,112,43,'#9c7771');px(x+19,257,77,30,'#c08e7d');px(x+24,262,66,21,'#355363');px(x+4,318,19,24,'#152632');px(x+92,318,18,24,'#152632');px(x+6,294,16,6,'#f5d6ab');px(x+91,294,16,6,'#f5d6ab');px(x+42,312,29,8,'#d9cbb2');}
+  character(c,411,390,{walk:0,scale:2.15});
+ }else{
+  for(let i=0;i<48;i++){const x=r()*640,y=262+r()*177;px(x,y,12+r()*31,2,'#7bb3a133');}
+  for(let i=0;i<37;i++){const x=r()*640,y=280+r()*165,height=30+r()*55;px(x,y-height,3,height,'#518c80');px(x-8,y-height+13,11,4,'#70b4a0');px(x+3,y-height+25,11,4,'#70b4a0');}
+  for(let i=0;i<35;i++){const x=(r()*640+t*(i%2?4:-5)+640)%640,y=70+r()*263,col=['#d6b388','#95d2bc','#b2a6d1'][i%3];px(x,y,13,5,col);px(x-4,y-2,4,9,col);px(x+10,y+1,1,1,'#163d4b');}
+  px(265,329,89,39,'#72796b');px(271,329,5,39,'#c1b481');px(342,329,5,39,'#c1b481');px(299,342,13,12,'#c1e8d6');
+  for(let i=0;i<6;i++){c.fillStyle='#b1e4d20c';c.beginPath();c.moveTo(i*111,0);c.lineTo(i*111+30,0);c.lineTo(i*111+190,440);c.lineTo(i*111+90,440);c.fill();}
+ }
+ c.fillStyle='#091b2666';c.fillRect(0,0,640,24);c.fillRect(0,409,640,31);c.font='9px monospace';c.fillStyle='#c3d6c3';c.textAlign='left';c.fillText('WILD SIGNAL  /  '+titleScene.toUpperCase(),16,16);c.fillStyle='#96b6b3';c.fillText('BUY / LIVE / BECOME',16,429);c.textAlign='right';c.fillText('VLAD / 010',625,429);
 }

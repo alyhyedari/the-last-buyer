@@ -1,0 +1,33 @@
+// Local-only, visible scenario launcher. It never touches the player's game save.
+import {createStaticServer} from '../server.mjs';
+const server=await createStaticServer(),normal=server.listeners('request')[0];server.removeAllListeners('request');
+server.on('request',(req,res)=>{if(req.url!=='/wild-signal-check'){normal(req,res);return;}res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});res.end(`<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Wild Signal · local scenario preview</title><link rel="stylesheet" href="/style.css"><body><main id="app" style="padding:40px;max-width:900px;margin:auto"><h1>Wild Signal / Local scenario preview</h1><p>Uses the actual game modules. Fictional test progress is separate from the player's save. Return to village opens this launcher.</p><label>Scenario <select id="scenario"><option value="drive">Drive and park</option><option value="crowd">Daytime crowd</option><option value="water">Blue basin swimming</option><option value="alien">Friendly visitor</option><option value="tree">Rocket against tree</option><option value="theft">Steal a nearby car</option><option value="dive">Underwater view</option><option value="car">Rocket against car</option><option value="cliff">Quiet cliff</option><option value="wildlife">Wildlife shooting</option><option value="home">Enter a home</option><option value="night">Night pursuit</option><option value="storm">Storm and tornado</option><option value="shop">Weapon shop and BUY</option><option value="death">Death and recovery</option></select></label><label>Language <select id="locale"><option value="en">English</option><option value="fa">فارسی</option><option value="zh">中文</option><option value="ar">العربية</option><option value="es">Español</option><option value="hi">हिन्दी</option><option value="fr">Français</option><option value="pt">Português</option></select></label><p><button id="start" class="btn primary">Start scenario</button> <button id="resume" class="btn secondary" disabled>Resume saved test</button></p><pre id="report" style="white-space:pre-wrap;overflow-wrap:anywhere" role="status">Ready</pre></main><script type="module">
+import {newState,defaultSettings,validateState} from '/src/state.js';
+import {newFrontierState} from '/src/frontier-state.js';
+import {makeFrontierWorld,canStand,clearSight,trafficAt,nearestOpen} from '/src/frontier-world.js';
+import {enemyActors,weatherHazard,bulletSight} from '/src/frontier-combat.js';
+import {Soundscape} from '/src/audio.js';
+import {mountFrontier} from '/src/frontier-ui.js';
+import {createBuyAnimation} from '/src/buy-animation.js';
+import {setLanguage,direction} from '/src/i18n.js';
+const report=document.querySelector('#report');let state,saved=null,ui=null,settings=defaultSettings(),audio=new Soundscape();
+function launch(resume=false){if(ui)ui.dispose();settings.language=document.querySelector('#locale').value;setLanguage(settings.language);document.documentElement.lang=settings.language;document.documentElement.dir=direction();settings.reducedMotion=false;settings.sound=true;audio.start();
+if(resume){state=validateState(JSON.parse(saved));}else{state=newState();state.frontier=newFrontierState(91);const f=state.frontier,w=makeFrontierWorld(91),mode=document.querySelector('#scenario').value;f.active=true;f.visits=['gate'];f.tutorial=5;f.tutorialHidden=true;state.village.money=2000;state.village.vehicles=['bike','car'];state.village.vehicle='bike';state.village.weapons=['pistol','rifle','shotgun','smg','launcher','grenade'];state.village.weapon='pistol';Object.assign(f.life.combat,{shells:24,rockets:12,grenades:8});f.life.ammo=120;
+if(mode==='drive'){f.x=114.15;f.y=99.5;f.angle=-Math.PI/2;f.mounted=true;state.village.vehicle='car';f.life.expanse.carModel=1;}
+if(mode==='crowd'){f.x=74.2;f.y=47;f.angle=Math.PI/2;state.village.weapon='none';}
+if(mode==='water'){f.x=149.5;f.y=181.5;f.angle=-Math.PI/2;state.village.weapon='none';f.target='bluebasin';}
+if(mode==='alien'){f.x=71;f.y=145;f.angle=-Math.PI/2;state.village.weapon='none';}
+if(mode==='tree'||mode==='car'||mode==='theft'){const candidates=mode==='tree'?w.sprites.filter(a=>a.kind==='tree'):w.sprites.filter(a=>a.kind==='trafficCar');const target=candidates.find(a=>canStand(w,a.x-4.5,a.y)&&bulletSight(w,{x:a.x-4.5,y:a.y},a));if(!target)throw Error('No safe scenario target');f.x=target.x-4.5;f.y=target.y;f.angle=0;state.village.weapon=mode==='theft'?'none':'launcher';if(mode==='theft')f.x=target.x-1.8;}
+if(mode==='dive'){Object.assign(f,{x:149.5,y:173.5,angle:-Math.PI/2});Object.assign(f.life.expanse,{swimming:true,depth:1,shore:{x:149.5,y:181.5}});state.village.weapon='none';}
+if(mode==='cliff'){f.x=171.5;f.y=148.5;f.angle=2.5;f.life.expanse.cigarettes=3;state.village.weapon='none';}
+if(mode==='wildlife'){
+const target=w.sprites.find(s=>s.kind==='deer'&&canStand(w,s.x-3,s.y)&&clearSight(w,{x:s.x-3,y:s.y},s));f.x=target.x-3;f.y=target.y;f.angle=0;}
+if(mode==='home'){const b=w.buildings.find(b=>b.id==='homes');Object.assign(f,b.door);f.angle=-Math.PI/2;state.village.weapon='none';}
+if(mode==='shop'){f.x=28.5;f.y=49.5;state.village.weapons=[];state.village.weapon='none';}
+if(mode==='night'||mode==='death'){f.minutes=22*60;const e=enemyActors(w,f,0).find(s=>canStand(w,s.x+3,s.y));f.x=e.x+3;f.y=e.y;f.angle=Math.PI;if(mode==='death')f.life.health=1;}
+if(mode==='storm'){for(let m=0;m<20000;m++){f.minutes=m;const h=weatherHazard(f);if(h.tornado&&canStand(w,h.tornado.x+5,h.tornado.y)){f.x=h.tornado.x+5;f.y=h.tornado.y;f.angle=Math.PI;break;}}}
+}
+const buy=createBuyAnimation(()=>settings,()=>audio.tone('click'));ui=mountFrontier({state,settings,audio,onSave:()=>{const valid=validateState(state);if(!valid){report.textContent='INVALID SAVE';return false;}saved=JSON.stringify(valid);document.querySelector('#resume').disabled=false;report.textContent=JSON.stringify({valid:true,position:{x:state.frontier.x,y:state.frontier.y},money:state.village.money,expanse:state.frontier.life.expanse,health:state.frontier.life.health,ammo:state.frontier.life.ammo,combat:state.frontier.life.combat},null,2);return true;},onReturn:()=>{ui=null;},onSettings:()=>{setLanguage(settings.language);document.documentElement.lang=settings.language;document.documentElement.dir=direction();},onBuy:()=>buy.play()});}
+document.querySelector('#start').addEventListener('click',()=>launch());document.querySelector('#resume').addEventListener('click',()=>launch(true));
+</script></body></html>`);});
+server.listen(4183,'127.0.0.1',()=>console.log('Local scenarios: http://localhost:4183/wild-signal-check'));
