@@ -37,7 +37,9 @@ const bytes=assets.reduce((n,a)=>n+a.bytes,0),gzipBytes=assets.reduce((n,a)=>n+a
 // every statically imported shared chunk, not just the small entry wrapper.
 // Wild Signal adds swimming, reactive scenery, driving and eight-language guidance
 // to the lazy county. The initial budget covers shared save validation and menu art.
-const limits={totalGzipBytes:436*1024,scriptGzipBytes:238*1024};
+// Six guardian encounters, 30 localized powers and saved-world preview are lazy.
+// Keep the initial script ceiling; allow their separate content bundle to grow.
+const limits={totalGzipBytes:466*1024,scriptGzipBytes:238*1024};
 const script=assets.find(a=>a.file===relative(out,resolve(root,js)).split(sep).join('/'));
 const initial=new Set();
 function visitInitial(path){if(initial.has(path))return;initial.add(path);for(const imported of result.metafile.outputs[path]?.imports||[])if(!imported.external&&imported.kind!=='dynamic-import')visitInitial(imported.path);}

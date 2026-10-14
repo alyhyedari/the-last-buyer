@@ -1,4 +1,5 @@
 /* The menu remains light: the world preview is native canvas, not a video download. */
+.saved-world-caption{padding:10px 0;color:#adbfaf;font-size:11px;line-height:1.8}.saved-world-stats{display:flex;flex-wrap:wrap;gap:14px;color:#c8ecad;font:11px monospace;margin-top:7px}.world-preview-tabs{flex-wrap:wrap}
 #menu{grid-template-columns:minmax(280px,.85fr) minmax(0,1.3fr);gap:4.5%;padding-bottom:96px}
 #menu .eyebrow{letter-spacing:1px;font-size:.64rem;color:#a4c6c1}
 #menu .menu-art{padding:12px;background:linear-gradient(145deg,#1c3338aa,#10222d);border:1px solid #3b535b;box-shadow:0 22px 70px #0005;transform:rotate(-1deg)}

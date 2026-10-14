@@ -1,3 +1,4 @@
+import {hasBuy,hasGme} from './frontier-perks.js';
 import {hash,gameHour,earn,advanceTime} from './frontier-state.js';
 import {LAKES,canStand,moveInWorld,tileAt,route,nearestOpen,trafficAt} from './frontier-world.js';
 
@@ -5,7 +6,7 @@ export const CAR_MODELS=[{id:'sedan',speed:9,accel:2.8,grip:1,color:'#5d91a0'},{
 export const isScenery=s=>['tree','trafficCar','trafficBike','trafficMotor','bench','streetlamp','sign','laundry','crystal','relic'].includes(s.kind);
 export function restoreScenery(world,f){const destroyed=new Set(Object.entries(f.life.combat.actors).filter(([,a])=>a.hp===0).map(([id])=>id).concat(f.life.expanse.taken));world.colliders=(world.colliders||[]).filter(c=>!destroyed.has(c.id));world.buckets=new Map();for(const c of world.colliders){const k=Math.floor(c.x)+','+Math.floor(c.y);if(!world.buckets.has(k))world.buckets.set(k,[]);world.buckets.get(k).push(c);}world.routeEdges?.clear();}
 export function drivingStep(motion,{dt,turn=0,speed=0,wet=false,model=0,health=100,brake=false}){const profile=CAR_MODELS[model]||CAR_MODELS[0],grip=profile.grip*(wet?.63:1)*(.65+health*.0035),rate=dt*(brake?5:3.7);motion.steering=(motion.steering||0)+(turn-(motion.steering||0))*Math.min(1,rate);const understeer=1/(1+Math.abs(speed)*.055);motion.slip=(motion.slip||0)+((1-grip)*motion.steering*Math.abs(speed)*.12-(motion.slip||0))*Math.min(1,dt*2);motion.gear=speed<-.1?-1:Math.max(1,Math.min(5,1+Math.floor(Math.abs(speed)/2.1)));motion.rpm=900+Math.abs(speed)*310/(Math.max(1,motion.gear)*.6)+Math.abs(turn)*150;return motion.steering*dt*1.65*Math.min(1,Math.abs(speed)/1.5)*Math.sign(speed)*understeer;}
-export function damageCar(state,amount){const f=state.frontier,e=f.life.expanse;e.carHealth=Math.max(0,e.carHealth-Math.max(0,amount));if(e.carHealth===0){f.mounted=false;e.parked={x:f.x,y:f.y,angle:f.angle};}return e.carHealth;}
+export function damageCar(state,amount){const f=state.frontier,e=f.life.expanse;e.carHealth=Math.max(0,e.carHealth-Math.max(0,amount)*(hasBuy(f,21)?.75:1));if(e.carHealth===0){f.mounted=false;e.parked={x:f.x,y:f.y,angle:f.angle};}return e.carHealth;}
 export function parkCar(state,heading){const f=state.frontier;f.life.expanse.parked={x:f.x,y:f.y,angle:heading??f.life.vehicleYaw??f.angle};}
 // Separate touching bodies through the same swept collision path as walking.
 // Never search for an open tile across a wall when traffic touches the player.
@@ -35,7 +36,7 @@ export function smoke(state){const f=state.frontier,e=f.life.expanse;if(!e.cigar
 export function expanseActors(world,f,time){if(world.interior)return[];const e=f.life.expanse,list=[];if(e.parked)list.push({id:'parked-car',kind:'trafficCar',...e.parked,model:e.carModel,hp:e.carHealth*3,owned:true,dead:e.carHealth===0});return [...list,...waterActors(world,f,time)];}
 
 // Breath uses elapsed seconds, not frame count or the accelerated world clock.
-export function tickBreath(f,dt){const e=f.life.expanse;if(!e.swimming)return 0;e.oxygen=Math.max(0,Math.min(100,e.oxygen+(e.depth>.45?-2.4:17)*Math.max(0,dt)));return e.oxygen===0&&e.depth>.45?dt:0;}
+export function tickBreath(f,dt){const e=f.life.expanse;if(!e.swimming)return 0;const use=(hasBuy(f,11)?.75:1)*(hasGme(f,'tide')?.5:1);e.oxygen=Math.max(0,Math.min(100,e.oxygen+(e.depth>.45?-2.4*use:17)*Math.max(0,dt)));return e.oxygen===0&&e.depth>.45?dt:0;}
 
 // Drivers yield to visible bodies instead of endlessly pushing a stopped player.
 // A sudden entry inside the braking distance can still cause an impact.

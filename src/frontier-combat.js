@@ -1,3 +1,7 @@
+import {MYTH_BOSSES} from './frontier-myth-data.js';
+import {hasBuy,hasGme} from './frontier-perks.js';
+import {uvTouches} from './frontier-myth.js';
+import {forestWard} from './frontier-forest-state.js';
 import {isScenery,restoreScenery,damageCar,parkCar} from './frontier-expanse.js';
 import {gameDay,isNight,hash,earn,advanceTime} from './frontier-state.js';
 import {canStand,moveInWorld,clearSight,nearestOpen,route,tileAt} from './frontier-world.js';
@@ -13,6 +17,7 @@ export const WEAPONS={
  grenade:{damage:105,range:12,delay:1,ammo:'grenades',projectile:'grenade',blast:2.8,sound:'bow'}
 };
 export const HOSTILES={"zombie":{"hp":95,"speed":0.7,"damage":12,"reach":1,"delay":1.4,"notice":12},"jinn":{"hp":72,"speed":1.45,"damage":10,"reach":1.1,"delay":1.25,"notice":14},"vampire":{"hp":150,"speed":2.1,"damage":19,"reach":1,"delay":1.7,"notice":15},"watcher":{"hp":210,"speed":0.52,"damage":26,"reach":1.4,"delay":2.1,"notice":11},"robber":{"hp":85,"speed":1.35,"damage":9,"reach":1,"delay":1.2,"notice":9},"sentinel":{"hp":170,"speed":1.1,"damage":14,"reach":1.4,"delay":1.8,"notice":15},"ufoEnemy":{"hp":240,"speed":0.8,"damage":15,"reach":9,"delay":2.6,"notice":20}};
+for(const b of MYTH_BOSSES)HOSTILES[b.kind]={hp:b.hp,speed:b.speed,damage:b.damage,reach:2,delay:3,notice:24};Object.assign(HOSTILES,{wisp:{hp:85,speed:1.8,damage:12,reach:1.3,delay:1.4,notice:14},briar:{hp:180,speed:.8,damage:21,reach:1.5,delay:2,notice:12},moth:{hp:65,speed:2.2,damage:8,reach:1.2,delay:1.2,notice:17}});
 export const actorMaxHealth=s=>HOSTILES[s.kind]?.hp||({tree:110,trafficCar:300,trafficBike:90,trafficMotor:140,bench:55,streetlamp:55,sign:50,laundry:30,crystal:160,relic:240,ufoFriend:240,mossling:90,rabbit:22,fox:40,owl:26,heron:30,bird:16,deer:60,boar:115,horse:150,dog:60,cat:35}[s.kind]||100);
 export const ammoCount=(f,weapon)=>{const key=WEAPONS[weapon]?.ammo;return key==='ammo'?f.life.ammo:key?f.life.combat[key]:Infinity;};
 export const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
@@ -28,34 +33,34 @@ function remember(f,s,hp){const records=f.life.combat.actors;if(Object.keys(reco
 export function actorWithHealth(f,s){if(s.owned)return{...s,hp:f.life.expanse.carHealth*3,maxHp:300,dead:f.life.expanse.carHealth<=0,scenery:true};const record=f.life.combat.actors[s.id],hp=record?.hp??actorMaxHealth(s);return{...s,...(hp<=0&&record?{x:record.x,y:record.y}:{}),hp,maxHp:actorMaxHealth(s),dead:hp<=0,scenery:isScenery(s)};}
 export function damageActor(state,world,s,damage,{crime=true}={}){
  const f=state.frontier,l=f.life,current=s.owned?l.expanse.carHealth*3:l.combat.actors[s.id]?.hp??s.hp??actorMaxHealth(s);if(current<=0||damage<=0)return null;
- const hp=Math.max(0,current-damage),killed=hp===0;remember(f,s,hp);
+ if(s.boss||s.id?.startsWith('boss-'))damage*=uvTouches(f,world,s)?1.3:.65;const hp=Math.max(0,current-damage),killed=hp===0;remember(f,s,hp);
  if(s.owned)l.expanse.carHealth=hp/3;const scenery=isScenery(s);if(s.alien){l.expanse.alienTrust=Math.max(-12,l.expanse.alienTrust-2);world.alienAlertUntil=f.minutes+30;}
  const protectedTarget=s.domestic||['resident','companion'].includes(s.kind);
  if(protectedTarget&&crime){l.heat=Math.min(100,l.heat+40);l.debts=Math.min(99999,l.debts+60);state.village.reputation=Math.max(-9,state.village.reputation-2);f.trust=Math.max(0,f.trust-1);l.companion=false;}
  if(killed&&scenery)restoreScenery(world,f);if(scenery&&!s.owned&&s.kind.startsWith('traffic')&&crime){l.heat=Math.min(100,l.heat+12);l.debts=Math.min(99999,l.debts+25);}
- if(killed&&!scenery){l.combat.kills++;if(s.id?.startsWith('animal-')&&!l.hunted.includes(s.id)){l.hunted.push(s.id);f.energy=Math.min(100,f.energy+8);}if(s.id==='companion-pet')l.pet=null;if(s.kind==='robber')l.robberDay=gameDay(f);if(HOSTILES[s.kind])earn(state,6+Math.floor(actorMaxHealth(s)/15));l.skills=Math.min(100,l.skills+2);}
+ if(killed&&!scenery){l.combat.kills++;if(s.id?.startsWith('animal-')&&!l.hunted.includes(s.id)){l.hunted.push(s.id);f.energy=Math.min(100,f.energy+8);}if(s.id==='companion-pet')l.pet=null;if(s.kind==='robber')l.robberDay=gameDay(f);if(HOSTILES[s.kind]){earn(state,(6+Math.floor(actorMaxHealth(s)/15))*(hasBuy(f,28)?1.25:1));if(hasBuy(f,7))l.ammo=Math.min(500,l.ammo+1);if(hasBuy(f,23))l.health=Math.min(100,l.health+3);}l.skills=Math.min(100,l.skills+2);}
  const effect={kind:scenery||s.alien||['sentinel','ufoEnemy'].includes(s.kind)?'sparks':'blood',x:s.x,y:s.y,age:0,ttl:killed?1.1:.65,seed:l.combat.kills+Math.round(f.minutes),victim:s.kind};(world.effects??=[]).push(effect);if(world.effects.length>32)world.effects.shift();
  if(world.hunters?.has(s.id))world.hunters.get(s.id).alert=true;
  return{kind:scenery?(killed?'objectBroken':'objectHit'):s.alien?'alienAngered':protectedTarget?'protectedShot':killed?(s.animal?'huntResult':'enemyDown'):'enemyHit',target:s.id,victim:s.kind,killed,hp,maxHp:actorMaxHealth(s),close:distance(f,s)<2.5,damage:current-hp,x:s.x,y:s.y};
 }
 export function shoot(state,world,actors,{aiming=false}={}){
  const f=state.frontier,l=f.life,weapon=state.village.weapon,c=WEAPONS[weapon];if(l.expanse.swimming||f.mounted||!c||f.minutes<Math.max(l.impairedUntil,f.soberAt))return{kind:'cannotShoot'};if(ammoCount(f,weapon)<=0)return{kind:'noAmmo'};
- if(c.ammo==='ammo')l.ammo--;else if(c.ammo)l.combat[c.ammo]--;
- if(c.projectile){const p={id:(world.shotSerial=(world.shotSerial||0)+1),kind:c.projectile,x:f.x,y:f.y,angle:f.angle,age:0,speed:c.projectile==='rocket'?16:8,ttl:c.projectile==='rocket'?2.2:1.25,blast:c.blast,damage:c.damage,height:.55};(world.projectiles??=[]).push(p);return{kind:'projectile',weapon};}
+ l.forest.shots++;const damagePower=(aiming&&hasBuy(f,5)?1.2:1)*(hasBuy(f,16)&&l.forest.shots%5===0?1.6:1)*(hasGme(f,'storm')?1.25:1);if(!(hasBuy(f,20)&&l.forest.shots%4===0)){if(c.ammo==='ammo')l.ammo--;else if(c.ammo)l.combat[c.ammo]--;}
+ if(c.projectile){const p={id:(world.shotSerial=(world.shotSerial||0)+1),kind:c.projectile,x:f.x,y:f.y,angle:f.angle,age:0,speed:c.projectile==='rocket'?16:8,ttl:c.projectile==='rocket'?2.2:1.25,blast:c.blast,damage:c.damage*damagePower,height:.55};(world.projectiles??=[]).push(p);return{kind:'projectile',weapon};}
  const hits=[],penalized=new Set();for(let n=0;n<(c.pellets||1);n++){const offset=c.pellets?(n-2)*c.spread/4:0,s=targetUnderCrosshair(f,world,actors,weapon,f.angle+offset);if(!s)continue;if(s.kind==='target'){l.skills=Math.min(100,l.skills+1);hits.push({kind:'targetHit',target:s.id,victim:'target',hp:100,maxHp:100});continue;}
-  const damage=damageActor(state,world,s,c.damage*(c.pellets?Math.max(.3,1-distance(f,s)/24):1),{crime:!penalized.has(s.id)});penalized.add(s.id);if(damage)hits.push(damage);
+  const damage=damageActor(state,world,s,c.damage*damagePower*(c.pellets?Math.max(.3,1-distance(f,s)/24):1),{crime:!penalized.has(s.id)});penalized.add(s.id);if(damage)hits.push(damage);
  }
  if(!hits.length){const hit=shootFacade(state,world,c.range,c.damage);if(hit)hits.push(hit);}const best=hits.find(s=>s.killed)||hits[0];return best?{...best,hits,weapon}:{kind:'miss',weapon};
 }
 export function dropOnDeath(state){
  const f=state.frontier,l=f.life,c=l.combat,v=state.village,where=c.interior?.outside||(l.expanse.swimming?l.expanse.shore:null)||f;
- if(f.mounted&&v.vehicle==='car')parkCar(state);const drop={id:++c.serial,x:where.x,y:where.y,money:v.money,weapons:[...v.weapons],ammo:l.ammo,shells:c.shells,rockets:c.rockets,grenades:c.grenades,campKit:l.campKit,contraband:l.contraband};
+ if(f.mounted&&v.vehicle==='car')parkCar(state);const drop={id:++c.serial,x:where.x,y:where.y,money:v.money-(hasBuy(f,29)?Math.floor(v.money*.2):0),weapons:[...v.weapons],ammo:l.ammo,shells:c.shells,rockets:c.rockets,grenades:c.grenades,campKit:l.campKit,contraband:l.contraband};
  // Keep every possession recoverable even after repeated deaths: merge the oldest satchel.
  const occupied=drop.money||drop.weapons.length||drop.ammo||drop.shells||drop.rockets||drop.grenades||drop.campKit||drop.contraband;
- if(occupied){if(c.drops.length>=8){const oldest=c.drops.shift();for(const key of ['money','ammo','shells','rockets','grenades','contraband'])drop[key]+=oldest[key];drop.weapons=[...new Set([...oldest.weapons,...drop.weapons])];drop.campKit||=oldest.campKit;}c.drops.push(drop);}c.deaths++;v.money=0;v.weapons=[];v.weapon='none';l.ammo=0;c.shells=0;c.rockets=0;c.grenades=0;l.campKit=false;l.contraband=0;c.interior=null;
+ if(occupied){if(c.drops.length>=8){const oldest=c.drops.shift();for(const key of ['money','ammo','shells','rockets','grenades','contraband'])drop[key]+=oldest[key];drop.weapons=[...new Set([...oldest.weapons,...drop.weapons])];drop.campKit||=oldest.campKit;}c.drops.push(drop);}c.deaths++;v.money=hasBuy(f,29)?Math.floor(v.money*.2):0;v.weapons=[];v.weapon='none';l.ammo=0;c.shells=0;c.rockets=0;c.grenades=0;l.campKit=false;l.contraband=0;c.interior=null;
  l.expanse.swimming=false;l.expanse.depth=0;l.expanse.oxygen=100;f.x=32.5;f.y=57.5;f.angle=-Math.PI/2;f.mounted=false;l.health=100;l.companion=false;advanceTime(f,60);f.energy=100;c.graceUntil=f.minutes+60;return drop;
 }
-export function hurtPlayer(state,amount,{ignoreGrace=false}={}){const f=state.frontier;if(!ignoreGrace&&f.minutes<f.life.combat.graceUntil)return false;f.life.health=Math.max(0,f.life.health-Math.max(0,amount));if(f.life.health>0)return false;dropOnDeath(state);return true;}
+export function hurtPlayer(state,amount,{ignoreGrace=false}={}){const f=state.frontier;if(!ignoreGrace&&f.minutes<f.life.combat.graceUntil)return false;f.life.health=Math.max(0,f.life.health-Math.max(0,amount)*(hasBuy(f,14)?.88:1)*(hasGme(f,'cinder')?.85:1));if(f.life.health>0)return false;dropOnDeath(state);return true;}
 export function recoverDrop(state,id){const f=state.frontier,c=f.life.combat,index=c.drops.findIndex(d=>d.id===id);if(index<0||c.interior||distance(f,c.drops[index])>1.7)return false;const d=c.drops[index],v=state.village;let changed=false;
  const transfer=(key,to,max)=>{const count=Math.min(d[key],max-to[key]);to[key]+=count;d[key]-=count;changed||=count>0;};transfer('money',v,999999);transfer('ammo',f.life,500);transfer('contraband',f.life,30);for(const key of ['shells','rockets','grenades'])transfer(key,c,key==='shells'?500:99);
  if(d.weapons.length){v.weapons=[...new Set([...v.weapons,...d.weapons])];if(v.weapon==='none')v.weapon=d.weapons.find(w=>WEAPONS[w])||d.weapons[0]||'none';d.weapons=[];changed=true;}if(d.campKit){f.life.campKit=true;d.campKit=false;changed=true;}
@@ -71,12 +76,12 @@ export function enemyActors(world,f,time){
  if(world.interior)return[];const hunters=world.hunters??=new Map(),day=gameDay(f),list=[];
  const zones=[{x:58,y:43},{x:69,y:77},{x:96,y:82},{x:105,y:103},{x:26,y:85},{x:15,y:109},{x:42,y:99},{x:51,y:115},{x:48,y:137},{x:102,y:145},{x:38,y:170},{x:111,y:177}];
  for(let zone=0;zone<zones.length;zone++){const forest=zone>=4;if(!forest&&!isNight(f)&&f.life.heat<55)continue;for(let n=0;n<(forest?3:2);n++){const id=`night-${day}-${zone}-${n}`,kind=!forest&&!isNight(f)?'sentinel':zone>=8&&n===0?'ufoEnemy':zone>=8&&n===1?'sentinel':zone===0&&n===0?'robber':['zombie','jinn','vampire','watcher'][(zone+n+day)%4];if(kind==='robber'&&f.life.robberDay===day)continue;let p=hunters.get(id);if(!p){const a=hash(f.seed,zone*9+n+day)*6.28,home=zones[zone],start=nearestOpen(world,{x:home.x+Math.cos(a)*4,y:home.y+Math.sin(a)*4},.25),saved=f.life.combat.actors[id];p={...(saved&&canStand(world,saved.x,saved.y,.25)?saved:start),id,kind,homeX:start.x,homeY:start.y,at:time,path:[],repath:0,nextAttack:0,alert:false};hunters.set(id,p);}list.push(actorWithHealth(f,{id,kind,x:p.x,y:p.y,hostile:true,height:kind==='ufoEnemy'?2:0,phase:zone+n,winding:!!p.windup}));}}
- for(const id of hunters.keys())if(!id.startsWith('night-'+day+'-'))hunters.delete(id);return list;
+ for(const id of hunters.keys())if(id.startsWith('night-')&&!id.startsWith('night-'+day+'-'))hunters.delete(id);return list;
 }
 export function updateThreats(state,world,actors,dt,time){
  const f=state.frontier,events=[];if(world.interior||f.life.expanse.swimming)return events;
- for(const s of actors.filter(s=>s.hostile&&!s.dead).sort((a,b)=>distance(f,a)-distance(f,b)).slice(0,6)){const rule=HOSTILES[s.kind],p=world.hunters?.get(s.id);if(!rule||!p||s.dead)continue;const d=distance(f,p);if(d>26)continue;
-  if(d<rule.notice&&bulletSight(world,p,f))p.alert=true;if(!p.alert)continue;
+ for(const s of actors.filter(s=>s.hostile&&!s.boss&&!s.dead).sort((a,b)=>distance(f,a)-distance(f,b)).slice(0,6)){const rule=HOSTILES[s.kind],p=world.hunters?.get(s.id);if(!rule||!p||s.dead)continue;if(forestWard(f,p)){p.windup=0;p.path=[];p.repath=0;continue;}const d=distance(f,p);if(d>26)continue;
+  if(d<rule.notice*(hasBuy(f,4)?.8:1)&&bulletSight(world,p,f))p.alert=true;if(!p.alert)continue;
   if(d<rule.reach+.2&&bulletSight(world,p,f)&&time>=p.nextAttack){if(!p.windup){p.windup=time+(s.kind==='watcher'?.7:.25);events.push({kind:'windup',victim:s.kind});}if(time<p.windup)continue;p.windup=0;p.nextAttack=time+rule.delay;if(f.minutes>=f.life.combat.graceUntil){const died=hurtPlayer(state,rule.damage);if(s.kind==='vampire')remember(f,s,Math.min(rule.hp,s.hp+12));events.push({kind:died?'died':'attacked',victim:s.kind});if(died)return events;}continue;}
   p.windup=0;if(d>rule.reach){if(time>=p.repath){const flank=s.kind==='jinn'&&d>2?{x:f.x+Math.sin(time)*1.2,y:f.y+Math.cos(time)*1.2}:f;p.path=route(world,p,canStand(world,flank.x,flank.y,.25)?flank:f,.25);p.repath=time+1+hash(f.seed,s.id.length)*.6;}while(p.path.length&&distance(p,p.path[0])<.15)p.path.shift();const goal=p.path[0];if(goal){const a=Math.atan2(goal.y-p.y,goal.x-p.x),speed=rule.speed*(s.kind==='vampire'&&Math.sin(time*1.7)>.65?1.6:1);moveInWorld(world,p,Math.cos(a)*dt*speed,Math.sin(a)*dt*speed,.25);const saved=f.life.combat.actors[s.id];if(saved&&saved.hp>0){saved.x=p.x;saved.y=p.y;}}}
  }

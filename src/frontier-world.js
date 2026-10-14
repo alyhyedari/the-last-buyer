@@ -1,7 +1,10 @@
 import {hash} from './frontier-state.js';
-export const SIZE=192;
+import {growForest,outsideCoinGlade} from './frontier-forest-world.js';
+import {inDeepForest} from './frontier-forest-data.js';
+import {MYTH_BOSSES,MYTH_TRAILS} from './frontier-myth-data.js';
+export const SIZE=384;
 export const LAKES=[{id:'mirrorwater',x:54,y:19,rx:12,ry:9,shore:{x:61.5,y:29.5},entry:{x:58.5,y:24.5}},{id:'bluebasin',x:150,y:164,rx:18,ry:14,shore:{x:149.5,y:181.5},entry:{x:149.5,y:173.5}}];
-export const PLACES=[
+export const PLACES=[...MYTH_TRAILS,
  {id:'gate',x:32.5,y:57.5,color:'#c8e397',kind:'gate'},
  {id:'garage',x:28.5,y:49.5,color:'#dba05f',kind:'garage'},
  {id:'market',x:36.5,y:43.5,color:'#bddc83',kind:'market'},
@@ -43,16 +46,18 @@ export function makeFrontierWorld(seed){
  const tiles=new Uint8Array(SIZE*SIZE),sprites=[],colliders=[],buildings=[],treasures=[];
  for(let y=0;y<SIZE;y++)for(let x=0;x<SIZE;x++){
   const edge=x<2||y<2||x>SIZE-3||y>SIZE-3;tiles[y*SIZE+x]=edge?1:0;
-  if(!edge&&hash(seed,x+y*SIZE)<(y>125?.19:x<57&&y>72?.12:.07))sprites.push({id:'tree-'+x+'-'+y,x:x+.5,y:y+.5,kind:'tree',variant:Math.floor(hash(seed,x*y+401)*3)+(y>125?3:0)});
+  if(!edge&&hash(seed,x+y*(x<192&&y<192?192:SIZE))<(inDeepForest(x,y)?(y>190?.2:.24)+.055*Math.sin(x*.13)*Math.cos(y*.11):y>125?.19:x<57&&y>72?.12:.07))sprites.push({id:'tree-'+x+'-'+y,x:x+.5,y:y+.5,kind:'tree',variant:Math.floor(hash(seed,x*y+401)*(inDeepForest(x,y)?5:3))+(inDeepForest(x,y)?3:0)});
  }
  // One connected trunk, with broad branches to every destination. Roads are walkable.
  const road=(ax,ay,bx,by)=>{const steps=Math.ceil(Math.hypot(bx-ax,by-ay)*2);for(let n=0;n<=steps;n++){const x=Math.floor(ax+(bx-ax)*n/steps),y=Math.floor(ay+(by-ay)*n/steps);for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)if(x+dx>1&&x+dx<SIZE-2&&y+dy>1&&y+dy<SIZE-2)tiles[(y+dy)*SIZE+x+dx]=2;}};
  road(32,184,32,10);for(const p of PLACES.filter(p=>p.x<55))road(32,p.y,p.x,p.y);
  road(32,43,74,43);road(74,43,74,72);road(74,43,85,43);road(85,43,85,58);road(85,58,74,58);road(74,43,74,20);road(74,20,81,20);road(81,20,81,8);
- for(const p of PLACES.filter(p=>p.x>=55))road(74,p.y,p.x,p.y);
+ for(const p of PLACES.filter(p=>p.x>=55&&p.y<192))road(74,p.y,p.x,p.y);
  road(74,70,74,184);road(74,81,144,81);road(114,81,114,130);road(114,108,74,108);road(106,65,106,116);road(32,77,74,77);road(144,81,144,116);road(114,116,144,116);
  for(const lake of LAKES)for(let y=Math.floor(lake.y-lake.ry);y<=lake.y+lake.ry;y++)for(let x=Math.floor(lake.x-lake.rx);x<=lake.x+lake.rx;x++)if(((x-lake.x)/lake.rx)**2+((y-lake.y)/lake.ry)**2<1)tiles[y*SIZE+x]=3;
  road(32,23,47,23);
+ road(74,181,150,196);road(150,196,234,238);road(234,238,318,262);road(234,238,192,312);road(192,312,280,334);road(280,334,336,374);
+ for(const b of MYTH_BOSSES){for(let y=Math.floor(b.y)-9;y<=b.y+9;y++)for(let x=Math.floor(b.x)-9;x<=b.x+9;x++)if(Math.hypot(x+.5-b.x,y+.5-b.y)<9)tiles[y*SIZE+x]=0;}
  const addBuilding=(x,y,kind,id,width=5,depth=4)=>{const left=Math.floor(x-width/2),top=Math.floor(y-depth),style=kind==='manor'?5:kind==='house'?4:kind==='clinic'?6:7;for(let yy=top;yy<Math.floor(y);yy++)for(let xx=left;xx<left+width;xx++)tiles[yy*SIZE+xx]=style;buildings.push({id,x:left+width/2,y:top+depth/2,left,top,width,depth,kind,door:{x:left+Math.floor(width/2)+.5,y:top+depth+.7}});};
  for(const p of PLACES){
   // Clear approach; facades sit behind the interactable doorstep.
@@ -73,7 +78,7 @@ export function makeFrontierWorld(seed){
  for(const [x,y,kind,radius]of [[65.5,57.7,'laundry',.12],[69.5,47.5,'bench',.5],[81.5,46.5,'bench',.5],[70.5,60.5,'trafficCar',.55],[87.5,44.5,'trafficCar',.55]])if(tiles[Math.floor(y)*SIZE+Math.floor(x)]===0)sprites.push({x,y,kind,radius,variant:1});
  for(let i=0;i<52;i++){const x=61+hash(seed,2000+i)*30,y=30+hash(seed,2100+i)*44;if(tiles[Math.floor(y)*SIZE+Math.floor(x)]===0)sprites.push({x,y,kind:'flowers',variant:i%3});}
  const animals=['deer','fox','rabbit','boar','owl','heron'];
- for(let i=0;i<350;i++){const kind=animals[i%6],x=kind==='heron'&&i<150?41+hash(seed,700+i)*2:i<72?5+hash(seed,801+i)*84:i<150?5+hash(seed,801+i)*49:5+hash(seed,801+i)*123,y=kind==='heron'&&i<150?17+hash(seed,900+i)*6:i<72?5+hash(seed,1001+i)*77:i<150?72+hash(seed,1001+i)*46:125+hash(seed,1001+i)*60;if(tiles[Math.floor(y)*SIZE+Math.floor(x)]===0)sprites.push({id:'animal-'+i,kind,x,y,animal:true,phase:hash(seed,1200+i)*6.28});}
+ for(let i=0;i<650;i++){const kind=animals[i%6],x=i>=350?134+hash(seed,801+i)*243:kind==='heron'&&i<150?41+hash(seed,700+i)*2:i<72?5+hash(seed,801+i)*84:i<150?5+hash(seed,801+i)*49:5+hash(seed,801+i)*123,y=i>=350?194+hash(seed,1001+i)*183:kind==='heron'&&i<150?17+hash(seed,900+i)*6:i<72?5+hash(seed,1001+i)*77:i<150?72+hash(seed,1001+i)*46:125+hash(seed,1001+i)*60;if(tiles[Math.floor(y)*SIZE+Math.floor(x)]===0)sprites.push({id:'animal-'+i,kind,x,y,animal:true,phase:hash(seed,1200+i)*6.28});}
  for(let i=0;i<16;i++){const x=9.5+(i%4)*12,y=79.5+Math.floor(i/4)*11;tiles[Math.floor(y)*SIZE+Math.floor(x)]=0;const cache={id:'cache-'+i,kind:'treasure',x,y};treasures.push(cache);sprites.push(cache);}
  for(let i=16;i<40;i++){const x=11.5+((i-16)%6)*21,y=132.5+Math.floor((i-16)/6)*15;const cache={id:'cache-'+i,kind:'treasure',x,y};treasures.push(cache);sprites.push(cache);}
  for(let i=0;i<180;i++){const x=6+hash(seed,7200+i)*123,y=127+hash(seed,7420+i)*59;if(tiles[Math.floor(y)*SIZE+Math.floor(x)]===0)sprites.push({id:'growth-'+i,kind:i%7===0?'crystal':'mushroom',x,y,variant:i%3,radius:i%7===0?.3:0});}
@@ -83,13 +88,17 @@ export function makeFrontierWorld(seed){
  for(let i=0;i<6;i++)sprites.push({id:'bird-'+i,kind:'bird',x:58+i*4,y:36+i%3,airborne:true,phase:i*1.9});
  sprites.push({id:'paper-target',kind:'target',x:17.5,y:35.5,radius:.25});
  sprites.push({x:30.4,y:45.5,kind:'stranger',id:'stranger'},{x:14.5,y:17.5,kind:'ghost',id:'ghost'});
- const filtered=sprites.filter(s=>s.kind!=='tree'||tiles[Math.floor(s.y)*SIZE+Math.floor(s.x)]===0&&!PLACES.some(p=>Math.hypot(p.x-s.x,p.y-s.y)<4)&&!buildings.some(b=>Math.hypot(b.door.x-s.x,b.door.y-s.y)<1.4)&&!treasures.some(t=>Math.hypot(t.x-s.x,t.y-s.y)<1.3));
+ growForest(sprites,tiles,SIZE,seed);
+ // Wide, open ritual grounds; pillars frame the arena without sealing exits.
+ for(const b of MYTH_BOSSES)for(let i=0;i<8;i++){const a=i*Math.PI/4,x=b.x+Math.cos(a)*8.5,y=b.y+Math.sin(a)*8.5;sprites.push({id:'pillar-'+b.id+'-'+i,kind:'mythPillar',x,y,variant:b.variant,radius:.3});}
+ const filtered=sprites.filter(s=>!MYTH_BOSSES.some(b=>Math.hypot(s.x-b.x,s.y-b.y)<8)&&outsideCoinGlade(s)).filter(s=>s.kind!=='tree'||tiles[Math.floor(s.y)*SIZE+Math.floor(s.x)]===0&&!PLACES.some(p=>Math.hypot(p.x-s.x,p.y-s.y)<4)&&!buildings.some(b=>Math.hypot(b.door.x-s.x,b.door.y-s.y)<1.4)&&!treasures.some(t=>Math.hypot(t.x-s.x,t.y-s.y)<1.3));
  for(const s of filtered){if(!s.id&&['trafficCar','bench','streetlamp','sign','laundry'].includes(s.kind))s.id=s.kind.toLowerCase()+'-'+Math.round(s.x*10)+'-'+Math.round(s.y*10);if(s.kind==='resident'){s.variant??=Math.floor(hash(seed,Math.round(s.x*50+s.y))*12);if(!canStand({size:SIZE,tiles},s.x,s.y,.2)){s.x=s.homeX=Math.floor(s.x)+.5;s.y=s.homeY=Math.floor(s.y)+1.5;}}}
  for(const s of filtered)if(s.kind==='tree'||s.radius)colliders.push({x:s.x,y:s.y,radius:s.kind==='tree'?.2:s.radius,id:s.id||s.kind,kind:s.kind});
  const buckets=new Map();for(const o of colliders){const key=Math.floor(o.x)+','+Math.floor(o.y);if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(o);}
  const traffic=[{id:'traffic-car',kind:'trafficCar',phase:0,speed:2.4,radius:.62,model:0},{id:'traffic-bike',kind:'trafficBike',phase:17,speed:1.8,radius:.35},{id:'traffic-motor',kind:'trafficMotor',phase:39,speed:2.9,radius:.4}];
  for(let i=0;i<9;i++)traffic.push({id:'traffic-neon-'+i,kind:i%4===3?'trafficMotor':'trafficCar',phase:i*11,speed:1.7+(i%3)*.25,radius:i%4===3?.4:.62,model:i%4,corners:[[114.15,81.85],[144.15,81.85],[144.15,116.85],[114.15,116.85]]});
- const facadeTiles=new Map();for(const b of buildings)for(let y=b.top;y<b.top+b.depth;y++)for(let x=b.left;x<b.left+b.width;x++)facadeTiles.set(y*SIZE+x,b.id);return{size:SIZE,tiles,sprites:filtered,seed,colliders,buckets,buildings,traffic,treasures,facadeTiles};
+ const spriteBuckets=new Map();for(const s of filtered){const k=Math.floor(s.x/8)+','+Math.floor(s.y/8);if(!spriteBuckets.has(k))spriteBuckets.set(k,[]);spriteBuckets.get(k).push(s);}
+ const facadeTiles=new Map();for(const b of buildings)for(let y=b.top;y<b.top+b.depth;y++)for(let x=b.left;x<b.left+b.width;x++)facadeTiles.set(y*SIZE+x,b.id);return{size:SIZE,tiles,sprites:filtered,seed,colliders,buckets,buildings,traffic,treasures,facadeTiles,spriteBuckets};
 }
 export const tileAt=(world,x,y)=>{const size=world.size||SIZE;return x<0||y<0||x>=size||y>=size?1:world.tiles[Math.floor(y)*size+Math.floor(x)];};
 export const solid=(world,x,y)=>{const t=tileAt(world,x,y);return t!==0&&t!==2;};
@@ -106,7 +115,12 @@ export function route(world,start,target,radius=.22){
  // Join the grid from the actual position: a tree may occupy its cell centre.
  const joins=[];for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){const p={x:Math.floor(start.x)+dx+.5,y:Math.floor(start.y)+dy+.5};joins.push({...p,d:Math.hypot(p.x-start.x,p.y-start.y)});}const join=joins.sort((a,b)=>a.d-b.d).find(p=>reachable(start,p));if(!join)return[];
  const caches=world.routeEdges??=new Map();if(!caches.has(radius))caches.set(radius,new Int8Array(SIZE*SIZE*4));const edges=caches.get(radius);
- const sx=Math.floor(join.x),sy=Math.floor(join.y),gx=Math.floor(target.x),gy=Math.floor(target.y),from=sy*SIZE+sx,to=gy*SIZE+gx,parents=new Int32Array(SIZE*SIZE).fill(-2),queue=[from];parents[from]=-1;
- for(let i=0;i<queue.length;i++){const id=queue[i];if(id===to){const points=[];for(let n=to;n!==from;n=parents[n])points.push({x:n%SIZE+.5,y:Math.floor(n/SIZE)+.5});points.push({x:join.x,y:join.y});points.reverse();if(reachable(points.at(-1),target))points.push({x:target.x,y:target.y});return points;}const x=id%SIZE,y=Math.floor(id/SIZE);let direction=0;for(const [dx,dy]of [[1,0],[-1,0],[0,1],[0,-1]]){const edge=id*4+direction++,xx=x+dx,yy=y+dy,n=yy*SIZE+xx;if(xx<1||yy<1||xx>=SIZE-1||yy>=SIZE-1||parents[n]!==-2||edges[edge]===-1)continue;if(!edges[edge]){const middle={x:x+.5,y:y+.5};moveInWorld(world,middle,dx,dy,radius);edges[edge]=canStand(world,xx+.5,yy+.5,radius)&&Math.hypot(middle.x-xx-.5,middle.y-yy-.5)<.02?1:-1;}if(edges[edge]!==1)continue;parents[n]=id;queue.push(n);}}
+ const sx=Math.floor(join.x),sy=Math.floor(join.y),gx=Math.floor(target.x),gy=Math.floor(target.y),from=sy*SIZE+sx,to=gy*SIZE+gx,parents=new Int32Array(SIZE*SIZE).fill(-2),cost=new Int32Array(SIZE*SIZE).fill(2147483647),closed=new Uint8Array(SIZE*SIZE),heap=[];parents[from]=-1;cost[from]=0;
+ // A* expands toward the destination instead of flooding the entire enlarged
+ // county. Every accepted edge still uses the same swept collision test.
+ const push=(id,score)=>{const entry={id,score};let i=heap.length;heap.push(entry);while(i){const p=(i-1)>>1;if(heap[p].score<=score)break;heap[i]=heap[p];i=p;}heap[i]=entry;};
+ const pop=()=>{const first=heap[0],last=heap.pop();if(heap.length){let i=0;while(i*2+1<heap.length){let j=i*2+1;if(j+1<heap.length&&heap[j+1].score<heap[j].score)j++;if(heap[j].score>=last.score)break;heap[i]=heap[j];i=j;}heap[i]=last;}return first.id;};
+ push(from,Math.abs(gx-sx)+Math.abs(gy-sy));
+ while(heap.length){const id=pop();if(closed[id])continue;closed[id]=1;if(id===to){const points=[];for(let n=to;n!==from;n=parents[n])points.push({x:n%SIZE+.5,y:Math.floor(n/SIZE)+.5});points.push({x:join.x,y:join.y});points.reverse();if(reachable(points.at(-1),target))points.push({x:target.x,y:target.y});return points;}const x=id%SIZE,y=Math.floor(id/SIZE);let direction=0;for(const [dx,dy]of [[1,0],[-1,0],[0,1],[0,-1]]){const edge=id*4+direction++,xx=x+dx,yy=y+dy,n=yy*SIZE+xx;if(xx<1||yy<1||xx>=SIZE-1||yy>=SIZE-1||closed[n]||cost[n]<=cost[id]+1||edges[edge]===-1)continue;if(!edges[edge]){const middle={x:x+.5,y:y+.5};moveInWorld(world,middle,dx,dy,radius);edges[edge]=canStand(world,xx+.5,yy+.5,radius)&&Math.hypot(middle.x-xx-.5,middle.y-yy-.5)<.02?1:-1;}if(edges[edge]!==1)continue;parents[n]=id;cost[n]=cost[id]+1;push(n,cost[n]+1.3*(Math.abs(gx-xx)+Math.abs(gy-yy)));}}
  return[];
 }
