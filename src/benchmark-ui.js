@@ -1,6 +1,7 @@
 import {tr} from './i18n.js';
 import {h,button} from './dom.js';
 import {BT} from './benchmark-text.js';
+import {PT} from './performance-text.js';
 import {runBenchmark,validateBenchmark} from './benchmark.js';
 const text=value=>tr(value),number=(v,d=1)=>Number.isFinite(v)?v.toFixed(d):'—';
 const metric=(label,value)=>h('div',{class:'benchmark-metric'},h('small',{},text(label)),h('strong',{},value));
@@ -9,7 +10,7 @@ function resultDetails(r){
  return h('div',{class:'benchmark-result-grid'},
   metric(BT.score,r.score+'/100'),metric(BT.quality,text(BT[r.quality])),
   metric(BT.median,number(r.medianFrameMs)+' ms'),metric(BT.p95,number(r.p95FrameMs)+' ms'),
-  metric(BT.renderCost,number(r.renderP95Ms)+' ms'),metric(BT.slow,number(r.slowFrameRatio*100)+'%'),
+  metric(PT.work,number(r.renderP95Ms)+' ms'),metric(BT.slow,number(r.slowFrameRatio*100)+'%'),
   metric(BT.samples,String(r.frameCount)),metric(BT.duration,number(r.durationMs/1000)+' s'),
   metric(BT.hardware,p.cores===null?'—':String(p.cores)),metric(BT.memory,p.memoryGb===null?'—':number(p.memoryGb)+' GB'),
   metric(BT.touch,String(p.touchPoints)),metric(BT.viewport,p.viewport.width+' × '+p.viewport.height)
@@ -23,10 +24,10 @@ export function mountBenchmark(root,{existing=null,onSaved=()=>false,onContinue=
  let current=validateBenchmark(existing),running=false,disposed=false,controller=null,stored=Boolean(current),parts=null;
  const render=()=>{
   if(disposed)return;
-  root.replaceChildren(h('div',{class:'modal-kicker'},text(BT.kicker)),h('h2',{},text(BT.title)),h('p',{class:'body-copy'},text(BT.intro)));
+  root.replaceChildren(h('div',{class:'modal-kicker'},text(BT.kicker)),h('h2',{},text(BT.title)),h('p',{class:'body-copy'},text(PT.suiteIntro)));
   if(current){
    root.append(h('div',{class:'benchmark-complete',role:'status'},h('span',{class:'success-mark','aria-hidden':'true'},'✓'),h('strong',{},text(BT.passed)),h('small',{},text(stored?BT.saved:BT.notStored))));
-   root.append(resultDetails(current),h('p',{class:'benchmark-note'},text(BT[current.quality==='high'?'deviceHigh':current.quality==='low'?'deviceLow':'deviceAuto'])),h('p',{class:'modal-note'},text(BT.local)),h('p',{class:'benchmark-privacy'},text(BT.privacy)));
+   root.append(resultDetails(current));const scenes=h('div',{class:'benchmark-scenes'},h('h3',{},text(PT.sceneResults)));for(const scene of current.scenes){const row=h('article',{'data-benchmark-scene':scene.id},h('strong',{},text(PT[scene.id])),h('div',{class:'benchmark-result-grid'},metric(BT.p95,number(scene.p95FrameMs)+' ms'),metric(PT.work,number(scene.workP95Ms)+' ms'),metric(PT.simulation,number(scene.simulationP95Ms)+' ms'),metric(PT.peakFrame,number(scene.peakFrameMs)+' ms')));scenes.append(row);}root.append(scenes,h('div',{class:'benchmark-result-grid'},metric(PT.setupCost,number(current.worldBuildMs)+' ms'),metric(PT.routeCost,number(current.routeMs)+' ms')),h('p',{class:'modal-note'},text(PT.suiteNote)),h('p',{class:'benchmark-note'},text(BT[current.quality==='high'?'deviceHigh':current.quality==='low'?'deviceLow':'deviceAuto'])),h('p',{class:'modal-note'},text(BT.local)),h('p',{class:'benchmark-privacy'},text(BT.privacy)));
    root.append(h('div',{class:'modal-actions'},button(text(BT.rerun),run,'btn secondary',{'data-benchmark-run':'true'}),button(text(BT.export),()=>exportResult(current),'btn secondary',{'data-benchmark-export':'true'}),button(text(BT.continue),onContinue,'btn primary',{'data-benchmark-continue':'true'})));
   }else{
    const canvas=h('canvas',{class:'benchmark-canvas',width:640,height:360,'aria-label':text(BT.title)}),status=h('p',{class:'benchmark-status','aria-live':'polite'},text(BT.run)),bar=h('div',{class:'benchmark-progress',role:'progressbar','aria-label':text(BT.title),'aria-valuemin':0,'aria-valuemax':100,'aria-valuenow':0},h('i',{}));
@@ -41,7 +42,7 @@ export function mountBenchmark(root,{existing=null,onSaved=()=>false,onContinue=
   try{
    const result=await runBenchmark({canvas:activeParts.canvas,signal:controller.signal,onPhase:phase=>{
     if(disposed)return;
-    activeParts.status.textContent=text(BT[phase.id]||BT.measure);
+    activeParts.status.textContent=text(PT[phase.id]||BT[phase.id]||BT.measure);
     const percent=Math.round(phase.progress*100);activeParts.bar.firstElementChild.style.width=percent+'%';activeParts.bar.setAttribute('aria-valuenow',String(percent));
    }});
    if(disposed)return;

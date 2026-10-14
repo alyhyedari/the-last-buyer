@@ -20,7 +20,6 @@ import {renderEndingOffers,renderFinale,renderEndingGallery} from './ending-ui.j
 import {ET} from './ending-text.js';
 import {ENDING_ROUTES} from './ending-rules.js';
 import {readBenchmark,writeBenchmark} from './benchmark.js';
-import {mountBenchmark} from './benchmark-ui.js';
 import {BT} from './benchmark-text.js';
 import {renderReflection} from './reflection-ui.js';
 import {COMMONS,canVisitChapter,enterChapter,returnToCommons,discover,projectCount,finishProject,ringBell,settledChapters} from './open-world.js';
@@ -97,13 +96,20 @@ function dismissModal(){if(playing&&state?.ending)titleScreen();else closeModal(
 $('modal-close').addEventListener('click',dismissModal);
 function ensureBenchmark(after=()=>{}){if(benchmark||benchmarkSkipped)after();else showBenchmark(after);}
 function showBenchmark(after=()=>{}){
- openModal(root=>{benchmarkUI=mountBenchmark(root,{
-  existing:benchmark,
-  onSaved:result=>{benchmark=result;engine.recommend(result.quality);return writeBenchmark(storage,result);},
-  onContinue:()=>{closeModal();after();},
-  onSkip:()=>{benchmarkSkipped=true;if(!benchmark)engine.recommend('low');closeModal();after();},
-  onClose:closeModal
- });},{clock:true});
+ const builder=root=>{
+  root.append(h('h2',{},tr(BT.title)),h('p',{role:'status'},tr(BT.prepare)),button(tr('cancel'),closeModal,'btn secondary'));
+  import('./benchmark-ui.js').then(({mountBenchmark})=>{
+   if(!modalOpen||modalBuilder!==builder)return;
+   benchmarkUI=mountBenchmark(root,{
+    existing:benchmark,
+    onSaved:result=>{benchmark=result;engine.recommend(result.quality);return writeBenchmark(storage,result);},
+    onContinue:()=>{closeModal();after();},
+    onSkip:()=>{benchmarkSkipped=true;if(!benchmark)engine.recommend('low');closeModal();after();},
+    onClose:closeModal
+   });
+  }).catch(()=>{if(!modalOpen||modalBuilder!==builder)return;root.replaceChildren(h('h2',{},tr(BT.title)),h('p',{role:'status'},tr(BT.unavailable)),button(tr(BT.rerun),()=>showBenchmark(after),'btn primary'),button(tr('cancel'),closeModal,'btn secondary'));});
+ };
+ openModal(builder,{clock:true});
 }
 $('benchmark-menu').addEventListener('click',()=>showBenchmark());
 document.addEventListener('keydown',e=>{if(frontierUI||frontierLoading)return;if(modalOpen){if(e.code==='Escape'){e.preventDefault();dismissModal();return;}if(e.code==='Tab'){const nodes=[...$('modal').querySelectorAll('button:not(:disabled),a[href],input,select,textarea,summary,[tabindex="0"]')].filter(el=>!el.hidden&&el.getClientRects().length);if(!nodes.length){e.preventDefault();return;}const first=nodes[0],last=nodes.at(-1);if(e.shiftKey&&(document.activeElement===first||document.activeElement===$('modal'))){e.preventDefault();last.focus();}else if(!e.shiftKey&&(document.activeElement===last||document.activeElement===$('modal'))){e.preventDefault();first.focus();}}return;}if(!playing||e.target.matches('input,select,textarea'))return;if(e.code==='Escape'){e.preventDefault();showPause();}if(e.code==='KeyJ'){e.preventDefault();showJournal();}if(e.code==='KeyM'){e.preventDefault();showMap();}if(e.code==='KeyH'){e.preventDefault();showGuidance();}});
@@ -254,7 +260,7 @@ async function enterFrontier(resume=false){
  if(!resume&&state.village.vehicle==='foot'){showTravelGuide();return;}
  engine.capturePosition();frontierLoading=true;closeModal({resume:false});$('app').inert=true;engine.setPaused(true);syncInputMode();toast(ft('loading'));
  try{const {mountFrontier}=await import('./frontier-ui.js');frontierLoading=false;
-  frontierUI=mountFrontier({state,settings,audio,onSave:save,onBuy:()=>buyAnimation.play(),sourceCanvas:$('world'),onSettings:()=>{storeSettings();translate();},onReturn:()=>{frontierUI=null;state.frontier.active=false;mobileDisplay.sync();loadChapter(false);syncInputMode();}});
+  frontierUI=mountFrontier({state,settings,audio,onSave:save,onBuy:()=>buyAnimation.play(),sourceCanvas:$('world'),recommendedQuality:benchmark?.quality||(benchmarkSkipped?'low':'high'),onSettings:()=>{storeSettings();translate();},onReturn:()=>{frontierUI=null;state.frontier.active=false;mobileDisplay.sync();loadChapter(false);syncInputMode();}});
   $('toast').hidden=true;mobileDisplay.sync();syncInputMode();
  }catch(error){frontierLoading=false;frontierUI=null;document.body.classList.remove('in-frontier');$('app').inert=false;state.frontier.active=false;engine.setPaused(document.hidden||displayBlocked);syncInputMode();toast(ft('failed'));console.error('Frontier load failed',error);}
 }

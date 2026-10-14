@@ -13,7 +13,7 @@ test('measured benchmark round-trips; unavailable storage is reported honestly',
  assert.equal(readBenchmark({getItem(){throw Error('denied');}}),null);
 });
 test('incomplete, stale algorithms, invented grades and extra tracking fields are rejected',()=>{
- for(const patch of [{version:1},{score:82},{quality:'low'},{frameCount:0},{frameCount:1001},{durationMs:0},{p95FrameMs:0},{renderP95Ms:Infinity},{slowFrameRatio:2},{at:'invalid'},{userAgent:'extra'},{profile:{...fixture.profile,cores:999}},{profile:{...fixture.profile,viewport:{width:-1,height:900}}},{profile:{...fixture.profile,ua:'extra'}}])assert.equal(validateBenchmark({...fixture,...patch}),null,JSON.stringify(patch));
+ for(const patch of [{version:1},{score:82},{quality:'low'},{frameCount:0},{frameCount:3001},{durationMs:0},{p95FrameMs:0},{renderP95Ms:Infinity},{slowFrameRatio:2},{at:'invalid'},{userAgent:'extra'},{profile:{...fixture.profile,cores:999}},{profile:{...fixture.profile,viewport:{width:-1,height:900}}},{profile:{...fixture.profile,ua:'extra'}}])assert.equal(validateBenchmark({...fixture,...patch}),null,JSON.stringify(patch));
  const p=benchmarkProfile();assert.ok(p.cores===null||Number.isInteger(p.cores));assert.equal('userAgent' in p,false);
 });
 test('quality follows measured scene load, independent of reported hardware',()=>{

@@ -98,7 +98,7 @@ export function makeFrontierWorld(seed){
  const traffic=[{id:'traffic-car',kind:'trafficCar',phase:0,speed:2.4,radius:.62,model:0},{id:'traffic-bike',kind:'trafficBike',phase:17,speed:1.8,radius:.35},{id:'traffic-motor',kind:'trafficMotor',phase:39,speed:2.9,radius:.4}];
  for(let i=0;i<9;i++)traffic.push({id:'traffic-neon-'+i,kind:i%4===3?'trafficMotor':'trafficCar',phase:i*11,speed:1.7+(i%3)*.25,radius:i%4===3?.4:.62,model:i%4,corners:[[114.15,81.85],[144.15,81.85],[144.15,116.85],[114.15,116.85]]});
  const spriteBuckets=new Map();for(const s of filtered){const k=Math.floor(s.x/8)+','+Math.floor(s.y/8);if(!spriteBuckets.has(k))spriteBuckets.set(k,[]);spriteBuckets.get(k).push(s);}
- const facadeTiles=new Map();for(const b of buildings)for(let y=b.top;y<b.top+b.depth;y++)for(let x=b.left;x<b.left+b.width;x++)facadeTiles.set(y*SIZE+x,b.id);return{size:SIZE,tiles,sprites:filtered,seed,colliders,buckets,buildings,traffic,treasures,facadeTiles,spriteBuckets};
+ const facadeTiles=new Map();for(const b of buildings)for(let y=b.top;y<b.top+b.depth;y++)for(let x=b.left;x<b.left+b.width;x++)facadeTiles.set(y*SIZE+x,b.id);return{spatialCollision:true,size:SIZE,tiles,sprites:filtered,seed,colliders,buckets,buildings,traffic,treasures,facadeTiles,spriteBuckets};
 }
 export const tileAt=(world,x,y)=>{const size=world.size||SIZE;return x<0||y<0||x>=size||y>=size?1:world.tiles[Math.floor(y)*size+Math.floor(x)];};
 export const solid=(world,x,y)=>{const t=tileAt(world,x,y);return t!==0&&t!==2;};
@@ -108,7 +108,7 @@ export function clearSight(world,a,b){const d=Math.hypot(b.x-a.x,b.y-a.y),steps=
 export function nearestOpen(world,point,radius=.22){if(canStand(world,point.x,point.y,radius))return{x:point.x,y:point.y};for(let r=.3;r<8;r+=.3)for(let a=0;a<Math.PI*2;a+=.3){const x=point.x+Math.cos(a)*r,y=point.y+Math.sin(a)*r;if(canStand(world,x,y,radius))return{x,y};}return{x:32.5,y:57.5};}
 export function elevationAt(x,y){return Math.max(0,1-Math.hypot((x-82)/17,(y-6)/20))*12;}
 export function trafficAt(world,minutes){return(world.traffic||[]).map(v=>{const corners=v.corners||[[74.15,43.85],[85.15,43.85],[85.15,58.85],[74.15,58.85]],lengths=corners.map((a,i)=>Math.hypot(a[0]-corners[(i+1)%corners.length][0],a[1]-corners[(i+1)%corners.length][1])),total=lengths.reduce((a,b)=>a+b,0);let d=((minutes*1.1*v.speed+v.phase)%total+total)%total,i=0;while(d>lengths[i])d-=lengths[i++];const a=corners[i],b=corners[(i+1)%corners.length],t=d/lengths[i];return{...v,x:a[0]+(b[0]-a[0])*t,y:a[1]+(b[1]-a[1])*t,angle:Math.atan2(b[1]-a[1],b[0]-a[0])};});}
-export function route(world,start,target,radius=.22){
+export function route(world,start,target,radius=.22,{maxNodes=12000,bounds=null}={}){
  const SIZE=world.size||192;
  const reachable=(a,b)=>{const count=Math.max(1,Math.ceil(Math.hypot(b.x-a.x,b.y-a.y)/.1));for(let i=0;i<=count;i++)if(!canStand(world,a.x+(b.x-a.x)*i/count,a.y+(b.y-a.y)*i/count,radius))return false;return true;};
  if(!canStand(world,start.x,start.y,radius)||!canStand(world,target.x,target.y,radius))return[];
@@ -121,6 +121,17 @@ export function route(world,start,target,radius=.22){
  const push=(id,score)=>{const entry={id,score};let i=heap.length;heap.push(entry);while(i){const p=(i-1)>>1;if(heap[p].score<=score)break;heap[i]=heap[p];i=p;}heap[i]=entry;};
  const pop=()=>{const first=heap[0],last=heap.pop();if(heap.length){let i=0;while(i*2+1<heap.length){let j=i*2+1;if(j+1<heap.length&&heap[j+1].score<heap[j].score)j++;if(heap[j].score>=last.score)break;heap[i]=heap[j];i=j;}heap[i]=last;}return first.id;};
  push(from,Math.abs(gx-sx)+Math.abs(gy-sy));
- while(heap.length){const id=pop();if(closed[id])continue;closed[id]=1;if(id===to){const points=[];for(let n=to;n!==from;n=parents[n])points.push({x:n%SIZE+.5,y:Math.floor(n/SIZE)+.5});points.push({x:join.x,y:join.y});points.reverse();if(reachable(points.at(-1),target))points.push({x:target.x,y:target.y});return points;}const x=id%SIZE,y=Math.floor(id/SIZE);let direction=0;for(const [dx,dy]of [[1,0],[-1,0],[0,1],[0,-1]]){const edge=id*4+direction++,xx=x+dx,yy=y+dy,n=yy*SIZE+xx;if(xx<1||yy<1||xx>=SIZE-1||yy>=SIZE-1||closed[n]||cost[n]<=cost[id]+1||edges[edge]===-1)continue;if(!edges[edge]){const middle={x:x+.5,y:y+.5};moveInWorld(world,middle,dx,dy,radius);edges[edge]=canStand(world,xx+.5,yy+.5,radius)&&Math.hypot(middle.x-xx-.5,middle.y-yy-.5)<.02?1:-1;}if(edges[edge]!==1)continue;parents[n]=id;cost[n]=cost[id]+1;push(n,cost[n]+1.3*(Math.abs(gx-xx)+Math.abs(gy-yy)));}}
+ let expanded=0;while(heap.length&&expanded<maxNodes){const id=pop();if(closed[id])continue;expanded++;closed[id]=1;if(id===to){const points=[];for(let n=to;n!==from;n=parents[n])points.push({x:n%SIZE+.5,y:Math.floor(n/SIZE)+.5});points.push({x:join.x,y:join.y});points.reverse();if(reachable(points.at(-1),target))points.push({x:target.x,y:target.y});world.lastRoute={expanded,limited:false};return points;}const x=id%SIZE,y=Math.floor(id/SIZE);let direction=0;for(const [dx,dy]of [[1,0],[-1,0],[0,1],[0,-1]]){const edge=id*4+direction++,xx=x+dx,yy=y+dy,n=yy*SIZE+xx;if(xx<1||yy<1||xx>=SIZE-1||yy>=SIZE-1||bounds&&(xx<bounds.left||xx>bounds.right||yy<bounds.top||yy>bounds.bottom)||closed[n]||cost[n]<=cost[id]+1||edges[edge]===-1)continue;if(!edges[edge]){const middle={x:x+.5,y:y+.5};moveInWorld(world,middle,dx,dy,radius);edges[edge]=canStand(world,xx+.5,yy+.5,radius)&&Math.hypot(middle.x-xx-.5,middle.y-yy-.5)<.02?1:-1;}if(edges[edge]!==1)continue;parents[n]=id;cost[n]=cost[id]+1;push(n,cost[n]+1.3*(Math.abs(gx-xx)+Math.abs(gy-yy)));}}
+ world.lastRoute={expanded,limited:expanded>=maxNodes};
  return[];
+}
+// NPCs share a small planning budget. A blocked sidewalk must never cause every
+// resident to search the entire county on the same frame. null means deferred.
+export function localRoute(world,start,target,radius=.25){
+ if(world.aiRouteBudget!==undefined){if(world.aiRouteBudget<=0)return null;world.aiRouteBudget--;}
+ if(!canStand(world,target.x,target.y,radius))return[];
+ const d=Math.hypot(target.x-start.x,target.y-start.y),n=Math.ceil(d/.12);let direct=d<32;
+ for(let i=1;direct&&i<=n;i++)if(!canStand(world,start.x+(target.x-start.x)*i/n,start.y+(target.y-start.y)*i/n,radius))direct=false;
+ if(direct)return[{x:target.x,y:target.y}];
+ return route(world,start,target,radius,{maxNodes:160,bounds:{left:Math.min(start.x,target.x)-4,right:Math.max(start.x,target.x)+4,top:Math.min(start.y,target.y)-4,bottom:Math.max(start.y,target.y)+4}});
 }

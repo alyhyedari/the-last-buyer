@@ -5,6 +5,7 @@
 .frontier-dialog:has(.forest-journal-head,.myth-boss-entry) .frontier-dialog-close{position:sticky;top:-20px;float:inline-end;z-index:5;background:#101f29;border:1px solid #52735a}
 /* Physical controls do not mirror with the language direction. FIRE always sits
    under the right thumb; only the label follows the document language. */
+.benchmark-scenes{margin-top:18px}.benchmark-scenes article{padding:14px 0;border-top:1px solid #46604b66}.benchmark-scenes article>strong{font-size:13px;color:#c9eead}.benchmark-scenes .benchmark-result-grid{margin-top:8px}.benchmark-metric strong{direction:ltr;unicode-bidi:isolate}
 .frontier-shell .frontier-combat{inset-inline:auto;left:auto;right:max(16px,env(safe-area-inset-right));direction:ltr;grid-template-columns:100px 100px;bottom:126px;max-width:none}
 .frontier-shell .frontier-combat .frontier-btn{min-width:0;overflow-wrap:anywhere}
 .frontier-shell .frontier-combat .combat-fire{grid-column:2;grid-row:1}

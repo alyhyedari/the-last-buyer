@@ -1,6 +1,6 @@
 import {MYTH_BOSSES} from './frontier-myth-data.js';
 import {hash,earn} from './frontier-state.js';
-import {canStand,moveInWorld,clearSight,nearestOpen,route} from './frontier-world.js';
+import {canStand,moveInWorld,clearSight,nearestOpen,localRoute} from './frontier-world.js';
 import {actorWithHealth,damageActor,hurtPlayer,bulletSight} from './frontier-combat.js';
 import {hasBuy,hasGme,lightRange} from './frontier-perks.js';
 import {FOREST_COINS} from './frontier-forest-data.js';
@@ -29,7 +29,7 @@ export function updateMyths(state,world,dt){
    (world.effects??=[]).push({kind:'sparks',x:p.tx,y:p.ty,age:0,ttl:.8,seed:b.variant});if(hit&&clearSight(world,p,f)){const died=hurtPlayer(state,b.damage*(enraged?1.15:1));out.push({kind:died?'died':'attacked',victim:b.kind});if(died)break;}continue;
   }
   if(d<16&&f.minutes>=p.next&&clearSight(world,p,f)){p.windup=f.minutes+(enraged?1.15:1.65);p.tx=f.x;p.ty=f.y;p.pattern++;out.push({kind:'mythWarning',boss:b.id,attack:b.attack});continue;}
-  if(d>4){if(f.minutes>=p.repath){p.path=route(world,p,f,.4);p.repath=f.minutes+2;}while(p.path.length&&Math.hypot(p.x-p.path[0].x,p.y-p.path[0].y)<.2)p.path.shift();const goal=p.path[0];if(goal){const a=Math.atan2(goal.y-p.y,goal.x-p.x);moveInWorld(world,p,Math.cos(a)*dt*b.speed,Math.sin(a)*dt*b.speed,.4);}}
+  if(d>4){if(f.minutes>=p.repath){const nextPath=localRoute(world,p,f,.4);if(nextPath!==null){p.path=nextPath;p.repath=f.minutes+2;}}while(p.path.length&&Math.hypot(p.x-p.path[0].x,p.y-p.path[0].y)<.2)p.path.shift();const goal=p.path[0];if(goal){const a=Math.atan2(goal.y-p.y,goal.x-p.x);moveInWorld(world,p,Math.cos(a)*dt*b.speed,Math.sin(a)*dt*b.speed,.4);}}
   const saved=f.life.combat.actors[id];if(saved){saved.x=p.x;saved.y=p.y;}
  }
  return out;
