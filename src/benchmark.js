@@ -60,12 +60,12 @@ export async function runBenchmark({canvas,onPhase=()=>{},signal}={}){
  return new Promise((resolve,reject)=>{
   let id,timer,finished=false,index=0,stageStart=0,last=0,announced=-1;const started=performance.now(),scenes=[],allFrames=[];let frames=[],costs=[],simulation=[];
   const clean=()=>{cancelAnimationFrame(id);clearTimeout(timer);document.removeEventListener('visibilitychange',visibility);signal?.removeEventListener('abort',abort);};
-  const fail=code=>{if(finished)return;finished=true;clean();reject(new Error(code));};const abort=()=>fail('cancelled'),visibility=()=>{if(document.hidden)fail('interrupted');};
+  const fail=code=>{if(finished)return;finished=true;clean();reject(new Error(code));};const abort=()=>fail('cancelled'),visibility=()=>{if(document.hidden){canvas.dataset.benchmarkInterruption='page hidden';fail('interrupted');}};
   if(signal?.aborted){fail('cancelled');return;}if(document.hidden){fail('interrupted');return;}
   signal?.addEventListener('abort',abort,{once:true});document.addEventListener('visibilitychange',visibility);timer=setTimeout(()=>fail('insufficient'),25000);
   const ids=['city','forest','boss','water'];try{suite.setup(ids[0]);}catch{fail('unavailable');return;}
   const tick=now=>{if(finished)return;try{
-   if(!stageStart)stageStart=now;const elapsed=now-stageStart,interval=last?now-last:16.67;last=now;if(interval>1000){fail('interrupted');return;}
+   if(!stageStart)stageStart=now;const elapsed=now-stageStart,interval=last?now-last:16.67;last=now;if(interval>1000){canvas.dataset.benchmarkInterruption='frame gap '+Math.round(interval)+' ms';fail('interrupted');return;}
    const work=suite.draw(Math.min(.06,interval/1000));if(elapsed>180){frames.push(interval);costs.push(work.workMs);simulation.push(work.simulationMs);allFrames.push(interval);}
    const mark=Math.floor(elapsed/150);if(mark!==announced){announced=mark;onPhase({id:ids[index],progress:(index+Math.min(1,elapsed/1650))/4});}
    if(elapsed>=1650){if(frames.length<8){fail('insufficient');return;}scenes.push({id:ids[index],medianFrameMs:round(percentile(frames,.5)),p95FrameMs:round(percentile(frames,.95)),peakFrameMs:round(Math.max(...frames)),workP95Ms:round(percentile(costs,.95)),simulationP95Ms:round(percentile(simulation,.95)),slowFrameRatio:round(frames.filter(n=>n>34).length/frames.length),frameCount:frames.length,durationMs:Math.round(elapsed)});

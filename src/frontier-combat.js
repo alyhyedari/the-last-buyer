@@ -1,4 +1,5 @@
 import {MYTH_BOSSES} from './frontier-myth-data.js';
+import {magazineRounds,spendMagazine} from './frontier-loadout-state.js';
 import {hasBuy,hasGme} from './frontier-perks.js';
 import {uvTouches} from './frontier-myth.js';
 import {forestWard} from './frontier-forest-state.js';
@@ -17,7 +18,7 @@ export const WEAPONS={
  grenade:{damage:105,range:12,delay:1,ammo:'grenades',projectile:'grenade',blast:2.8,sound:'bow'}
 };
 export const HOSTILES={"zombie":{"hp":95,"speed":0.7,"damage":12,"reach":1,"delay":1.4,"notice":12},"jinn":{"hp":72,"speed":1.45,"damage":10,"reach":1.1,"delay":1.25,"notice":14},"vampire":{"hp":150,"speed":2.1,"damage":19,"reach":1,"delay":1.7,"notice":15},"watcher":{"hp":210,"speed":0.52,"damage":26,"reach":1.4,"delay":2.1,"notice":11},"robber":{"hp":85,"speed":1.35,"damage":9,"reach":1,"delay":1.2,"notice":9},"sentinel":{"hp":170,"speed":1.1,"damage":14,"reach":1.4,"delay":1.8,"notice":15},"ufoEnemy":{"hp":240,"speed":0.8,"damage":15,"reach":9,"delay":2.6,"notice":20}};
-for(const b of MYTH_BOSSES)HOSTILES[b.kind]={hp:b.hp,speed:b.speed,damage:b.damage,reach:2,delay:3,notice:24};Object.assign(HOSTILES,{wisp:{hp:85,speed:1.8,damage:12,reach:1.3,delay:1.4,notice:14},briar:{hp:180,speed:.8,damage:21,reach:1.5,delay:2,notice:12},moth:{hp:65,speed:2.2,damage:8,reach:1.2,delay:1.2,notice:17}});
+for(const b of MYTH_BOSSES)HOSTILES[b.kind]={hp:b.hp,speed:b.speed,damage:b.damage,reach:2,delay:3,notice:24};Object.assign(HOSTILES,{shade:{hp:110,speed:2.5,damage:14,reach:1.2,delay:1.9,notice:18},spore:{hp:145,speed:.5,damage:17,reach:5,delay:2.8,notice:14},wisp:{hp:85,speed:1.8,damage:12,reach:1.3,delay:1.4,notice:14},briar:{hp:180,speed:.8,damage:21,reach:1.5,delay:2,notice:12},moth:{hp:65,speed:2.2,damage:8,reach:1.2,delay:1.2,notice:17}});
 export const actorMaxHealth=s=>HOSTILES[s.kind]?.hp||({tree:110,trafficCar:300,trafficBike:90,trafficMotor:140,bench:55,streetlamp:55,sign:50,laundry:30,crystal:160,relic:240,ufoFriend:240,mossling:90,rabbit:22,fox:40,owl:26,heron:30,bird:16,deer:60,boar:115,horse:150,dog:60,cat:35}[s.kind]||100);
 export const ammoCount=(f,weapon)=>{const key=WEAPONS[weapon]?.ammo;return key==='ammo'?f.life.ammo:key?f.life.combat[key]:Infinity;};
 export const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
@@ -35,7 +36,7 @@ function remember(f,s,hp){const records=f.life.combat.actors;if(Object.keys(reco
 }
 export function actorWithHealth(f,s){if(s.owned)return{...s,hp:f.life.expanse.carHealth*3,maxHp:300,dead:f.life.expanse.carHealth<=0,scenery:true};const record=f.life.combat.actors[s.id],hp=record?.hp??actorMaxHealth(s);return{...s,...(hp<=0&&record?{x:record.x,y:record.y}:{}),hp,maxHp:actorMaxHealth(s),dead:hp<=0,scenery:isScenery(s)};}
 export function damageActor(state,world,s,damage,{crime=true}={}){
- const f=state.frontier,l=f.life,current=s.owned?l.expanse.carHealth*3:l.combat.actors[s.id]?.hp??s.hp??actorMaxHealth(s);if(current<=0||damage<=0)return null;
+ if(s.peaceful||s.kind==='child')return null;const f=state.frontier,l=f.life,current=s.owned?l.expanse.carHealth*3:l.combat.actors[s.id]?.hp??s.hp??actorMaxHealth(s);if(current<=0||damage<=0)return null;
  if(s.boss||s.id?.startsWith('boss-'))damage*=uvTouches(f,world,s)?1.3:.65;const hp=Math.max(0,current-damage),killed=hp===0;remember(f,s,hp);
  if(s.owned)l.expanse.carHealth=hp/3;const scenery=isScenery(s);if(s.alien){l.expanse.alienTrust=Math.max(-12,l.expanse.alienTrust-2);world.alienAlertUntil=f.minutes+30;}
  const protectedTarget=s.domestic||['resident','companion'].includes(s.kind);
@@ -47,8 +48,8 @@ export function damageActor(state,world,s,damage,{crime=true}={}){
  return{kind:scenery?(killed?'objectBroken':'objectHit'):s.alien?'alienAngered':protectedTarget?'protectedShot':killed?(s.animal?'huntResult':'enemyDown'):'enemyHit',target:s.id,victim:s.kind,killed,hp,maxHp:actorMaxHealth(s),close:distance(f,s)<2.5,damage:current-hp,x:s.x,y:s.y};
 }
 export function shoot(state,world,actors,{aiming=false}={}){
- const f=state.frontier,l=f.life,weapon=state.village.weapon,c=WEAPONS[weapon];if(l.expanse.swimming||f.mounted||!c||f.minutes<Math.max(l.impairedUntil,f.soberAt))return{kind:'cannotShoot'};if(ammoCount(f,weapon)<=0)return{kind:'noAmmo'};
- l.forest.shots++;const damagePower=(aiming&&hasBuy(f,5)?1.2:1)*(hasBuy(f,16)&&l.forest.shots%5===0?1.6:1)*(hasGme(f,'storm')?1.25:1);if(!(hasBuy(f,20)&&l.forest.shots%4===0)){if(c.ammo==='ammo')l.ammo--;else if(c.ammo)l.combat[c.ammo]--;}
+ const f=state.frontier,l=f.life,weapon=state.village.weapon,c=WEAPONS[weapon];if(l.expanse.swimming||f.mounted||!c||f.minutes<Math.max(l.impairedUntil,f.soberAt))return{kind:'cannotShoot'};if(ammoCount(f,weapon)<=0)return{kind:'noAmmo'};if(magazineRounds(f,weapon,ammoCount(f,weapon))<=0)return{kind:'reloadNeeded'};
+ l.forest.shots++;const damagePower=(aiming&&hasBuy(f,5)?1.2:1)*(hasBuy(f,16)&&l.forest.shots%5===0?1.6:1)*(hasGme(f,'storm')?1.25:1);if(!(hasBuy(f,20)&&l.forest.shots%4===0)){if(c.ammo==='ammo')l.ammo--;else if(c.ammo)l.combat[c.ammo]--;spendMagazine(f,weapon);}
  if(c.projectile){const p={id:(world.shotSerial=(world.shotSerial||0)+1),kind:c.projectile,x:f.x,y:f.y,angle:f.angle,age:0,speed:c.projectile==='rocket'?16:8,ttl:c.projectile==='rocket'?2.2:1.25,blast:c.blast,damage:c.damage*damagePower,height:.55};(world.projectiles??=[]).push(p);return{kind:'projectile',weapon};}
  const hits=[],penalized=new Set();for(let n=0;n<(c.pellets||1);n++){const offset=c.pellets?(n-2)*c.spread/4:0,s=targetUnderCrosshair(f,world,actors,weapon,f.angle+offset);if(!s)continue;if(s.kind==='target'){l.skills=Math.min(100,l.skills+1);hits.push({kind:'targetHit',target:s.id,victim:'target',hp:100,maxHp:100});continue;}
   const damage=damageActor(state,world,s,c.damage*damagePower*(c.pellets?Math.max(.3,1-distance(f,s)/24):1),{crime:!penalized.has(s.id)});penalized.add(s.id);if(damage)hits.push(damage);
@@ -85,8 +86,8 @@ export function updateThreats(state,world,actors,dt,time){
  const f=state.frontier,events=[];if(world.interior||f.life.expanse.swimming)return events;
  for(const s of actors.filter(s=>s.hostile&&!s.boss&&!s.dead).sort((a,b)=>distance(f,a)-distance(f,b)).slice(0,6)){const rule=HOSTILES[s.kind],p=world.hunters?.get(s.id);if(!rule||!p||s.dead)continue;if(forestWard(f,p)){p.windup=0;p.path=[];p.repath=0;continue;}const d=distance(f,p);if(d>26)continue;
   if(d<rule.notice*(hasBuy(f,4)?.8:1)&&bulletSight(world,p,f))p.alert=true;if(!p.alert)continue;
-  if(d<rule.reach+.2&&bulletSight(world,p,f)&&time>=p.nextAttack){if(!p.windup){p.windup=time+(s.kind==='watcher'?.7:.25);events.push({kind:'windup',victim:s.kind});}if(time<p.windup)continue;p.windup=0;p.nextAttack=time+rule.delay;if(f.minutes>=f.life.combat.graceUntil){const died=hurtPlayer(state,rule.damage);if(s.kind==='vampire')remember(f,s,Math.min(rule.hp,s.hp+12));events.push({kind:died?'died':'attacked',victim:s.kind});if(died)return events;}continue;}
-  p.windup=0;if(d>rule.reach){if(time>=p.repath){const flank=s.kind==='jinn'&&d>2?{x:f.x+Math.sin(time)*1.2,y:f.y+Math.cos(time)*1.2}:f;const nextPath=localRoute(world,p,canStand(world,flank.x,flank.y,.25)?flank:f,.25);if(nextPath!==null){p.path=nextPath;p.repath=time+1+hash(f.seed,s.id.length)*.6;}}while(p.path.length&&distance(p,p.path[0])<.15)p.path.shift();const goal=p.path[0];if(goal){const a=Math.atan2(goal.y-p.y,goal.x-p.x),speed=rule.speed*(s.kind==='vampire'&&Math.sin(time*1.7)>.65?1.6:1);moveInWorld(world,p,Math.cos(a)*dt*speed,Math.sin(a)*dt*speed,.25);const saved=f.life.combat.actors[s.id];if(saved&&saved.hp>0){saved.x=p.x;saved.y=p.y;}}}
+  if(d<rule.reach+.2&&bulletSight(world,p,f)&&time>=p.nextAttack){if(!p.windup){p.windup=time+(s.kind==='spore'?1.15:s.kind==='shade'?.9:s.kind==='watcher'?.7:.25);events.push({kind:'windup',victim:s.kind});}if(time<p.windup)continue;p.windup=0;p.nextAttack=time+rule.delay;if(f.minutes>=f.life.combat.graceUntil){const died=hurtPlayer(state,rule.damage);if(s.kind==='vampire')remember(f,s,Math.min(rule.hp,s.hp+12));events.push({kind:died?'died':'attacked',victim:s.kind});if(died)return events;}continue;}
+  p.windup=0;if(d>rule.reach){if(time>=p.repath){const flank=['jinn','shade'].includes(s.kind)&&d>2?{x:f.x+Math.sin(time)*1.2,y:f.y+Math.cos(time)*1.2}:f;const nextPath=localRoute(world,p,canStand(world,flank.x,flank.y,.25)?flank:f,.25);if(nextPath!==null){p.path=nextPath;p.repath=time+1+hash(f.seed,s.id.length)*.6;}}while(p.path.length&&distance(p,p.path[0])<.15)p.path.shift();const goal=p.path[0];if(goal){const a=Math.atan2(goal.y-p.y,goal.x-p.x),speed=rule.speed*(s.kind==='vampire'&&Math.sin(time*1.7)>.65?1.6:1);moveInWorld(world,p,Math.cos(a)*dt*speed,Math.sin(a)*dt*speed,.25);const saved=f.life.combat.actors[s.id];if(saved&&saved.hp>0){saved.x=p.x;saved.y=p.y;}}}
  }
  return events;
 }
@@ -106,7 +107,6 @@ export function tickWeather(state,world,dt,time){const f=state.frontier,h=weathe
 function markFacade(state,world,b,damage,point){const f=state.frontier,id='facade-'+b.id,old=f.life.combat.actors[id]?.hp??500,hp=Math.max(0,old-damage);remember(f,{id,kind:'facade',x:point.x,y:point.y},hp);if(old>hp){f.life.heat=Math.min(100,f.life.heat+4);f.life.debts=Math.min(99999,f.life.debts+2);}(world.effects??=[]).push({kind:'sparks',x:point.x,y:point.y,age:0,ttl:.5,seed:old});return{kind:'objectHit',target:id,hp,maxHp:500,victim:'facade'};}
 function shootFacade(state,world,range,damage){const f=state.frontier;for(let d=.3;d<range;d+=.12){const x=f.x+Math.cos(f.angle)*d,y=f.y+Math.sin(f.angle)*d,t=tileAt(world,x,y);if(t<4)continue;const b=world.buildings?.find(b=>x>=b.left&&x<b.left+b.width&&y>=b.top&&y<b.top+b.depth);return b?markFacade(state,world,b,damage,{x:x-Math.cos(f.angle)*.15,y:y-Math.sin(f.angle)*.15}):null;}return null;}
 function blastFacades(state,world,p){for(const b of world.buildings||[]){const x=Math.max(b.left-.1,Math.min(b.left+b.width+.1,p.x)),y=Math.max(b.top-.1,Math.min(b.top+b.depth+.1,p.y)),d=Math.hypot(x-p.x,y-p.y);if(d<p.blast&&clearSight(world,p,{x,y}))markFacade(state,world,b,p.damage*(1-d/p.blast),{x,y});}}
-
 
 
 

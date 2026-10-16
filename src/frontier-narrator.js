@@ -1,0 +1,15 @@
+import {h,button} from './dom.js';
+import {tr} from './i18n.js';
+import {isNight} from './frontier-state.js';
+import {magazineRounds} from './frontier-loadout-state.js';
+import {ammoCount} from './frontier-combat.js';
+import {NARRATOR_TEXT as T} from './frontier-narrator-text.js';
+import {drawNarrator} from './frontier-narrator-art.js';
+export function narrationFor(state,actors=[]){const f=state.frontier,l=f.life,seen=new Set(l.guide.seen),near=kind=>actors.some(a=>!a.dead&&(kind==='boss'?a.boss===true:a.kind===kind)&&Math.hypot(a.x-f.x,a.y-f.y)<22);const choices=[['danger',l.health<35],['reload',magazineRounds(f,state.village.weapon,ammoCount(f,state.village.weapon))===0&&ammoCount(f,state.village.weapon)>0],['fuel',f.fuel<22],['arrival',true],['water',l.expanse.swimming],['night',isNight(f)&&l.forest.light==='off'],['boss',near('boss')],['children',near('child')],['coin',l.forest.coins.length>0],['forest',f.y>125],['combat',state.village.weapon!=='none'],['gear',f.purchases>0],['wealth',f.donated>0||f.deliveries>1],['camp',f.life.campKit]];return choices.find(([id,ready])=>ready&&!seen.has(id))?.[0]||null;}
+export function createNarrator({state,settings,root,ft,panelShow,closePanel,persist,ambient}){
+ const portrait=h('canvas',{'aria-hidden':'true'}),title=h('strong'),body=h('p'),dismiss=button('',hide,'narrator-dismiss'),card=h('aside',{class:'narrator-card',hidden:true,'aria-live':'polite'},portrait,h('div',{class:'narrator-copy'},h('small',{},'OUTSIDE / THE FRAME'),title,body,dismiss));root.append(card);drawNarrator(portrait);let next=3,until=0,current=null,lastFrame=-1;
+ const trigger=button('◈',showJournal,'frontier-btn',{'aria-label':tr(T.title)});
+ function hide(){card.hidden=true;current=null;}
+ function showJournal(){hide();panelShow(tr(T.title),tr(T.name),r=>{const toggle=button(ft(state.frontier.life.guide.enabled?'enabled':'disabled'),()=>{state.frontier.life.guide.enabled=!state.frontier.life.guide.enabled;persist();showJournal();},'btn secondary',{'aria-pressed':String(state.frontier.life.guide.enabled)});r.append(toggle);for(const id of state.frontier.life.guide.seen)r.append(h('article',{class:'narrator-entry'},h('p',{},tr(T[id]))));r.append(button(ft('back'),closePanel,'btn primary'));});}
+ return{trigger,showJournal,update(time,actors,paused){trigger.setAttribute('aria-label',tr(T.title));card.dataset.reduced=String(settings.reducedMotion);if(paused||!state.frontier.life.guide.enabled){card.hidden=true;return;}if(current){if(time>=until){hide();return;}card.hidden=false;const frame=Math.floor(time*2)%5;if(frame!==lastFrame){drawNarrator(portrait,settings.reducedMotion?0:frame);lastFrame=frame;}return;}if(time<next)return;const id=narrationFor(state,actors);next=time+35;if(!id)return;state.frontier.life.guide.seen.push(id);persist();current=id;until=time+16;title.textContent=tr(T.name);body.textContent=tr(T[id]);dismiss.textContent=tr(T.close);card.hidden=false;ambient.call('guide',-.4,.5);},dispose(){card.remove();trigger.remove();}};
+}

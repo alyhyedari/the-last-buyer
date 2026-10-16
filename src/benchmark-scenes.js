@@ -20,7 +20,8 @@ export function createBenchmarkScenes(canvas){
  function draw(dt){const f=state.frontier,start=performance.now();time+=dt;f.minutes+=dt*1.2;f.angle=baseAngle+Math.sin(time*.8)*.6;const actors=worldActors(world,f,f.minutes/1.2);updateThreats(state,world,actors,dt,time);updateMyths(state,world,dt);
   if(stageId==='boss'&&step++%35===0)world.projectiles.push({id:step,kind:'rocket',x:f.x,y:f.y,angle:f.angle,age:0,speed:16,ttl:2.2,blast:3.3,damage:135,height:.55});
   updateProjectiles(state,world,actors,dt);for(const e of world.effects)e.age+=dt;world.effects=world.effects.filter(e=>e.age<e.ttl);
-  const simulationMs=performance.now()-start;renderer.render(state,time,{actors,speed:0});return{simulationMs,workMs:performance.now()-start,actors:actors.length};
+  if(stageId==='boss'){const guardian=world.myth.get('boss-stag');if(guardian&&step===1){guardian.next=f.minutes;guardian.windup=f.minutes+.4;guardian.tx=f.x;guardian.ty=f.y;}}
+  const simulationMs=performance.now()-start;renderer.render(state,time,{actors,speed:0});const workMs=performance.now()-start;canvas.dataset.benchmarkScene=stageId;canvas.dataset.benchmarkWorkMs=workMs.toFixed(2);canvas.dataset.benchmarkSimulationMs=simulationMs.toFixed(2);canvas.dataset.benchmarkActors=String(actors.length);return{simulationMs,workMs,actors:actors.length};
  }
  return{setup,draw,worldBuildMs,routeMs};
 }

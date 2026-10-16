@@ -13,6 +13,7 @@
 #menu .art-caption{font-size:.64rem;line-height:1.8;padding:9px 4px 0;border:0}
 #menu .coordinate{display:none}
 .world-preview-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;padding-top:9px}
+.world-preview-tabs:has(#preview-saved:not([hidden])){grid-template-columns:repeat(4,minmax(0,1fr))}
 .world-preview-tabs button{min-height:44px;border:1px solid #3c545e;background:#152c37;color:#9eb6b6;padding:8px 4px;font-size:.58rem;letter-spacing:.3px}
 .world-preview-tabs button[aria-pressed=true]{background:#b8d8bc;color:#192e31;border-color:#b8d8bc}
 .frontier-shell .water-action{color:#b6eeee;border-color:#628f9c;background:#193b4bdd}
@@ -23,6 +24,7 @@
 .frontier-shell[data-swimming=true] .frontier-hint p{max-height:66px;overflow:auto;pointer-events:auto}
 @media(min-width:1400px){#menu .menu-art{margin-inline-end:-20px}#menu h1{font-size:76px}}
 @media(min-width:801px) and (min-height:600px) and (max-height:800px){#menu .menu-art{width:100%;max-width:calc(145svh - 464px);justify-self:end}}
+@media(min-width:801px) and (min-height:600px) and (max-height:800px){#menu .menu-art:has(#preview-saved:not([hidden])){max-width:calc(145svh - 556px)}}
 @media(min-width:801px) and (max-height:800px){#app>.topbar{height:80px}#menu{min-height:calc(100svh - 80px);padding-top:20px;padding-bottom:80px}#menu .menu-copy{padding:10px 0}#menu h1{font-size:52px;line-height:1.16}#menu .eyebrow{margin-bottom:14px}#menu .english-title{margin-top:9px}#menu .menu-lead{margin-top:16px;font-size:.82rem;line-height:1.8}#menu .menu-actions{margin-top:20px;gap:8px}#menu .menu-actions .btn{min-height:46px;padding-top:10px;padding-bottom:10px}#menu .menu-meta{margin-top:22px}#menu .menu-meta>span{flex-direction:row;align-items:center;gap:7px}#menu .menu-meta b{font-size:16px}#menu .menu-meta>span>span{font-size:.58rem}#menu .save-note{margin-top:14px}}
 @media(max-width:800px){#menu{gap:3%;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr)}#menu .menu-art{padding:8px;transform:none}#menu .art-label{font-size:.45rem}#menu .menu-lead{font-size:.79rem}.world-preview-tabs button{font-size:.5rem}}
 @media(max-width:560px){#menu{display:flex;gap:18px;padding-bottom:0}#menu .menu-meta{position:static;margin-top:23px;justify-content:flex-start}#menu .menu-art{margin:0}#menu .menu-footer{position:static;margin-top:7px;padding-bottom:25px;gap:12px;justify-content:flex-start}#menu .version{display:block;width:100%;margin:0;color:#94b6b4}#menu .save-note{max-width:95%}#menu .menu-lead{font-size:.86rem}#menu .menu-actions{max-width:none}.world-preview-tabs button{font-size:.58rem}}

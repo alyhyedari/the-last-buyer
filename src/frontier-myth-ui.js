@@ -16,6 +16,7 @@ export function createMythGuide({state,root,ft,getWorld,getActors,panelShow,clos
  function nearbyGme(){return getActors().find(a=>a.kind==='gmeCoin'&&Math.hypot(a.x-f.x,a.y-f.y)<2.4);}
  function interact(){const a=nearbyGme();if(!a)return false;if(!collectGme(state,getWorld(),a)){announce(ft('forestDismount'));return true;}ambient.call('forestAward');announce(ft('mythReward')+' · '+ft('gme_'+a.boss));persist();update();return true;}
  function update(){
+  if(q.light==='uv')uvSelected=true;else if(q.light==='lantern')uvSelected=false;
   if(q.light==='lantern'&&!state.village.weapons.includes('lantern'))q.light='off';lightBtn.textContent=ft(q.light==='uv'?'uvLight':q.light==='lantern'?'lanternLight':'lightOff');lightBtn.setAttribute('aria-label',ft('uvLight')+' / '+ft('lanternLight'));lightBtn.setAttribute('aria-pressed',String(q.light!=='off'));lightBtn.hidden=!!getWorld().interior||f.life.expanse.swimming;
   const actor=getActors().filter(a=>a.boss&&!a.dead&&Math.hypot(a.x-f.x,a.y-f.y)<24).sort((a,b)=>Math.hypot(a.x-f.x,a.y-f.y)-Math.hypot(b.x-f.x,b.y-f.y))[0],boss=actor&&MYTH_BOSSES.find(b=>'boss-'+b.id===actor.id);bossBar.hidden=!boss;
   if(boss){const p=getWorld().myth?.get(actor.id);bossBar.replaceChildren(h('strong',{},ft(boss.id)),h('progress',{max:boss.hp,value:actor.hp,'aria-label':ft('health')}),h('span',{},p?.windup?ft(boss.attack):ft(uvTouches(f,getWorld(),actor)?'mythWeak':'mythArmored')));bossBar.dataset.boss=boss.id;bossBar.dataset.hp=String(Math.round(actor.hp));}

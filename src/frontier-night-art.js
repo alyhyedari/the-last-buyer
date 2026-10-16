@@ -33,7 +33,7 @@ export function drawCombatEffects(renderer,state,time,options){const c=renderer.
  const target=options.target;if(target&&!target.dead&&target.kind!=='target'){const p=project(target);if(p.depth>.1){const x=Math.max(20,Math.min(w-20,p.x)),y=Math.max(55,Math.min(185,p.y-(target.animal?75:165)/p.depth));r(x-17,y,34,3,'#122428');r(x-16,y+1,32*Math.max(0,target.hp/target.maxHp),1,target.hostile?'#dc8670':'#b4cc93');if(target.winding){r(x-2,y-10,4,5,'#f2b578');r(x-2,y-3,4,2,'#f2b578');}}}
 }
 export function drawFPSWeapon(c,weapon,w,h,motion,options){
- const r=(x,y,a,b,col)=>{c.fillStyle=col;c.fillRect(Math.round(x),Math.round(y),a,b);},x=w/2+motion,y=h-8+(options.recoil||0)*9;
+ const r=(x,y,a,b,col)=>{c.fillStyle=col;c.fillRect(Math.round(x),Math.round(y),a,b);},reload=options.reloading?Math.sin((options.reloadProgress||0)*Math.PI):0,x=w/2+motion+reload*24,y=h-8+(options.recoil||0)*9+reload*42;
  c.save();c.translate(x,y);r(-25,-20,26,32,'#2c545b');r(9,-21,28,33,'#2c545b');r(-23,-32,27,20,'#b98e67');r(12,-30,24,20,'#d5ab7a');r(-18,-34,20,6,'#e6c398');
  if(weapon==='stick'){c.rotate((options.recoil||0)*-.6+.13);r(-5,-111,11,130,'#85694a');r(-3,-106,3,120,'#c2a46a');r(1,-93,3,13,'#695c42');}
  else if(weapon==='bow'){c.strokeStyle='#b89c6b';c.lineWidth=5;c.beginPath();c.ellipse(0,-63,27,74,0,-Math.PI/2,Math.PI/2);c.stroke();c.strokeStyle='#e0d3a3';c.lineWidth=1;c.beginPath();c.moveTo(0,-137);c.lineTo(-9,-49);c.lineTo(0,11);c.stroke();r(-2,-120,3,108,'#cab385');r(-4,-124,7,8,'#a5b4ac');}
@@ -41,5 +41,6 @@ export function drawFPSWeapon(c,weapon,w,h,motion,options){
  else if(weapon==='launcher'){r(-21,-75,43,84,'#526449');r(-19,-76,38,9,'#2a393a');r(-15,-74,30,4,'#101f27');r(-16,-61,32,46,'#7a885a');r(-18,-38,36,8,'#344d43');r(-7,-12,13,25,'#58473b');r(17,-65,8,26,'#334746');r(18,-67,5,7,'#d6caa0');r(-4,-81,8,6,'#bbc6a2');}
  else if(weapon==='pistol'){r(-7,-39,17,55,'#665143');r(-10,-64,22,34,'#364748');r(-7,-68,16,8,'#83928a');r(-8,-58,18,5,'#a5aea0');r(-6,-50,13,6,'#202e34');r(-13,-35,28,11,'#4d6060');r(-1,-73,3,7,'#cfdac1');r(-12,-30,5,14,'#9c7954');}
  else{const shotgun=weapon==='shotgun',smg=weapon==='smg';r(-11,-62,24,63,'#465958');r(-9,-26,20,42,'#8a6749');r(-7,-50,16,28,'#776550');r(-9,-48,20,5,'#aa8b61');r(-8,-72,18,18,'#72837a');r(-6,-103,5,35,'#3d5050');r(1,-103,shotgun?6:3,35,'#9eaaa0');r(-2,-109,4,7,'#cfd9bb');r(-12,-62,26,6,'#23383c');if(smg){r(10,-52,12,25,'#253b3e');r(-14,-83,28,10,'#52676a');}if(shotgun){r(-11,-31,24,8,'#bf9867');r(-10,-40,22,3,'#3d3d35');}}
+ if(options.reloading){r(-43,-36-reload*18,15,35,'#475c5c');r(-48,-12-reload*18,24,12,'#d5ab7a');r(-42,-34-reload*18,4,27,'#adbaa3');}
  c.restore();
 }

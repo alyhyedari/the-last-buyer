@@ -1,3 +1,4 @@
+import {familyResidents} from './frontier-residents.js';
 import {hash} from './frontier-state.js';
 import {growForest,outsideCoinGlade} from './frontier-forest-world.js';
 import {inDeepForest} from './frontier-forest-data.js';
@@ -91,6 +92,7 @@ export function makeFrontierWorld(seed){
  growForest(sprites,tiles,SIZE,seed);
  // Wide, open ritual grounds; pillars frame the arena without sealing exits.
  for(const b of MYTH_BOSSES)for(let i=0;i<8;i++){const a=i*Math.PI/4,x=b.x+Math.cos(a)*8.5,y=b.y+Math.sin(a)*8.5;sprites.push({id:'pillar-'+b.id+'-'+i,kind:'mythPillar',x,y,variant:b.variant,radius:.3});}
+ sprites.push(...familyResidents(buildings,seed));
  const filtered=sprites.filter(s=>!MYTH_BOSSES.some(b=>Math.hypot(s.x-b.x,s.y-b.y)<8)&&outsideCoinGlade(s)).filter(s=>s.kind!=='tree'||tiles[Math.floor(s.y)*SIZE+Math.floor(s.x)]===0&&!PLACES.some(p=>Math.hypot(p.x-s.x,p.y-s.y)<4)&&!buildings.some(b=>Math.hypot(b.door.x-s.x,b.door.y-s.y)<1.4)&&!treasures.some(t=>Math.hypot(t.x-s.x,t.y-s.y)<1.3));
  for(const s of filtered){if(!s.id&&['trafficCar','bench','streetlamp','sign','laundry'].includes(s.kind))s.id=s.kind.toLowerCase()+'-'+Math.round(s.x*10)+'-'+Math.round(s.y*10);if(s.kind==='resident'){s.variant??=Math.floor(hash(seed,Math.round(s.x*50+s.y))*12);if(!canStand({size:SIZE,tiles},s.x,s.y,.2)){s.x=s.homeX=Math.floor(s.x)+.5;s.y=s.homeY=Math.floor(s.y)+1.5;}}}
  for(const s of filtered)if(s.kind==='tree'||s.radius)colliders.push({x:s.x,y:s.y,radius:s.kind==='tree'?.2:s.radius,id:s.id||s.kind,kind:s.kind});
@@ -98,7 +100,8 @@ export function makeFrontierWorld(seed){
  const traffic=[{id:'traffic-car',kind:'trafficCar',phase:0,speed:2.4,radius:.62,model:0},{id:'traffic-bike',kind:'trafficBike',phase:17,speed:1.8,radius:.35},{id:'traffic-motor',kind:'trafficMotor',phase:39,speed:2.9,radius:.4}];
  for(let i=0;i<9;i++)traffic.push({id:'traffic-neon-'+i,kind:i%4===3?'trafficMotor':'trafficCar',phase:i*11,speed:1.7+(i%3)*.25,radius:i%4===3?.4:.62,model:i%4,corners:[[114.15,81.85],[144.15,81.85],[144.15,116.85],[114.15,116.85]]});
  const spriteBuckets=new Map();for(const s of filtered){const k=Math.floor(s.x/8)+','+Math.floor(s.y/8);if(!spriteBuckets.has(k))spriteBuckets.set(k,[]);spriteBuckets.get(k).push(s);}
- const facadeTiles=new Map();for(const b of buildings)for(let y=b.top;y<b.top+b.depth;y++)for(let x=b.left;x<b.left+b.width;x++)facadeTiles.set(y*SIZE+x,b.id);return{spatialCollision:true,size:SIZE,tiles,sprites:filtered,seed,colliders,buckets,buildings,traffic,treasures,facadeTiles,spriteBuckets};
+ const playTiles=new Set();for(const child of filtered.filter(s=>s.kind==='child'&&s.id.endsWith('-0')))for(let dy=0;dy<3;dy++)for(let dx=0;dx<2;dx++){const x=Math.floor(child.x)+dx,y=Math.floor(child.y)+dy;if([0,2].includes(tiles[y*SIZE+x]))playTiles.add(y*SIZE+x);}
+ const facadeTiles=new Map();for(const b of buildings)for(let y=b.top;y<b.top+b.depth;y++)for(let x=b.left;x<b.left+b.width;x++)facadeTiles.set(y*SIZE+x,b.id);return{spatialCollision:true,playTiles,size:SIZE,tiles,sprites:filtered,seed,colliders,buckets,buildings,traffic,treasures,facadeTiles,spriteBuckets};
 }
 export const tileAt=(world,x,y)=>{const size=world.size||SIZE;return x<0||y<0||x>=size||y>=size?1:world.tiles[Math.floor(y)*size+Math.floor(x)];};
 export const solid=(world,x,y)=>{const t=tileAt(world,x,y);return t!==0&&t!==2;};
@@ -108,23 +111,98 @@ export function clearSight(world,a,b){const d=Math.hypot(b.x-a.x,b.y-a.y),steps=
 export function nearestOpen(world,point,radius=.22){if(canStand(world,point.x,point.y,radius))return{x:point.x,y:point.y};for(let r=.3;r<8;r+=.3)for(let a=0;a<Math.PI*2;a+=.3){const x=point.x+Math.cos(a)*r,y=point.y+Math.sin(a)*r;if(canStand(world,x,y,radius))return{x,y};}return{x:32.5,y:57.5};}
 export function elevationAt(x,y){return Math.max(0,1-Math.hypot((x-82)/17,(y-6)/20))*12;}
 export function trafficAt(world,minutes){return(world.traffic||[]).map(v=>{const corners=v.corners||[[74.15,43.85],[85.15,43.85],[85.15,58.85],[74.15,58.85]],lengths=corners.map((a,i)=>Math.hypot(a[0]-corners[(i+1)%corners.length][0],a[1]-corners[(i+1)%corners.length][1])),total=lengths.reduce((a,b)=>a+b,0);let d=((minutes*1.1*v.speed+v.phase)%total+total)%total,i=0;while(d>lengths[i])d-=lengths[i++];const a=corners[i],b=corners[(i+1)%corners.length],t=d/lengths[i];return{...v,x:a[0]+(b[0]-a[0])*t,y:a[1]+(b[1]-a[1])*t,angle:Math.atan2(b[1]-a[1],b[0]-a[0])};});}
-export function route(world,start,target,radius=.22,{maxNodes=12000,bounds=null}={}){
- const SIZE=world.size||192;
- const reachable=(a,b)=>{const count=Math.max(1,Math.ceil(Math.hypot(b.x-a.x,b.y-a.y)/.1));for(let i=0;i<=count;i++)if(!canStand(world,a.x+(b.x-a.x)*i/count,a.y+(b.y-a.y)*i/count,radius))return false;return true;};
+export function* routeSearch(world,start,target,radius=.22,{maxNodes=12000,bounds=null}={}){
+ const size=world.size||SIZE;
+ const reachable=(a,b)=>{
+  const count=Math.max(1,Math.ceil(Math.hypot(b.x-a.x,b.y-a.y)/.1));
+  for(let i=0;i<=count;i++)if(!canStand(world,a.x+(b.x-a.x)*i/count,a.y+(b.y-a.y)*i/count,radius))return false;
+  return true;
+ };
  if(!canStand(world,start.x,start.y,radius)||!canStand(world,target.x,target.y,radius))return[];
- // Join the grid from the actual position: a tree may occupy its cell centre.
- const joins=[];for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){const p={x:Math.floor(start.x)+dx+.5,y:Math.floor(start.y)+dy+.5};joins.push({...p,d:Math.hypot(p.x-start.x,p.y-start.y)});}const join=joins.sort((a,b)=>a.d-b.d).find(p=>reachable(start,p));if(!join)return[];
- const caches=world.routeEdges??=new Map();if(!caches.has(radius))caches.set(radius,new Int8Array(SIZE*SIZE*4));const edges=caches.get(radius);
- const sx=Math.floor(join.x),sy=Math.floor(join.y),gx=Math.floor(target.x),gy=Math.floor(target.y),from=sy*SIZE+sx,to=gy*SIZE+gx,parents=new Int32Array(SIZE*SIZE).fill(-2),cost=new Int32Array(SIZE*SIZE).fill(2147483647),closed=new Uint8Array(SIZE*SIZE),heap=[];parents[from]=-1;cost[from]=0;
- // A* expands toward the destination instead of flooding the entire enlarged
- // county. Every accepted edge still uses the same swept collision test.
- const push=(id,score)=>{const entry={id,score};let i=heap.length;heap.push(entry);while(i){const p=(i-1)>>1;if(heap[p].score<=score)break;heap[i]=heap[p];i=p;}heap[i]=entry;};
- const pop=()=>{const first=heap[0],last=heap.pop();if(heap.length){let i=0;while(i*2+1<heap.length){let j=i*2+1;if(j+1<heap.length&&heap[j+1].score<heap[j].score)j++;if(heap[j].score>=last.score)break;heap[i]=heap[j];i=j;}heap[i]=last;}return first.id;};
+
+ // Join from the actual position: a tree may occupy the cell centre.
+ const joins=[];
+ for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){
+  const p={x:Math.floor(start.x)+dx+.5,y:Math.floor(start.y)+dy+.5};
+  joins.push({...p,d:Math.hypot(p.x-start.x,p.y-start.y)});
+ }
+ const join=joins.sort((a,b)=>a.d-b.d).find(p=>reachable(start,p));
+ if(!join)return[];
+
+ const caches=world.routeEdges??=new Map();
+ if(!caches.has(radius)){
+  if(caches.size>=8)caches.delete(caches.keys().next().value);
+  caches.set(radius,new Int8Array(size*size*4));
+ }
+ const edges=caches.get(radius);
+ const sx=Math.floor(join.x),sy=Math.floor(join.y),gx=Math.floor(target.x),gy=Math.floor(target.y);
+ const from=sy*size+sx,to=gy*size+gx;
+
+ // Local NPC searches touch at most a few hundred cells. Allocating and filling
+ // three county-sized arrays for each of them creates unnecessary GC pressure.
+ // Long, infrequent player routes keep dense arrays; concurrent searches own
+ // their scratch data, so cancellation cannot corrupt another route.
+ const sparse=maxNodes<=256;
+ const parents=sparse?new Map():new Int32Array(size*size).fill(-2);
+ const cost=sparse?new Map():new Int32Array(size*size).fill(2147483647);
+ const closed=sparse?new Set():new Uint8Array(size*size);
+ const parentAt=id=>sparse?parents.get(id):parents[id];
+ const costAt=id=>sparse?(cost.get(id)??Infinity):cost[id];
+ const visited=id=>sparse?closed.has(id):closed[id]===1;
+ const remember=(id,parent,value)=>{
+  if(sparse){parents.set(id,parent);cost.set(id,value);}
+  else{parents[id]=parent;cost[id]=value;}
+ };
+ remember(from,-1,0);
+
+ const heap=[];
+ const push=(id,score)=>{
+  const entry={id,score};let i=heap.length;heap.push(entry);
+  while(i){const p=(i-1)>>1;if(heap[p].score<=score)break;heap[i]=heap[p];i=p;}
+  heap[i]=entry;
+ };
+ const pop=()=>{
+  const first=heap[0],last=heap.pop();
+  if(heap.length){
+   let i=0;
+   while(i*2+1<heap.length){let j=i*2+1;if(j+1<heap.length&&heap[j+1].score<heap[j].score)j++;if(heap[j].score>=last.score)break;heap[i]=heap[j];i=j;}
+   heap[i]=last;
+  }
+  return first.id;
+ };
  push(from,Math.abs(gx-sx)+Math.abs(gy-sy));
- let expanded=0;while(heap.length&&expanded<maxNodes){const id=pop();if(closed[id])continue;expanded++;closed[id]=1;if(id===to){const points=[];for(let n=to;n!==from;n=parents[n])points.push({x:n%SIZE+.5,y:Math.floor(n/SIZE)+.5});points.push({x:join.x,y:join.y});points.reverse();if(reachable(points.at(-1),target))points.push({x:target.x,y:target.y});world.lastRoute={expanded,limited:false};return points;}const x=id%SIZE,y=Math.floor(id/SIZE);let direction=0;for(const [dx,dy]of [[1,0],[-1,0],[0,1],[0,-1]]){const edge=id*4+direction++,xx=x+dx,yy=y+dy,n=yy*SIZE+xx;if(xx<1||yy<1||xx>=SIZE-1||yy>=SIZE-1||bounds&&(xx<bounds.left||xx>bounds.right||yy<bounds.top||yy>bounds.bottom)||closed[n]||cost[n]<=cost[id]+1||edges[edge]===-1)continue;if(!edges[edge]){const middle={x:x+.5,y:y+.5};moveInWorld(world,middle,dx,dy,radius);edges[edge]=canStand(world,xx+.5,yy+.5,radius)&&Math.hypot(middle.x-xx-.5,middle.y-yy-.5)<.02?1:-1;}if(edges[edge]!==1)continue;parents[n]=id;cost[n]=cost[id]+1;push(n,cost[n]+1.3*(Math.abs(gx-xx)+Math.abs(gy-yy)));}}
- world.lastRoute={expanded,limited:expanded>=maxNodes};
- return[];
+
+ let expanded=0;
+ while(heap.length&&expanded<maxNodes){
+  const id=pop();if(visited(id))continue;
+  expanded++;if(expanded%96===0)yield expanded;
+  if(sparse)closed.add(id);else closed[id]=1;
+  if(id===to){
+   const points=[];
+   for(let n=to;n!==from;n=parentAt(n))points.push({x:n%size+.5,y:Math.floor(n/size)+.5});
+   points.push({x:join.x,y:join.y});points.reverse();
+   if(reachable(points.at(-1),target))points.push({x:target.x,y:target.y});
+   world.lastRoute={expanded,limited:false};return points;
+  }
+  const x=id%size,y=Math.floor(id/size),nextCost=costAt(id)+1;
+  let direction=0;
+  for(const [dx,dy]of [[1,0],[-1,0],[0,1],[0,-1]]){
+   const edge=id*4+direction++,xx=x+dx,yy=y+dy,n=yy*size+xx;
+   if(xx<1||yy<1||xx>=size-1||yy>=size-1)continue;
+   if(bounds&&(xx<bounds.left||xx>bounds.right||yy<bounds.top||yy>bounds.bottom))continue;
+   if(visited(n)||costAt(n)<=nextCost||edges[edge]===-1)continue;
+   if(!edges[edge]){
+    const middle={x:x+.5,y:y+.5};moveInWorld(world,middle,dx,dy,radius);
+    edges[edge]=canStand(world,xx+.5,yy+.5,radius)&&Math.hypot(middle.x-xx-.5,middle.y-yy-.5)<.02?1:-1;
+   }
+   if(edges[edge]!==1)continue;
+   remember(n,id,nextCost);
+   push(n,nextCost+1.3*(Math.abs(gx-xx)+Math.abs(gy-yy)));
+  }
+ }
+ world.lastRoute={expanded,limited:expanded>=maxNodes};return[];
 }
+export function route(...args){const search=routeSearch(...args);let step;do{step=search.next();}while(!step.done);return step.value;}
 // NPCs share a small planning budget. A blocked sidewalk must never cause every
 // resident to search the entire county on the same frame. null means deferred.
 export function localRoute(world,start,target,radius=.25){

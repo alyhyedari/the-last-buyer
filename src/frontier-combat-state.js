@@ -1,11 +1,13 @@
+import {normalizeMagazines} from './frontier-loadout-state.js';
 // Small, save-safe data shared with the main game. Rendering and AI stay lazy-loaded.
 export const EXTRA_WEAPONS=['pistol','shotgun','smg','launcher','grenade'];
-export const newCombatState=()=>({actors:{},drops:[],treasures:[],deaths:0,kills:0,serial:0,shells:0,rockets:0,grenades:0,graceUntil:0,interior:null});
+export const newCombatState=()=>({actors:{},drops:[],treasures:[],magazines:{},deaths:0,kills:0,serial:0,shells:0,rockets:0,grenades:0,graceUntil:0,interior:null});
 const finite=(n,lo,hi)=>Number.isFinite(n)&&n>=lo&&n<=hi;
 const point=p=>p&&finite(p.x,1,383)&&finite(p.y,1,383);
 const gear=['stick','lantern','bow','rifle',...EXTRA_WEAPONS];
 export function normalizeCombatState(value){
  const out=newCombatState();if(value==null)return out;if(typeof value!=='object'||Array.isArray(value))return null;
+ out.magazines=normalizeMagazines(value.magazines);if(!out.magazines)return null;
  for(const key of ['deaths','kills','serial','shells','rockets','grenades','graceUntil']){if(value[key]===undefined)continue;if(!finite(value[key],0,key==='graceUntil'?1e8:key==='shells'?500:key==='rockets'||key==='grenades'?99:1e7))return null;out[key]=value[key];}
  const actors=value.actors??{};if(typeof actors!=='object'||!actors||Array.isArray(actors)||Object.keys(actors).length>8192)return null;
  for(const [id,a]of Object.entries(actors)){if(!/^[a-z0-9-]{1,60}$/.test(id)||!point(a)||!finite(a.hp,0,5000)||typeof a.kind!=='string'||!/^[a-zA-Z]{1,24}$/.test(a.kind)||!finite(a.at,0,1e8))return null;out.actors[id]={x:a.x,y:a.y,hp:a.hp,kind:a.kind,at:a.at};}

@@ -1,0 +1,3 @@
+export const GUIDE_IDS=['arrival','combat','reload','fuel','night','forest','boss','water','children','coin','gear','wealth','danger','camp'];
+export const newGuideState=()=>({enabled:true,seen:[]});
+export function normalizeGuide(value){const out=newGuideState();if(value==null)return out;if(!value||typeof value!=='object'||Array.isArray(value)||typeof value.enabled!=='boolean'||!Array.isArray(value.seen)||value.seen.length>GUIDE_IDS.length||value.seen.some(id=>!GUIDE_IDS.includes(id)))return null;out.enabled=value.enabled;out.seen=[...new Set(value.seen)];return out;}

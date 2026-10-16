@@ -1,5 +1,5 @@
 import {MYTH_BOSSES} from './frontier-myth-data.js';
-import {hash,earn} from './frontier-state.js';
+import {hash,earn,isNight} from './frontier-state.js';
 import {canStand,moveInWorld,clearSight,nearestOpen,localRoute} from './frontier-world.js';
 import {actorWithHealth,damageActor,hurtPlayer,bulletSight} from './frontier-combat.js';
 import {hasBuy,hasGme,lightRange} from './frontier-perks.js';
@@ -16,7 +16,7 @@ export function mythActors(world,f,time){
   if(p.windup){const points=b.attack==='thunderfall'?[-4,0,4]:[0];for(const offset of points)list.push({id:'omen-'+b.id+'-'+offset,kind:'mythOmen',x:p.tx+offset,y:p.ty,variant:b.variant,height:0});}
  }
  // Persistent, seeded wildlife-like myths; only nearby packs enter the actor list.
- for(let i=0;i<72;i++){const x=140+hash(f.seed,33000+i)*233,y=196+hash(f.seed,34000+i)*179;if(Math.hypot(x-f.x,y-f.y)>30||MYTH_BOSSES.some(b=>Math.hypot(x-b.x,y-b.y)<16))continue;const id='myth-'+i,kind=['wisp','briar','moth'][i%3],hunters=world.hunters??=new Map();let p=hunters.get(id);if(!p){const saved=f.life.combat.actors[id],point=nearestOpen(world,saved||{x,y},.25);p={...point,id,kind,path:[],repath:0,nextAttack:0,alert:false};hunters.set(id,p);}list.push(actorWithHealth(f,{id,kind,x:p.x,y:p.y,hostile:true,variant:i%3,height:kind==='moth'?.6:0}));}
+ for(let i=0;i<96;i++){const x=140+hash(f.seed,33000+i)*233,y=196+hash(f.seed,34000+i)*179;if(Math.hypot(x-f.x,y-f.y)>30||MYTH_BOSSES.some(b=>Math.hypot(x-b.x,y-b.y)<16))continue;const id='myth-'+i,kind=i<72?['wisp','briar','moth'][i%3]:['shade','spore'][i%2],hunters=world.hunters??=new Map();if(kind==='shade'&&!isNight(f))continue;let p=hunters.get(id);if(!p){const saved=f.life.combat.actors[id],point=nearestOpen(world,saved||{x,y},.25);p={...point,id,kind,path:[],repath:0,nextAttack:0,alert:false};hunters.set(id,p);}list.push(actorWithHealth(f,{id,kind,x:p.x,y:p.y,hostile:true,variant:i%3,winding:!!p.windup,height:kind==='moth'?.6:0}));}
  return list;
 }
 export function updateMyths(state,world,dt){
@@ -26,7 +26,7 @@ export function updateMyths(state,world,dt){
   if(p.windup){if(f.minutes<p.windup)continue;p.windup=0;p.next=f.minutes+(enraged?3.3:4.5);const targetDistance=Math.hypot(f.x-p.tx,f.y-p.ty);let hit=false;
    if(b.attack==='ring')hit=d<6&&d>2;else if(b.attack==='eclipse')hit=d<3||d>6&&d<10;else if(b.attack==='thunderfall')hit=[-4,0,4].some(offset=>Math.hypot(f.x-p.tx-offset,f.y-p.ty)<2.2);else if(b.attack==='fan'){const a=Math.atan2(f.y-p.y,f.x-p.x)-Math.atan2(p.ty-p.y,p.tx-p.x);hit=d<13&&Math.abs(Math.atan2(Math.sin(a),Math.cos(a)))<.45;}else hit=targetDistance<(b.attack==='charge'?2.2:2.8);
    if(b.attack==='charge'){const dx=p.tx-p.x,dy=p.ty-p.y,length=Math.hypot(dx,dy),travel=Math.min(Math.max(0,length-1.25),5);if(length)moveInWorld(world,p,dx/length*travel,dy/length*travel,.4);}
-   (world.effects??=[]).push({kind:'sparks',x:p.tx,y:p.ty,age:0,ttl:.8,seed:b.variant});if(hit&&clearSight(world,p,f)){const died=hurtPlayer(state,b.damage*(enraged?1.15:1));out.push({kind:died?'died':'attacked',victim:b.kind});if(died)break;}continue;
+   (world.effects??=[]).push({kind:'sparks',x:p.tx,y:p.ty,age:0,ttl:.8,seed:b.variant});if(hit&&clearSight(world,p,f)){const before=f.life.health,died=hurtPlayer(state,b.damage*(enraged?1.15:1));if(died||f.life.health<before)out.push({kind:died?'died':'attacked',victim:b.kind});if(died)break;}continue;
   }
   if(d<16&&f.minutes>=p.next&&clearSight(world,p,f)){p.windup=f.minutes+(enraged?1.15:1.65);p.tx=f.x;p.ty=f.y;p.pattern++;out.push({kind:'mythWarning',boss:b.id,attack:b.attack});continue;}
   if(d>4){if(f.minutes>=p.repath){const nextPath=localRoute(world,p,f,.4);if(nextPath!==null){p.path=nextPath;p.repath=f.minutes+2;}}while(p.path.length&&Math.hypot(p.x-p.path[0].x,p.y-p.path[0].y)<.2)p.path.shift();const goal=p.path[0];if(goal){const a=Math.atan2(goal.y-p.y,goal.x-p.x);moveInWorld(world,p,Math.cos(a)*dt*b.speed,Math.sin(a)*dt*b.speed,.4);}}

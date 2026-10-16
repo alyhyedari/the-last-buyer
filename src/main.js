@@ -20,7 +20,7 @@ import {renderEndingOffers,renderFinale,renderEndingGallery} from './ending-ui.j
 import {ET} from './ending-text.js';
 import {ENDING_ROUTES} from './ending-rules.js';
 import {readBenchmark,writeBenchmark} from './benchmark.js';
-import {BT} from './benchmark-text.js';
+import {BE as BT} from './benchmark-entry-text.js';
 import {renderReflection} from './reflection-ui.js';
 import {COMMONS,canVisitChapter,enterChapter,returnToCommons,discover,projectCount,finishProject,ringBell,settledChapters} from './open-world.js';
 import {W,POSTCARDS} from './world-text.js';
