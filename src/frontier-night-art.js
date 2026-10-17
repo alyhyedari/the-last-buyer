@@ -1,10 +1,11 @@
 // Hand-drawn pixel silhouettes. All effects use bounded particles and the raycaster depth buffer.
 export function drawNightSprite(c,kind,variant=0){
  const r=(x,y,w,h,color)=>{c.fillStyle=color;c.fillRect(x,y,w,h);};
- if(['zombie','jinn','vampire','watcher'].includes(kind)){
-  const color={zombie:'#697759',jinn:'#759fbd',vampire:'#402b45',watcher:'#676072'}[kind],skin=kind==='zombie'?'#9caa79':kind==='jinn'?'#b4ddd1':'#cebeae';
+ if(['zombie','jinn','vampire','watcher','runner','brute'].includes(kind)){
+  const color={runner:'#8c635b',brute:'#6c6376',zombie:'#697759',jinn:'#759fbd',vampire:'#402b45',watcher:'#676072'}[kind],skin=kind==='zombie'?'#9caa79':kind==='jinn'?'#b4ddd1':'#cebeae';
   r(7,61,34,3,'#12181b77');r(15,22,23,29,color);r(19,8,15,17,skin);r(19,6,16,6,kind==='vampire'?'#20202b':'#3a403e');r(20,16,4,3,'#bc6d63');r(29,16,4,3,'#bc6d63');r(24,23,7,2,'#3d3131');r(16,50,8,13,'#373c39');r(30,50,8,13,'#373c39');
-  if(kind==='zombie'){r(5,28,13,7,color);r(34,29,12,7,color);r(5,27,5,6,skin);r(41,29,5,6,skin);r(24,36,5,9,'#4f5550');}
+  if(['zombie','runner','brute'].includes(kind)){r(5,28,13,7,color);r(34,29,12,7,color);r(5,27,5,6,skin);r(41,29,5,6,skin);r(24,36,5,9,'#4f5550');}
+  if(kind==='runner'){r(18,29,18,4,'#cda77e');r(21,10,12,3,'#a96d5d');r(12,47,6,13,'#5d4a4c');}if(kind==='brute'){r(9,24,34,30,'#696276');r(4,27,9,30,'#9f9381');r(39,27,8,30,'#9f9381');r(18,31,17,4,'#b4a68e');r(21,37,12,3,'#473d4d');}
   if(kind==='vampire'){for(let y=25;y<62;y+=3)r(18-(y-25)*.24,y,19+(y-25)*.48,3,'#3c263f');r(15,23,25,6,'#7f3c51');r(24,25,7,27,'#c7bfa4');r(23,23,2,3,'#f1ddbe');r(30,23,2,3,'#f1ddbe');}
   if(kind==='jinn'){r(12,24,5,25,'#87bca8');r(36,24,5,25,'#87bca8');for(let i=0;i<5;i++)r(15+i*3,50+i*2,22-i*5,2,'#84acb399');r(12,17,5,2,'#c0f4d4');r(36,13,7,2,'#c0f4d4');}
   if(kind==='watcher'){r(10,25,7,31,'#655b67');r(38,25,7,31,'#655b67');r(20,2,15,9,'#898082');r(23,30,9,15,'#c7bc8a');r(25,33,5,2,'#47414c');r(25,38,5,2,'#47414c');}

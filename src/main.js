@@ -1,3 +1,4 @@
+import {CITY_ENTRY_TEXT} from './metropolis-entry-text.js';
 import {MENU_TEXT} from './menu-text.js';
 import {ft} from './frontier-entry-text.js';
 import {transact,toggleMount,advanceTime,earn} from './frontier-state.js';
@@ -32,7 +33,7 @@ import {mountDynamicJoystick} from './joystick.js';
 import {DETAIL_UI,detailFor,DETAIL_IDS} from './detail-content.js';
 import {V,VILLAGE_ITEMS,VILLAGE_PROJECTS,VILLAGE_OUTCOMES} from './village-content.js';
 import {recordVillageEncounter,villageItem,villageProject} from './village-state.js';
-Object.assign(UI,MENU_TEXT);
+Object.assign(UI,MENU_TEXT,CITY_ENTRY_TEXT);
 for(const name of ['city','forest','water'])document.getElementById('preview-'+name)?.addEventListener('click',()=>{showSavedScene=false;savedPreview?.setVisible(false);setTitleScene(name);for(const b of document.querySelectorAll('.world-preview-tabs button'))b.setAttribute('aria-pressed',String(b.id==='preview-'+name));});
 const $=id=>document.getElementById(id);
 let storage;try{storage=localStorage;}catch{storage={getItem:()=>null,setItem:()=>{throw new Error('Storage disabled');}};}

@@ -62,7 +62,7 @@ test('lightning warns at the strike location, strikes once, and respawn grace pr
 });
 
 test('all buildings have reachable entrances and navigable furnished interiors with exact return positions',()=>{
- for(const seed of [1,91]){const w=makeFrontierWorld(seed);assert.ok(w.buildings.length>=30);for(const b of w.buildings){assert.ok(canStand(w,b.door.x,b.door.y),b.id+' door');assert.ok(route(w,{x:32.5,y:57.5},b.door).length,b.id+' route');const room=makeInterior(b,seed);for(const spot of [{x:6,y:6},{x:14,y:4},{x:7,y:14},{x:14,y:15}]){assert.ok(canStand(room,spot.x,spot.y),b.id);assert.ok(route(room,room.entry,spot).length,b.id+' room route');}}
+ for(const seed of [1,91]){const w=makeFrontierWorld(seed);assert.ok(w.buildings.length>=30);for(const b of w.buildings){assert.ok(canStand(w,b.door.x,b.door.y),b.id+' door');assert.ok(route(w,{x:32.5,y:57.5},b.door).length,b.id+' route');const room=makeInterior(b,seed);for(const spot of room.rooms||[{x:6,y:6},{x:14,y:4},{x:7,y:14},{x:14,y:15}]){assert.ok(canStand(room,spot.x,spot.y),b.id);assert.ok(route(room,room.entry,spot).length,b.id+' room route');}}
   const s=sample(),b=w.buildings.find(b=>b.id==='homes');Object.assign(s.frontier,{...b.door,angle:.3});const original={x:s.frontier.x,y:s.frontier.y,angle:s.frontier.angle};const inside=enterInterior(s,w,b);assert.ok(inside.interior);assert.ok(validateState(s));assert.equal(enterInterior(s,w,b),null);assert.equal(exitInterior(s,w),true);assert.deepEqual({x:s.frontier.x,y:s.frontier.y,angle:s.frontier.angle},original);assert.equal(exitInterior(s,w),false);
  }
 });

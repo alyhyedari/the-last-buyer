@@ -1,4 +1,6 @@
 import {MYTH_BOSSES} from './frontier-myth-data.js';
+import {resetUnfinishedBosses} from './frontier-encounters.js';
+import {nightSchedule,nightKind} from './frontier-night-director.js';
 import {magazineRounds,spendMagazine} from './frontier-loadout-state.js';
 import {hasBuy,hasGme} from './frontier-perks.js';
 import {uvTouches} from './frontier-myth.js';
@@ -18,6 +20,7 @@ export const WEAPONS={
  grenade:{damage:105,range:12,delay:1,ammo:'grenades',projectile:'grenade',blast:2.8,sound:'bow'}
 };
 export const HOSTILES={"zombie":{"hp":95,"speed":0.7,"damage":12,"reach":1,"delay":1.4,"notice":12},"jinn":{"hp":72,"speed":1.45,"damage":10,"reach":1.1,"delay":1.25,"notice":14},"vampire":{"hp":150,"speed":2.1,"damage":19,"reach":1,"delay":1.7,"notice":15},"watcher":{"hp":210,"speed":0.52,"damage":26,"reach":1.4,"delay":2.1,"notice":11},"robber":{"hp":85,"speed":1.35,"damage":9,"reach":1,"delay":1.2,"notice":9},"sentinel":{"hp":170,"speed":1.1,"damage":14,"reach":1.4,"delay":1.8,"notice":15},"ufoEnemy":{"hp":240,"speed":0.8,"damage":15,"reach":9,"delay":2.6,"notice":20}};
+Object.assign(HOSTILES,{runner:{hp:115,speed:2.9,damage:13,reach:1.1,delay:1.6,notice:22},brute:{hp:290,speed:.65,damage:30,reach:1.6,delay:2.6,notice:15}});
 for(const b of MYTH_BOSSES)HOSTILES[b.kind]={hp:b.hp,speed:b.speed,damage:b.damage,reach:2,delay:3,notice:24};Object.assign(HOSTILES,{shade:{hp:110,speed:2.5,damage:14,reach:1.2,delay:1.9,notice:18},spore:{hp:145,speed:.5,damage:17,reach:5,delay:2.8,notice:14},wisp:{hp:85,speed:1.8,damage:12,reach:1.3,delay:1.4,notice:14},briar:{hp:180,speed:.8,damage:21,reach:1.5,delay:2,notice:12},moth:{hp:65,speed:2.2,damage:8,reach:1.2,delay:1.2,notice:17}});
 export const actorMaxHealth=s=>HOSTILES[s.kind]?.hp||({tree:110,trafficCar:300,trafficBike:90,trafficMotor:140,bench:55,streetlamp:55,sign:50,laundry:30,crystal:160,relic:240,ufoFriend:240,mossling:90,rabbit:22,fox:40,owl:26,heron:30,bird:16,deer:60,boar:115,horse:150,dog:60,cat:35}[s.kind]||100);
 export const ammoCount=(f,weapon)=>{const key=WEAPONS[weapon]?.ammo;return key==='ammo'?f.life.ammo:key?f.life.combat[key]:Infinity;};
@@ -62,32 +65,83 @@ export function dropOnDeath(state){
  // Keep every possession recoverable even after repeated deaths: merge the oldest satchel.
  const occupied=drop.money||drop.weapons.length||drop.ammo||drop.shells||drop.rockets||drop.grenades||drop.campKit||drop.contraband;
  if(occupied){if(c.drops.length>=8){const oldest=c.drops.shift();for(const key of ['money','ammo','shells','rockets','grenades','contraband'])drop[key]+=oldest[key];drop.weapons=[...new Set([...oldest.weapons,...drop.weapons])];drop.campKit||=oldest.campKit;}c.drops.push(drop);}c.deaths++;v.money=hasBuy(f,29)?Math.floor(v.money*.2):0;v.weapons=[];v.weapon='none';l.ammo=0;c.shells=0;c.rockets=0;c.grenades=0;l.campKit=false;l.contraband=0;c.interior=null;
+ resetUnfinishedBosses(f);l.forest.pulseUntil=0;l.forest.readyAt=0;
  l.expanse.swimming=false;l.expanse.depth=0;l.expanse.oxygen=100;f.x=32.5;f.y=57.5;f.angle=-Math.PI/2;f.mounted=false;l.health=100;l.companion=false;advanceTime(f,60);f.energy=100;c.graceUntil=f.minutes+60;return drop;
 }
-export function hurtPlayer(state,amount,{ignoreGrace=false}={}){const f=state.frontier;if(!ignoreGrace&&f.minutes<f.life.combat.graceUntil)return false;f.life.health=Math.max(0,f.life.health-Math.max(0,amount)*(hasBuy(f,14)?.88:1)*(hasGme(f,'cinder')?.85:1));if(f.life.health>0)return false;dropOnDeath(state);return true;}
+export function hurtPlayer(state,amount,{ignoreGrace=false,bypassVehicle=false}={}){
+ const f=state.frontier;if(!Number.isFinite(amount)||amount<=0)return false;
+ if(!ignoreGrace&&(f.minutes<f.life.combat.graceUntil||f.minutes<(f.life.combat.dodgeUntil||0)))return false;
+ // Car condition represents a 300-point hull. A hit which destroys it ejects
+ // the driver; subsequent hits reach Vlad. Bikes and horses have no cabin.
+ if(!bypassVehicle&&f.mounted&&state.village.vehicle==='car'&&f.life.expanse.carHealth>0){damageCar(state,amount/3);return false;}
+ f.life.health=Math.max(0,f.life.health-amount*(hasBuy(f,14)?.88:1)*(hasGme(f,'cinder')?.85:1));if(f.life.health>0)return false;dropOnDeath(state);return true;
+}
+export function hostileHit(state,amount,victim){
+ const f=state.frontier,hp=f.life.health,hull=f.life.expanse.carHealth,died=hurtPlayer(state,amount);
+ if(died)return{kind:'died',victim};
+ if(f.life.expanse.carHealth<hull)return{kind:f.life.expanse.carHealth<=0?'carBroken':'carHit',victim};
+ return f.life.health<hp?{kind:'attacked',victim}:null;
+}
+export function dodgeStep(state,world,{forward=0,strafe=0}={}){
+ const f=state.frontier;if(f.mounted||f.life.expanse.swimming||f.energy<8||f.minutes<(world.dodgeReadyAt||0))return false;
+ const angle=forward||strafe?f.angle+Math.atan2(strafe,forward):f.angle+Math.PI,before={x:f.x,y:f.y};
+ moveInWorld(world,f,Math.cos(angle)*2.1,Math.sin(angle)*2.1,.22);if(distance(before,f)<.15)return false;
+ f.energy-=8;f.life.combat.dodgeUntil=f.minutes+.34;world.dodgeReadyAt=f.minutes+1.9;return true;
+}
 export function recoverDrop(state,id){const f=state.frontier,c=f.life.combat,index=c.drops.findIndex(d=>d.id===id);if(index<0||c.interior||distance(f,c.drops[index])>1.7)return false;const d=c.drops[index],v=state.village;let changed=false;
  const transfer=(key,to,max)=>{const count=Math.min(d[key],max-to[key]);to[key]+=count;d[key]-=count;changed||=count>0;};transfer('money',v,999999);transfer('ammo',f.life,500);transfer('contraband',f.life,30);for(const key of ['shells','rockets','grenades'])transfer(key,c,key==='shells'?500:99);
  if(d.weapons.length){v.weapons=[...new Set([...v.weapons,...d.weapons])];if(v.weapon==='none')v.weapon=d.weapons.find(w=>WEAPONS[w])||d.weapons[0]||'none';d.weapons=[];changed=true;}if(d.campKit){f.life.campKit=true;d.campKit=false;changed=true;}
  if(!d.money&&!d.ammo&&!d.shells&&!d.rockets&&!d.grenades&&!d.contraband)c.drops.splice(index,1);return changed;
 }
-export function vehicleStrike(state,world,actor,speed){if(!state.frontier.mounted||Math.abs(speed)<1.9||actor.dead)return null;const mass={bike:8,horse:11,motorcycle:17,car:28}[state.village.vehicle]||8,result=damageActor(state,world,actor,Math.max(4,(Math.abs(speed)-1)*mass));if(result){const died=hurtPlayer(state,Math.min(28,Math.abs(speed)*2));return{...result,playerDied:died};}return null;}
+export function vehicleStrike(state,world,actor,speed){if(!state.frontier.mounted||Math.abs(speed)<1.9||actor.dead)return null;const mass={bike:8,horse:11,motorcycle:17,car:28}[state.village.vehicle]||8,result=damageActor(state,world,actor,Math.max(4,(Math.abs(speed)-1)*mass));if(result){const hit=hostileHit(state,Math.min(28,Math.abs(speed)*2),actor.kind);return{...result,playerDied:hit?.kind==='died',hullHit:hit?.kind==='carHit'||hit?.kind==='carBroken'};}return null;}
 export function recoverVehicle(world,position,lastSafe,radius){
  // A recovery never crosses a wall or teleports to a distant default spawn.
  for(const candidate of [lastSafe,...Array.from({length:16},(_,i)=>({x:position.x+Math.cos(i*Math.PI/8)*.7,y:position.y+Math.sin(i*Math.PI/8)*.7}))])if(candidate&&distance(position,candidate)<2&&canStand(world,candidate.x,candidate.y,radius)&&clearSight(world,position,candidate)){const trial={x:position.x,y:position.y};moveInWorld(world,trial,candidate.x-position.x,candidate.y-position.y,radius);if(distance(trial,candidate)>.03)continue;Object.assign(position,trial);return true;}return false;
 }
 export function nightPopulation(f){const h=Math.floor(f.minutes/60)%24;return h>=7&&h<18&&f.life.heat<40?1:h>=18&&h<21&&f.life.heat<40?.35:0;}
 export function enemyActors(world,f,time){
- if(world.interior)return[];const hunters=world.hunters??=new Map(),day=gameDay(f),list=[];
- const zones=[{x:58,y:43},{x:69,y:77},{x:96,y:82},{x:105,y:103},{x:26,y:85},{x:15,y:109},{x:42,y:99},{x:51,y:115},{x:48,y:137},{x:102,y:145},{x:38,y:170},{x:111,y:177}];
- for(let zone=0;zone<zones.length;zone++){const forest=zone>=4;if(!forest&&!isNight(f)&&f.life.heat<55)continue;for(let n=0;n<(forest?3:2);n++){const id=`night-${day}-${zone}-${n}`,kind=!forest&&!isNight(f)?'sentinel':zone>=8&&n===0?'ufoEnemy':zone>=8&&n===1?'sentinel':zone===0&&n===0?'robber':['zombie','jinn','vampire','watcher'][(zone+n+day)%4];if(kind==='robber'&&f.life.robberDay===day)continue;let p=hunters.get(id);if(!p){const a=hash(f.seed,zone*9+n+day)*6.28,home=zones[zone],start=nearestOpen(world,{x:home.x+Math.cos(a)*4,y:home.y+Math.sin(a)*4},.25),saved=f.life.combat.actors[id];p={...(saved&&canStand(world,saved.x,saved.y,.25)?saved:start),id,kind,homeX:start.x,homeY:start.y,at:time,path:[],repath:0,nextAttack:0,alert:false};hunters.set(id,p);}list.push(actorWithHealth(f,{id,kind,x:p.x,y:p.y,hostile:true,height:kind==='ufoEnemy'?2:0,phase:zone+n,winding:!!p.windup}));}}
- for(const id of hunters.keys())if(id.startsWith('night-')&&!id.startsWith('night-'+day+'-'))hunters.delete(id);return list;
+ if(world.interior||world.arena)return[];
+ const hunters=world.hunters??=new Map(),day=gameDay(f),night=isNight(f),list=[];
+ for(const zone of nightSchedule(f,night))for(let n=0;n<zone.count;n++){
+  const id='night-'+day+'-'+zone.index+'-'+n,kind=nightKind(zone,n,day,night);
+  if(kind==='robber'&&f.life.robberDay===day)continue;
+  let p=hunters.get(id);
+  if(!p){
+   const a=hash(f.seed,zone.index*9+n+day)*6.28,r=3+n%4*1.3,start=nearestOpen(world,{x:zone.x+Math.cos(a)*r,y:zone.y+Math.sin(a)*r},.25),saved=f.life.combat.actors[id];
+   p={...(saved&&canStand(world,saved.x,saved.y,.25)?saved:start),id,kind,homeX:start.x,homeY:start.y,at:time,path:[],repath:0,nextAttack:0,alert:false,lastSeen:0};hunters.set(id,p);
+  }
+  list.push(actorWithHealth(f,{id,kind,x:p.x,y:p.y,hostile:true,height:kind==='ufoEnemy'?2:0,phase:zone.index+n,variant:n%3,winding:!!p.windup}));
+ }
+ const active=new Set(list.map(a=>a.id));for(const [id,p]of hunters)if(id.startsWith('night-')&&!active.has(id)){p.alert=false;p.windup=0;p.path=[];}
+ for(const [id,p]of hunters)if(id.startsWith('night-')&&(!id.startsWith('night-'+day+'-')||Math.hypot(p.x-f.x,p.y-f.y)>70))hunters.delete(id);
+ return list;
 }
 export function updateThreats(state,world,actors,dt,time){
  const f=state.frontier,events=[];if(world.interior||f.life.expanse.swimming)return events;
- for(const s of actors.filter(s=>s.hostile&&!s.boss&&!s.dead).sort((a,b)=>distance(f,a)-distance(f,b)).slice(0,6)){const rule=HOSTILES[s.kind],p=world.hunters?.get(s.id);if(!rule||!p||s.dead)continue;if(forestWard(f,p)){p.windup=0;p.path=[];p.repath=0;continue;}const d=distance(f,p);if(d>26)continue;
-  if(d<rule.notice*(hasBuy(f,4)?.8:1)&&bulletSight(world,p,f))p.alert=true;if(!p.alert)continue;
-  if(d<rule.reach+.2&&bulletSight(world,p,f)&&time>=p.nextAttack){if(!p.windup){p.windup=time+(s.kind==='spore'?1.15:s.kind==='shade'?.9:s.kind==='watcher'?.7:.25);events.push({kind:'windup',victim:s.kind});}if(time<p.windup)continue;p.windup=0;p.nextAttack=time+rule.delay;if(f.minutes>=f.life.combat.graceUntil){const died=hurtPlayer(state,rule.damage);if(s.kind==='vampire')remember(f,s,Math.min(rule.hp,s.hp+12));events.push({kind:died?'died':'attacked',victim:s.kind});if(died)return events;}continue;}
-  p.windup=0;if(d>rule.reach){if(time>=p.repath){const flank=['jinn','shade'].includes(s.kind)&&d>2?{x:f.x+Math.sin(time)*1.2,y:f.y+Math.cos(time)*1.2}:f;const nextPath=localRoute(world,p,canStand(world,flank.x,flank.y,.25)?flank:f,.25);if(nextPath!==null){p.path=nextPath;p.repath=time+1+hash(f.seed,s.id.length)*.6;}}while(p.path.length&&distance(p,p.path[0])<.15)p.path.shift();const goal=p.path[0];if(goal){const a=Math.atan2(goal.y-p.y,goal.x-p.x),speed=rule.speed*(s.kind==='vampire'&&Math.sin(time*1.7)>.65?1.6:1);moveInWorld(world,p,Math.cos(a)*dt*speed,Math.sin(a)*dt*speed,.25);const saved=f.life.combat.actors[s.id];if(saved&&saved.hp>0){saved.x=p.x;saved.y=p.y;}}}
+ for(const s of actors.filter(s=>s.hostile&&!s.boss&&!s.dead).sort((a,b)=>distance(f,a)-distance(f,b)).slice(0,12)){
+  const rule=HOSTILES[s.kind],p=world.hunters?.get(s.id);if(!rule||!p)continue;
+  if(forestWard(f,p)){p.windup=0;p.path=[];p.repath=0;continue;}
+  const d=distance(f,p);if(d>32){p.alert=false;p.windup=0;continue;}
+  const visible=d<rule.notice*(hasBuy(f,4)?.8:1)&&bulletSight(world,p,f),noise=world.panic&&world.panic.until>f.minutes&&distance(p,world.panic)<rule.notice*1.25;
+  if(visible||noise){p.alert=true;p.lastSeen=time;p.lastKnown=visible?{x:f.x,y:f.y}:{x:world.panic.x,y:world.panic.y};}
+  if(p.alert&&time-p.lastSeen>9){p.alert=false;p.windup=0;p.path=[];p.lastKnown=null;}
+  if(!p.alert)continue;
+  if(d<rule.reach+.2&&visible&&time>=p.nextAttack){
+   if(!p.windup){p.windup=time+(s.kind==='spore'||s.kind==='brute'?1.15:s.kind==='shade'?.9:s.kind==='runner'?.5:.65);events.push({kind:'windup',victim:s.kind});}
+   if(time<p.windup)continue;
+   p.windup=0;p.nextAttack=time+rule.delay;
+   const hit=hostileHit(state,rule.damage,s.kind);if(hit){if(s.kind==='vampire'&&hit.kind==='attacked')remember(f,s,Math.min(rule.hp,s.hp+12));events.push(hit);if(hit.kind==='died')return events;}continue;
+  }
+  p.windup=0;
+  if(d>rule.reach){
+   const known=p.lastKnown||p;
+   if(time>=p.repath){const flank=visible&&['jinn','shade','runner'].includes(s.kind)&&d>2?{x:known.x+Math.sin(time+s.phase)*1.3,y:known.y+Math.cos(time+s.phase)*1.3}:known;
+    const nextPath=localRoute(world,p,canStand(world,flank.x,flank.y,.25)?flank:known,.25);
+    if(nextPath!==null){p.path=nextPath;p.repath=time+.8+hash(f.seed,s.id.length)*.5;}
+   }
+   while(p.path.length&&distance(p,p.path[0])<.15)p.path.shift();const goal=p.path[0];
+   if(goal){const a=Math.atan2(goal.y-p.y,goal.x-p.x),speed=rule.speed*(s.kind==='vampire'&&Math.sin(time*1.7)>.65?1.6:1);moveInWorld(world,p,Math.cos(a)*dt*speed,Math.sin(a)*dt*speed,.25);const saved=f.life.combat.actors[s.id];if(saved&&saved.hp>0){saved.x=p.x;saved.y=p.y;}}
+  }
  }
  return events;
 }
@@ -95,19 +149,17 @@ export function updateProjectiles(state,world,actors,dt){
  const events=[],f=state.frontier;for(const p of world.projectiles||[]){p.age+=dt;let blocked=false;const steps=Math.max(1,Math.ceil(p.speed*dt/.1));for(let i=0;i<steps;i++){const old={x:p.x,y:p.y},move=p.speed*dt/steps;moveInWorld(world,p,Math.cos(p.angle)*move,Math.sin(p.angle)*move,.07);if(distance(old,p)<move*.5){blocked=true;break;}if(p.age>.07&&actors.some(a=>!a.dead&&(a.animal||isScenery(a)||a.alien||HOSTILES[a.kind]||a.kind==='resident')&&distance(p,a)<.4)){blocked=true;break;}}
   if(p.kind==='grenade'){p.speed=Math.max(0,p.speed-dt*6);p.height=Math.max(.12,Math.sin(p.age/1.25*Math.PI)*.9);if(blocked){p.angle+=Math.PI*.7;p.speed*=.4;}}
   if(p.age>=p.ttl||blocked&&p.kind==='rocket'){p.done=true;(world.effects??=[]).push({kind:'explosion',x:p.x,y:p.y,age:0,ttl:.65,seed:p.id});events.push({kind:'explosion'});world.panic={x:p.x,y:p.y,until:f.minutes+12};blastFacades(state,world,p);for(const a of actors){const d=distance(p,a);if(d<p.blast&&!a.dead&&(a.animal||isScenery(a)||a.alien||HOSTILES[a.kind]||['resident','companion'].includes(a.kind))&&bulletSight(world,p,a)){const hit=damageActor(state,world,a,p.damage*Math.max(.2,1-d/p.blast));if(hit)events.push(hit);}}
-   if(f.mounted&&state.village.vehicle==='car'&&distance(p,f)<p.blast)damageCar(state,p.damage*.35*(1-distance(p,f)/p.blast));
-   if(distance(p,f)<p.blast&&bulletSight(world,p,f)){const died=hurtPlayer(state,p.damage*.6*(1-distance(p,f)/p.blast));events.push({kind:died?'died':'attacked'});}
+   if(distance(p,f)<p.blast&&bulletSight(world,p,f)){const hit=hostileHit(state,p.damage*.6*(1-distance(p,f)/p.blast),'explosion');if(hit)events.push(hit);}
   }
  }world.projectiles=(world.projectiles||[]).filter(p=>!p.done);return events;
 }
 export function forestTreasure(state,world,cache){const f=state.frontier,c=f.life.combat;if(world.interior||distance(f,cache)>1.8||c.treasures.includes(cache.id))return false;c.treasures.push(cache.id);const reward=45+Math.floor(hash(f.seed,Number(cache.id.slice(6))+950)*90);earn(state,reward);f.life.ammo=Math.min(500,f.life.ammo+6);if(Number(cache.id.slice(6))%4===0)c.grenades=Math.min(99,c.grenades+1);return reward;}
 export function weatherHazard(f){const block=Math.floor(f.minutes/180),storm=hash(f.seed,block+7721)<.22,local=f.minutes%180,phase=local%42,thunder=storm&&phase<3,warning=storm&&phase>37,index=block*7+Math.floor(local/42)+(warning?1:0),strike=storm?{x:9+hash(f.seed,index+552)*44,y:77+hash(f.seed,index+553)*43}:null;const tornado=storm&&hash(f.seed,block+918)<.27&&local>70&&local<140?{x:15+local*.25,y:78+Math.sin(local*.04)*14}:null;return{storm,thunder,warning,tornado,strike,index};}
-export function tickWeather(state,world,dt,time){const f=state.frontier,h=weatherHazard(f),events=[];if(world.interior)return events;if(h.thunder&&world.thunderBlock!==h.index){world.thunderBlock=h.index;events.push({kind:'thunder'});if(distance(f,h.strike)<1.5){const died=hurtPlayer(state,38);events.push({kind:died?'died':'attacked'});}}if(h.tornado&&distance(f,h.tornado)<3&&time>(world.windDamageAt||0)){world.windDamageAt=time+1;const died=hurtPlayer(state,16);events.push({kind:died?'died':'attacked'});if(!died){const a=Math.atan2(f.y-h.tornado.y,f.x-h.tornado.x);moveInWorld(world,f,Math.cos(a)*.6,Math.sin(a)*.6,.22);}}return events;}
+export function tickWeather(state,world,dt,time){const f=state.frontier,h=weatherHazard(f),events=[];if(world.interior)return events;if(h.thunder&&world.thunderBlock!==h.index){world.thunderBlock=h.index;events.push({kind:'thunder'});if(distance(f,h.strike)<1.5){const hit=hostileHit(state,38,'thunder');if(hit){events.push(hit);if(hit.kind==='died')return events;}}}if(h.tornado&&distance(f,h.tornado)<3&&time>(world.windDamageAt||0)){world.windDamageAt=time+1;const hit=hostileHit(state,16,'tornado');if(hit)events.push(hit);if(hit?.kind!=='died'){const a=Math.atan2(f.y-h.tornado.y,f.x-h.tornado.x);moveInWorld(world,f,Math.cos(a)*.6,Math.sin(a)*.6,.22);}}return events;}
 
 function markFacade(state,world,b,damage,point){const f=state.frontier,id='facade-'+b.id,old=f.life.combat.actors[id]?.hp??500,hp=Math.max(0,old-damage);remember(f,{id,kind:'facade',x:point.x,y:point.y},hp);if(old>hp){f.life.heat=Math.min(100,f.life.heat+4);f.life.debts=Math.min(99999,f.life.debts+2);}(world.effects??=[]).push({kind:'sparks',x:point.x,y:point.y,age:0,ttl:.5,seed:old});return{kind:'objectHit',target:id,hp,maxHp:500,victim:'facade'};}
 function shootFacade(state,world,range,damage){const f=state.frontier;for(let d=.3;d<range;d+=.12){const x=f.x+Math.cos(f.angle)*d,y=f.y+Math.sin(f.angle)*d,t=tileAt(world,x,y);if(t<4)continue;const b=world.buildings?.find(b=>x>=b.left&&x<b.left+b.width&&y>=b.top&&y<b.top+b.depth);return b?markFacade(state,world,b,damage,{x:x-Math.cos(f.angle)*.15,y:y-Math.sin(f.angle)*.15}):null;}return null;}
 function blastFacades(state,world,p){for(const b of world.buildings||[]){const x=Math.max(b.left-.1,Math.min(b.left+b.width+.1,p.x)),y=Math.max(b.top-.1,Math.min(b.top+b.depth+.1,p.y)),d=Math.hypot(x-p.x,y-p.y);if(d<p.blast&&clearSight(world,p,{x,y}))markFacade(state,world,b,p.damage*(1-d/p.blast),{x,y});}}
-
 
 
 

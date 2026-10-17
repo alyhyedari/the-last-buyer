@@ -3,6 +3,7 @@ import {inDeepForest} from './frontier-forest-data.js';
 import {lightRange} from './frontier-perks.js';
 export function drawMythSprite(c,kind,v=0){
  const r=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(x,y,w,h);},colors=['#b8d49a','#d38c60','#7fc4cc','#b8a1cf','#d8cc80','#99c9ad'],col=colors[v%6],dark=['#36573b','#744639','#305766','#54415f','#5d6040','#284d47'][v%6];
+ if(kind==='fogGate'){for(let i=0;i<7;i++){r(4+i*6,12+i%3*4,3,49-i%3*4,'#8ac6b54a');r(4+i*6,48+i%2*5,3,8,'#c0e5bc99');}r(0,62,48,2,'#a0d7b4');return true;}
  if(kind==='gmeCoin'){r(15,11,18,39,'#d8c45f');r(8,19,32,24,'#f2df8b');r(12,15,24,33,'#e2b943');r(14,18,20,27,'#233c39');c.font='bold 9px monospace';c.textAlign='center';c.fillStyle='#ddf3b8';c.fillText('GME',24,35);c.textAlign='start';r(19,13,11,2,'#ffffbf');return true;}
  if(kind==='mythOmen'){for(let x=3;x<45;x+=5){r(x,56,3,2,col);r(x,63,3,1,col);}r(3,58,3,4,col);r(42,58,3,4,col);r(23,56,2,8,col);return true;}
  if(kind==='uvRune'){r(15,49,19,14,'#3d514b');r(20,51,2,9,'#717e88');r(20,51,8,2,'#717e88');r(26,55,2,5,'#717e88');return true;}

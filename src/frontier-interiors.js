@@ -1,6 +1,8 @@
+import {makeCityInterior} from './metropolis-interiors.js';
 import {hash} from './frontier-state.js';
 import {canStand,nearestOpen} from './frontier-world.js';
-export function makeInterior(building,seed){
+export function makeInterior(building,seed,options={}){
+ const city=makeCityInterior(building,seed,options);if(city)return city;
  const size=20,tiles=new Uint8Array(size*size).fill(8),sprites=[],colliders=[],buckets=new Map(),wealth=building.kind==='manor',wall=wealth?10:9;
  for(let y=1;y<19;y++)for(let x=1;x<19;x++)tiles[y*size+x]=2;
  // Four connected rooms; actual walls and furniture share the collision system.
@@ -12,5 +14,5 @@ export function makeInterior(building,seed){
  for(const c of colliders){const key=Math.floor(c.x)+','+Math.floor(c.y);if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(c);}
  return{size,tiles,sprites,colliders,buckets,buildings:[],traffic:[],treasures:[],seed,interior:building.id,wealth,entry:{x:10,y:17},exit:{x:10,y:18.4}};
 }
-export function enterInterior(state,outdoor,building){const f=state.frontier;if(f.life.combat.interior)return null;const world=makeInterior(building,f.seed);f.life.combat.interior={id:building.id,outside:{x:f.x,y:f.y,angle:f.angle}};f.x=world.entry.x;f.y=world.entry.y;f.angle=-Math.PI*.69;f.life.pitch=0;f.mounted=false;return world;}
+export function enterInterior(state,outdoor,building){const f=state.frontier;if(f.life.combat.interior)return null;const world=makeInterior(building,f.seed,{theme:f.life.city.theme});f.life.combat.interior={id:building.id,outside:{x:f.x,y:f.y,angle:f.angle}};if(building.id==='tether')f.life.combat.interior.floor='lobby';f.x=world.entry.x;f.y=world.entry.y;f.angle=-Math.PI*.69;f.life.pitch=0;f.mounted=false;return world;}
 export function exitInterior(state,outdoor){const f=state.frontier,i=f.life.combat.interior;if(!i)return false;const building=outdoor.buildings.find(b=>b.id===i.id),candidate=canStand(outdoor,i.outside.x,i.outside.y,.22)?i.outside:nearestOpen(outdoor,building?.door||i.outside);f.x=candidate.x;f.y=candidate.y;f.angle=i.outside.angle;f.life.pitch=0;f.life.combat.interior=null;f.mounted=false;return true;}

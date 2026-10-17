@@ -1,8 +1,9 @@
+import {CITY_PLACES} from './metropolis-state.js';
 import {hasBuy} from './frontier-perks.js';
 import {newLifeState,normalizeLifeState} from './frontier-life-state.js';
 // Saved simulation rules. No DOM, wall clock, or rendering dependencies.
 export const VEHICLES={foot:{speed:2.5,cargo:1,fuel:0,radius:.22,accel:11,brake:14},bike:{speed:4.6,cargo:2,fuel:0,radius:.29,accel:2.4,brake:6},motorcycle:{speed:7.4,cargo:3,fuel:.18,radius:.34,accel:3.6,brake:8},car:{speed:9,cargo:6,fuel:.28,radius:.48,accel:2.8,brake:7},horse:{speed:5.8,cargo:3,fuel:0,radius:.34,accel:3,brake:7}};
-export const FRONTIER_PLACES=['gate','garage','market','workshop','club','inn','pond','range','grove','tower','clinic','overlook','square','homes','manor','stable','shelter','camp','summit','nightmarket','oldquarter','boulevard','armory','deepforest','ruins','ranger','weatherstation','quarry','lakeshore','neonquarter','lostwoods','observatory','starfall','quietcliff','bluebasin','oldgrowth','emberpath','moonfen','clockwood','stormwood','lastsanctum'];
+export const FRONTIER_PLACES=[...CITY_PLACES,'gate','garage','market','workshop','club','inn','pond','range','grove','tower','clinic','overlook','square','homes','manor','stable','shelter','camp','summit','nightmarket','oldquarter','boulevard','armory','deepforest','ruins','ranger','weatherstation','quarry','lakeshore','neonquarter','lostwoods','observatory','starfall','quietcliff','bluebasin','oldgrowth','emberpath','moonfen','clockwood','stormwood','lastsanctum'];
 export const FRONTIER_ENDINGS=['homeward','lighthouse','two-tickets','night-radio','river-keeper','last-delivery','paper-king','borrowed-dawn','unbought','the-witness','open-road','small-hours'];
 export const WEATHER=['clear','cloudy','rain','mist'];
 export function hash(seed,n=0){let x=(seed^Math.imul(n+1,0x45d9f3b))>>>0;x=Math.imul(x^(x>>>16),0x45d9f3b);x=Math.imul(x^(x>>>16),0x45d9f3b);return ((x^(x>>>16))>>>0)/4294967296;}

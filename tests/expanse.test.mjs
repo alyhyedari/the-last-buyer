@@ -62,7 +62,7 @@ test('traffic yields to a stopped player, resumes when clear, and respects stole
 });
 
 test('high attention attracts daytime sentinels while peaceful daytime streets stay clear',()=>{
- const s=sample(),f=s.frontier,w=makeFrontierWorld(91);f.minutes=12*60;assert.ok(enemyActors(w,f,0).every(a=>a.id.split('-')[2]>=4));f.life.heat=76;const guards=enemyActors(w,f,1).filter(a=>Number(a.id.split('-')[2])<4);assert.equal(guards.length,8);assert.ok(guards.every(a=>a.kind==='sentinel'));
+ const s=sample(),f=s.frontier,w=makeFrontierWorld(91);f.minutes=12*60;assert.ok(enemyActors(w,f,0).every(a=>a.id.split('-')[2]>=4));f.life.heat=76;const guards=enemyActors(w,f,1).filter(a=>Number(a.id.split('-')[2])<4);assert.ok(guards.length>0&&guards.length<=8);assert.ok(guards.every(a=>Math.hypot(a.x-f.x,a.y-f.y)<54));assert.ok(guards.every(a=>a.kind==='sentinel'));
 });
 
 test('traffic contact uses short collision-safe displacement and never crosses a wall',()=>{

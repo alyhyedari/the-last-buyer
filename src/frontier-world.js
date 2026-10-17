@@ -1,3 +1,5 @@
+import {CITY_DESTINATIONS} from './metropolis-data.js';
+import {buildMetropolis} from './metropolis-world.js';
 import {familyResidents} from './frontier-residents.js';
 import {hash} from './frontier-state.js';
 import {growForest,outsideCoinGlade} from './frontier-forest-world.js';
@@ -5,7 +7,7 @@ import {inDeepForest} from './frontier-forest-data.js';
 import {MYTH_BOSSES,MYTH_TRAILS} from './frontier-myth-data.js';
 export const SIZE=384;
 export const LAKES=[{id:'mirrorwater',x:54,y:19,rx:12,ry:9,shore:{x:61.5,y:29.5},entry:{x:58.5,y:24.5}},{id:'bluebasin',x:150,y:164,rx:18,ry:14,shore:{x:149.5,y:181.5},entry:{x:149.5,y:173.5}}];
-export const PLACES=[...MYTH_TRAILS,
+export const PLACES=[...MYTH_TRAILS,...CITY_DESTINATIONS,
  {id:'gate',x:32.5,y:57.5,color:'#c8e397',kind:'gate'},
  {id:'garage',x:28.5,y:49.5,color:'#dba05f',kind:'garage'},
  {id:'market',x:36.5,y:43.5,color:'#bddc83',kind:'market'},
@@ -53,14 +55,14 @@ export function makeFrontierWorld(seed){
  const road=(ax,ay,bx,by)=>{const steps=Math.ceil(Math.hypot(bx-ax,by-ay)*2);for(let n=0;n<=steps;n++){const x=Math.floor(ax+(bx-ax)*n/steps),y=Math.floor(ay+(by-ay)*n/steps);for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)if(x+dx>1&&x+dx<SIZE-2&&y+dy>1&&y+dy<SIZE-2)tiles[(y+dy)*SIZE+x+dx]=2;}};
  road(32,184,32,10);for(const p of PLACES.filter(p=>p.x<55))road(32,p.y,p.x,p.y);
  road(32,43,74,43);road(74,43,74,72);road(74,43,85,43);road(85,43,85,58);road(85,58,74,58);road(74,43,74,20);road(74,20,81,20);road(81,20,81,8);
- for(const p of PLACES.filter(p=>p.x>=55&&p.y<192))road(74,p.y,p.x,p.y);
+ for(const p of PLACES.filter(p=>!p.metro&&p.x>=55&&p.y<192))road(74,p.y,p.x,p.y);
  road(74,70,74,184);road(74,81,144,81);road(114,81,114,130);road(114,108,74,108);road(106,65,106,116);road(32,77,74,77);road(144,81,144,116);road(114,116,144,116);
  for(const lake of LAKES)for(let y=Math.floor(lake.y-lake.ry);y<=lake.y+lake.ry;y++)for(let x=Math.floor(lake.x-lake.rx);x<=lake.x+lake.rx;x++)if(((x-lake.x)/lake.rx)**2+((y-lake.y)/lake.ry)**2<1)tiles[y*SIZE+x]=3;
  road(32,23,47,23);
  road(74,181,150,196);road(150,196,234,238);road(234,238,318,262);road(234,238,192,312);road(192,312,280,334);road(280,334,336,374);
  for(const b of MYTH_BOSSES){for(let y=Math.floor(b.y)-9;y<=b.y+9;y++)for(let x=Math.floor(b.x)-9;x<=b.x+9;x++)if(Math.hypot(x+.5-b.x,y+.5-b.y)<9)tiles[y*SIZE+x]=0;}
  const addBuilding=(x,y,kind,id,width=5,depth=4)=>{const left=Math.floor(x-width/2),top=Math.floor(y-depth),style=kind==='manor'?5:kind==='house'?4:kind==='clinic'?6:7;for(let yy=top;yy<Math.floor(y);yy++)for(let xx=left;xx<left+width;xx++)tiles[yy*SIZE+xx]=style;buildings.push({id,x:left+width/2,y:top+depth/2,left,top,width,depth,kind,door:{x:left+Math.floor(width/2)+.5,y:top+depth+.7}});};
- for(const p of PLACES){
+ for(const p of PLACES.filter(p=>!p.metro)){
   // Clear approach; facades sit behind the interactable doorstep.
   for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)tiles[(Math.floor(p.y)+dy)*SIZE+Math.floor(p.x)+dx]=2;
   if(!['pond','grove','overlook','gate','range','camp','summit'].includes(p.kind))addBuilding(p.x,p.y-1.5,p.kind,p.id,p.kind==='manor'?7:5);
@@ -89,6 +91,7 @@ export function makeFrontierWorld(seed){
  for(let i=0;i<6;i++)sprites.push({id:'bird-'+i,kind:'bird',x:58+i*4,y:36+i%3,airborne:true,phase:i*1.9});
  sprites.push({id:'paper-target',kind:'target',x:17.5,y:35.5,radius:.25});
  sprites.push({x:30.4,y:45.5,kind:'stranger',id:'stranger'},{x:14.5,y:17.5,kind:'ghost',id:'ghost'});
+ const city=buildMetropolis({tiles,size:SIZE,sprites,buildings,road,seed,hash});
  growForest(sprites,tiles,SIZE,seed);
  // Wide, open ritual grounds; pillars frame the arena without sealing exits.
  for(const b of MYTH_BOSSES)for(let i=0;i<8;i++){const a=i*Math.PI/4,x=b.x+Math.cos(a)*8.5,y=b.y+Math.sin(a)*8.5;sprites.push({id:'pillar-'+b.id+'-'+i,kind:'mythPillar',x,y,variant:b.variant,radius:.3});}
@@ -99,13 +102,14 @@ export function makeFrontierWorld(seed){
  const buckets=new Map();for(const o of colliders){const key=Math.floor(o.x)+','+Math.floor(o.y);if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(o);}
  const traffic=[{id:'traffic-car',kind:'trafficCar',phase:0,speed:2.4,radius:.62,model:0},{id:'traffic-bike',kind:'trafficBike',phase:17,speed:1.8,radius:.35},{id:'traffic-motor',kind:'trafficMotor',phase:39,speed:2.9,radius:.4}];
  for(let i=0;i<9;i++)traffic.push({id:'traffic-neon-'+i,kind:i%4===3?'trafficMotor':'trafficCar',phase:i*11,speed:1.7+(i%3)*.25,radius:i%4===3?.4:.62,model:i%4,corners:[[114.15,81.85],[144.15,81.85],[144.15,116.85],[114.15,116.85]]});
+ traffic.push(...city.traffic);
  const spriteBuckets=new Map();for(const s of filtered){const k=Math.floor(s.x/8)+','+Math.floor(s.y/8);if(!spriteBuckets.has(k))spriteBuckets.set(k,[]);spriteBuckets.get(k).push(s);}
  const playTiles=new Set();for(const child of filtered.filter(s=>s.kind==='child'&&s.id.endsWith('-0')))for(let dy=0;dy<3;dy++)for(let dx=0;dx<2;dx++){const x=Math.floor(child.x)+dx,y=Math.floor(child.y)+dy;if([0,2].includes(tiles[y*SIZE+x]))playTiles.add(y*SIZE+x);}
- const facadeTiles=new Map();for(const b of buildings)for(let y=b.top;y<b.top+b.depth;y++)for(let x=b.left;x<b.left+b.width;x++)facadeTiles.set(y*SIZE+x,b.id);return{spatialCollision:true,playTiles,size:SIZE,tiles,sprites:filtered,seed,colliders,buckets,buildings,traffic,treasures,facadeTiles,spriteBuckets};
+ const facadeTiles=new Map();for(const b of buildings)for(let y=b.top;y<b.top+b.depth;y++)for(let x=b.left;x<b.left+b.width;x++)facadeTiles.set(y*SIZE+x,b.id);return{spatialCollision:true,playTiles,size:SIZE,tiles,sprites:filtered,seed,colliders,buckets,buildings,traffic,treasures,facadeTiles,spriteBuckets,cityBuildings:city.buildings};
 }
 export const tileAt=(world,x,y)=>{const size=world.size||SIZE;return x<0||y<0||x>=size||y>=size?1:world.tiles[Math.floor(y)*size+Math.floor(x)];};
 export const solid=(world,x,y)=>{const t=tileAt(world,x,y);return t!==0&&t!==2;};
-export function canStand(world,x,y,radius=.22){if(!Number.isFinite(x)||!Number.isFinite(y))return false;for(let yy=Math.floor(y-radius);yy<=Math.floor(y+radius);yy++)for(let xx=Math.floor(x-radius);xx<=Math.floor(x+radius);xx++)if(solid(world,xx,yy)&&Math.hypot(x-Math.max(xx,Math.min(xx+1,x)),y-Math.max(yy,Math.min(yy+1,y)))<radius)return false;for(let yy=Math.floor(y)-2;yy<=Math.floor(y)+2;yy++)for(let xx=Math.floor(x)-2;xx<=Math.floor(x)+2;xx++)for(const o of world.buckets?.get(xx+','+yy)||[])if(Math.hypot(x-o.x,y-o.y)<radius+o.radius)return false;return true;}
+export function canStand(world,x,y,radius=.22){if(!Number.isFinite(x)||!Number.isFinite(y))return false;if(world.arena&&Math.hypot(x-world.arena.x,y-world.arena.y)+radius>world.arena.radius)return false;for(let yy=Math.floor(y-radius);yy<=Math.floor(y+radius);yy++)for(let xx=Math.floor(x-radius);xx<=Math.floor(x+radius);xx++)if(solid(world,xx,yy)&&Math.hypot(x-Math.max(xx,Math.min(xx+1,x)),y-Math.max(yy,Math.min(yy+1,y)))<radius)return false;for(let yy=Math.floor(y)-2;yy<=Math.floor(y)+2;yy++)for(let xx=Math.floor(x)-2;xx<=Math.floor(x)+2;xx++)for(const o of world.buckets?.get(xx+','+yy)||[])if(Math.hypot(x-o.x,y-o.y)<radius+o.radius)return false;return true;}
 export function moveInWorld(world,f,dx,dy,radius=.22){const before={x:f.x,y:f.y},steps=Math.max(1,Math.ceil(Math.hypot(dx,dy)/.12));for(let i=0;i<steps;i++){if(canStand(world,f.x+dx/steps,f.y,radius))f.x+=dx/steps;if(canStand(world,f.x,f.y+dy/steps,radius))f.y+=dy/steps;}return Math.hypot(f.x-before.x,f.y-before.y);}
 export function clearSight(world,a,b){const d=Math.hypot(b.x-a.x,b.y-a.y),steps=Math.ceil(d/.1);for(let i=1;i<steps;i++)if(solid(world,a.x+(b.x-a.x)*i/steps,a.y+(b.y-a.y)*i/steps))return false;return true;}
 export function nearestOpen(world,point,radius=.22){if(canStand(world,point.x,point.y,radius))return{x:point.x,y:point.y};for(let r=.3;r<8;r+=.3)for(let a=0;a<Math.PI*2;a+=.3){const x=point.x+Math.cos(a)*r,y=point.y+Math.sin(a)*r;if(canStand(world,x,y,radius))return{x,y};}return{x:32.5,y:57.5};}

@@ -60,7 +60,7 @@ test('travel, water and protection rewards stack with GME and remain bounded',()
  f.life.forest.light='uv';assert.equal(lightRange(f),22);f.life.forest.light='lantern';assert.equal(lightRange(f),18);
  f.life.expanse.swimming=true;f.life.expanse.depth=1;tickBreath(f,10);assert.equal(f.life.expanse.oxygen,91);f.life.expanse.swimming=false;
  f.mounted=true;s.village.vehicle='car';s.village.vehicles=['car'];const fuel=f.fuel;travelStep(s,10);assert.ok(f.fuel<fuel);assert.ok(f.energy>99.94);damageCar(s,20);assert.equal(f.life.expanse.carHealth,85);
- hurtPlayer(s,20,{ignoreGrace:true});assert.ok(Math.abs(f.life.health-85.04)<.001);
+ hurtPlayer(s,20,{ignoreGrace:true});assert.equal(f.life.health,100);assert.ok(f.life.expanse.carHealth<85);f.mounted=false;hurtPlayer(s,20,{ignoreGrace:true});assert.ok(Math.abs(f.life.health-85.04)<.001);
 });
 test('safe regeneration is suspended by nearby danger; final Echo shock respects cover and bosses',()=>{
  const s=sample(),f=s.frontier,w=empty();Object.assign(f,{x:10.5,y:10.5});give(s,3,19,30);f.life.forest.gme=['void'];f.life.health=50;

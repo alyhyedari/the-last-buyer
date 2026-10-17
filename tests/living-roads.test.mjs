@@ -16,7 +16,7 @@ test('visible tree trunks, signposts and buildings block swept movement instead 
 });
 
 test('expanded destinations and moving traffic have physically clear routes including the full car footprint',()=>{
- const world=makeFrontierWorld(5);assert.equal(SIZE,384);assert.equal(PLACES.length,41);
+ const world=makeFrontierWorld(5);assert.equal(SIZE,384);assert.equal(PLACES.length,51);
  for(const p of PLACES){assert.ok(canStand(world,p.x,p.y,.48),p.id);const road=route(world,{x:32.5,y:57.5},p,.48);if(p.id!=='gate')assert.ok(road.length,p.id);const vehicle={x:32.5,y:57.5};for(const step of road)moveInWorld(world,vehicle,step.x-vehicle.x,step.y-vehicle.y,.48);assert.ok(Math.hypot(vehicle.x-p.x,vehicle.y-p.y)<.01,p.id);}
  for(let minute=0;minute<100;minute+=.25)for(const car of trafficAt(world,minute))assert.ok(canStand(world,car.x,car.y,car.radius),car.id+' at '+car.x+','+car.y);
 });

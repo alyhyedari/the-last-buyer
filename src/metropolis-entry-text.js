@@ -1,0 +1,6 @@
+import {L} from './i18n.js';
+export const CITY_ENTRY_TEXT={
+ cityPrivateServer:L('ساخت سرور شخصی','Create a private server','创建私人服务器','إنشاء خادم خاص','Crear servidor privado','निजी सर्वर बनाएँ','Créer un serveur privé','Criar servidor privado'),
+ cityFuture:L('در آینده','Coming later','即将推出','مستقبلاً','Próximamente','भविष्य में','À venir','Em breve'),
+ cityServerSoon:L('ساخت سرور شخصی — در آینده','Create a private server — coming later','创建私人服务器 — 即将推出','إنشاء خادم خاص — مستقبلاً','Crear servidor privado — próximamente','निजी सर्वर बनाएँ — भविष्य में','Créer un serveur privé — à venir','Criar servidor privado — em breve')
+};
