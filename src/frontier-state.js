@@ -20,10 +20,12 @@ export function normalizeFrontier(input){
  if(input.job!=null){const j=input.job;if(!j||typeof j!=='object'||!['delivery'].includes(j.type)||!['clinic','club','inn'].includes(j.destination)||!Number.isFinite(j.reward)||j.reward<0||j.reward>200||!Number.isFinite(j.acceptedAt))return null;out.job={type:j.type,destination:j.destination,reward:Math.round(j.reward),acceptedAt:Math.max(0,j.acceptedAt)};}
  const journal=input.journal??[];if(!Array.isArray(journal)||journal.length>24||!journal.every(s=>typeof s==='string'&&s.length<=60))return null;out.journal=[...journal];out.life=normalizeLifeState(input.life);if(!out.life)return null;return out;
 }
-export const gameDay=f=>Math.floor(f.minutes/1440)+1;
-export const gameHour=f=>Math.floor(f.minutes/60)%24;
-export function clockLabel(f){const t=Math.floor(f.minutes)%1440;return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0');}
-export const weatherAt=f=>WEATHER[Math.floor(hash(f.seed,Math.floor(f.minutes/180))*4)];
+// Shared sky time is transient; cooldowns and private saves keep their own clock.
+export const worldTime=f=>Number.isFinite(f.worldMinutes)?f.worldMinutes:f.minutes;
+export const gameDay=f=>Math.floor(worldTime(f)/1440)+1;
+export const gameHour=f=>Math.floor(worldTime(f)/60)%24;
+export function clockLabel(f){const t=Math.floor(worldTime(f))%1440;return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0');}
+export const weatherAt=f=>WEATHER[Math.floor(hash(f.seed,Math.floor(worldTime(f)/180))*4)];
 export const isNight=f=>gameHour(f)<6||gameHour(f)>=19;
 export function advanceTime(f,minutes){if(!Number.isFinite(minutes)||minutes<0)return;f.minutes=Math.min(1e8,f.minutes+minutes);f.energy=Math.max(0,f.energy-minutes*.018);}
 export function note(f,id){f.journal.push(id);if(f.journal.length>24)f.journal.shift();}

@@ -7,6 +7,15 @@
   "trailingSlash": false,
   "headers": [
     {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
+    },
+    {
       "source": "/assets/(.*)",
       "headers": [
         {
@@ -55,5 +64,16 @@
       ]
     }
   ],
-  "$schema": "https://openapi.vercel.sh/vercel.json"
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "regions": [
+    "fra1"
+  ],
+  "functions": {
+    "api/ghost-socket.js": {
+      "maxDuration": 300
+    },
+    "api/ghost-room.js": {
+      "maxDuration": 10
+    }
+  }
 }
