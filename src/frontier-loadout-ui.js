@@ -1,3 +1,4 @@
+import {supplyQuote} from './neon-world.js';
 import {h,button} from './dom.js';
 import {tr} from './i18n.js';
 import {EQUIPMENT,SUPPLIES,buySupply,supplyAvailable,buyEquipment,equipWeapon,equipVehicle} from './frontier-loadout.js';
@@ -8,7 +9,7 @@ export function createLoadoutPanel({state,ft,panelShow,closePanel,persist,onBuy,
   const tabs=h('div',{class:'loadout-tabs','aria-label':ft('quickShop')});for(const id of ['supplies','weapons','vehicles','utilities'])tabs.append(button(ft(id),()=>{category=id;show();},'btn secondary',{'aria-pressed':String(id===category)}));root.append(tabs);
   const grid=h('div',{class:'loadout-grid'});root.append(grid);
   const finish=(ok,paid=false)=>{if(!ok){announce(ft('noMoney'));return;}if(paid)onBuy();onChange();persist();show();};
-  if(category==='supplies')for(const item of SUPPLIES){const active=supplyAvailable(state,item.id);const buy=button('BUY · $'+item.cost,()=>{buy.disabled=true;finish(buySupply(state,item.id),true);},'btn buy-small',{'data-supply':item.id,disabled:!active||v.money<item.cost});grid.append(h('article',{},h('h3',{},ft(item.id==='repairCar'?'fieldRepair':item.id)),buy));}
+  if(category==='supplies')for(const base of SUPPLIES){const item={...base,cost:supplyQuote(state,base.cost)},active=supplyAvailable(state,item.id);const buy=button('BUY · $'+item.cost,()=>{buy.disabled=true;finish(buySupply(state,item.id),true);},'btn buy-small',{'data-supply':item.id,disabled:!active||v.money<item.cost});grid.append(h('article',{},h('h3',{},ft(item.id==='repairCar'?'fieldRepair':item.id)),buy));}
   if(category==='weapons'||category==='vehicles')for(const item of EQUIPMENT.filter(i=>i.kind===(category==='vehicles'?'vehicle':'weapon'))){const owned=(item.kind==='vehicle'?v.vehicles:v.weapons).includes(item.id),selected=(item.kind==='vehicle'?v.vehicle:v.weapon)===item.id;
    const choice=button(owned?ft(selected?'putAway':'equip'):'BUY · $'+item.cost,()=>{choice.disabled=true;let paid=false;if(!owned){if(!buyEquipment(state,item.id)){finish(false);return;}paid=true;}const id=selected?(item.kind==='vehicle'?'foot':'none'):item.id;finish(item.kind==='vehicle'?equipVehicle(state,id):equipWeapon(state,id),paid);},owned?'btn secondary':'btn buy-small',{'data-gear':item.id,'aria-pressed':String(selected),disabled:!owned&&v.money<item.cost});grid.append(h('article',{},h('h3',{},tr(item.name)),h('p',{},tr(item.body)),choice));
   }

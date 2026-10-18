@@ -15,7 +15,7 @@ export class Soundscape{
  setPattern(pattern){if(validatePattern(pattern))this.pattern=pattern.map(row=>[...row]);}
  setStudio(value){this.studio=Boolean(value);this.start();}
  schedule(){
-  if(!this.ctx||!this.on||this.mutedByPause||this.ctx.state!=='running')return;
+  if(!this.ctx||!this.on||this.mutedByPause||this.regionalOwner||this.ctx.state!=='running')return;
   const now=this.ctx.currentTime,beat=60/this.bpm;if(this.nextTime<now-.2)this.nextTime=now+.04;
   let limit=0;while(this.nextTime<now+.13&&limit++<12){const score=scoreStep(TRACKS[this.trackIndex],this.absoluteStep,{intensity:this.intensity,discovery:this.discovery,studio:this.studio,pattern:this.pattern});this.graph.delay.delayTime.setTargetAtTime(beat*.75,now,.1);
    for(const event of score.events){const stem=['kick','snare','hat','rim'].includes(event.kind)?'drums':['bass','pulse'].includes(event.kind)?'bass':['pad','keys'].includes(event.kind)?'harmony':event.kind==='lead'?'lead':'texture';if(!this.stems[stem])continue;synthNote(this.ctx,this.graph,event,this.nextTime+event.offset*beat/4,beat);this.scheduled++;}

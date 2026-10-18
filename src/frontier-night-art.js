@@ -1,3 +1,4 @@
+import {terrainHeight} from './frontier-terrain.js';
 // Hand-drawn pixel silhouettes. All effects use bounded particles and the raycaster depth buffer.
 export function drawNightSprite(c,kind,variant=0){
  const r=(x,y,w,h,color)=>{c.fillStyle=color;c.fillRect(x,y,w,h);};
@@ -27,11 +28,11 @@ export function drawNightSprite(c,kind,variant=0){
  else return false;return true;
 }
 export function drawCombatEffects(renderer,state,time,options){const c=renderer.c,f=state.frontier,w=renderer.w,h=renderer.h,settings=renderer.settings,world=renderer.world,r=(x,y,a,b,col)=>{c.fillStyle=col;c.fillRect(Math.round(x),Math.round(y),a,b);};
- const project=p=>{const dx=p.x-f.x,dy=p.y-f.y,depth=dx*Math.cos(f.angle)+dy*Math.sin(f.angle),side=-dx*Math.sin(f.angle)+dy*Math.cos(f.angle);return{depth,x:w/2+side/depth*w/1.4,y:108+f.life.pitch*150+143.1/depth};};
+ const project=p=>{const dx=p.x-f.x,dy=p.y-f.y,depth=dx*Math.cos(f.angle)+dy*Math.sin(f.angle),side=-dx*Math.sin(f.angle)+dy*Math.cos(f.angle);return{depth,x:w/2+side/depth*w/1.4,y:108+f.life.pitch*150+(143.1-(world.interior?0:terrainHeight(p.x,p.y)-terrainHeight(f.x,f.y))*h*.66)/depth};};
  for(const e of world.effects||[]){const p=project(e);if(p.depth<.2||p.x<0||p.x>=w||p.depth>renderer.z[Math.floor(p.x)])continue;const explosion=e.kind==='explosion';if(e.kind==='blood'&&settings.blood==='off')continue;const fade=1-e.age/e.ttl,size=Math.min(70,(explosion?150:35)/p.depth);c.globalAlpha=fade*(explosion?1:.85);for(let i=0;i<(explosion?14:settings.blood==='low'?3:8);i++){const a=i*2.4+e.seed,spread=(e.age+.15)*size;r(p.x+Math.cos(a)*spread,p.y-size*.9+Math.sin(a)*spread,Math.max(2,size*(explosion?.22:.08)),Math.max(2,size*.1),e.kind==='sparks'?['#d2e6b6','#efc883','#80b6bd'][i%3]:explosion?['#efb363','#f5d78a','#8e664b'][i%3]:['#a3453c','#722d32','#bd6552'][i%3]);}c.globalAlpha=1;}
  const blood=options.blood||0;if(blood&&settings.blood!=='off'){c.globalAlpha=Math.min(.24,blood*.12)*(settings.blood==='low'?.4:1);r(0,0,w,12,'#922b32');r(0,h-10,w,10,'#922b32');r(0,0,13,h,'#922b32');r(w-13,0,13,h,'#922b32');c.globalAlpha=Math.min(.55,blood*.24);for(const [x,y,a,b]of [[16,35,5,13],[8,74,12,5],[w-24,46,8,5],[w-18,94,4,16],[40,h-18,7,4]])r(x,y,a,b,'#a3433b');c.globalAlpha=1;}
  if(options.hitMarker>0){c.strokeStyle=options.lastHit?.killed?'#f0bd72':'#e4f6d5';c.lineWidth=2;c.beginPath();for(const [sx,sy]of [[-1,-1],[1,-1],[-1,1],[1,1]]){c.moveTo(w/2+sx*6,h/2+sy*6);c.lineTo(w/2+sx*11,h/2+sy*11);}c.stroke();}
- const target=options.target;if(target&&!target.dead&&target.kind!=='target'){const p=project(target);if(p.depth>.1){const x=Math.max(20,Math.min(w-20,p.x)),y=Math.max(55,Math.min(185,p.y-(target.animal?75:165)/p.depth));r(x-17,y,34,3,'#122428');r(x-16,y+1,32*Math.max(0,target.hp/target.maxHp),1,target.hostile?'#dc8670':'#b4cc93');if(target.winding){r(x-2,y-10,4,5,'#f2b578');r(x-2,y-3,4,2,'#f2b578');}}}
+ const target=options.target;if(target&&!target.dead&&target.kind!=='target'&&Number.isFinite(target.hp)&&target.maxHp>0){const p=project(target);if(p.depth>.1){const x=Math.max(20,Math.min(w-20,p.x)),y=Math.max(55,Math.min(185,p.y-(target.animal?75:165)/p.depth));r(x-17,y,34,3,'#122428');r(x-16,y+1,32*Math.max(0,target.hp/target.maxHp),1,target.hostile?'#dc8670':'#b4cc93');if(target.winding){r(x-2,y-10,4,5,'#f2b578');r(x-2,y-3,4,2,'#f2b578');}}}
 }
 export function drawFPSWeapon(c,weapon,w,h,motion,options){
  const r=(x,y,a,b,col)=>{c.fillStyle=col;c.fillRect(Math.round(x),Math.round(y),a,b);},reload=options.reloading?Math.sin((options.reloadProgress||0)*Math.PI):0,x=w/2+motion+reload*24,y=h-8+(options.recoil||0)*9+reload*42;

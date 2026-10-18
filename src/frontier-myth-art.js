@@ -23,10 +23,23 @@ export function drawMythSprite(c,kind,v=0){
  if(v===3){r(7,4,34,3,col);r(7,4,3,28,col);r(38,4,3,28,col);r(7,30,34,3,col);r(23,5,2,13,'#eee0ab');r(24,16,12,2,'#eee0ab');r(3,40,6,21,'#a08a75');}
  if(v===4){for(const x of [3,39]){r(x,5,5,35,col);r(x-2,16,9,3,'#eee3a7');r(x,29,7,3,'#eee3a7');}r(15,5,21,4,col);}
  if(v===5){r(10,2,28,3,col);r(6,5,3,17,col);r(39,5,3,17,col);r(10,23,28,3,col);r(21,10,8,11,'#091d26');r(5,37,5,24,col);r(39,37,5,24,col);}
+ if(v>=6){const metal='#a7c9cd',glow='#d5f5bf';
+  if(v===6){r(4,23,10,34,metal);r(34,23,10,34,metal);r(9,6,30,8,'#687f94');r(17,9,16,11,'#304e5e');r(2,47,44,7,'#607b87');}
+  if(v===7){r(4,7,12,21,'#b1acd4');r(34,7,12,21,'#b1acd4');r(6,13,6,3,glow);r(36,13,6,3,glow);r(1,33,7,21,'#7c6c9f');r(40,33,7,21,'#7c6c9f');}
+  if(v===8){for(let i=0;i<8;i++){const a=i*Math.PI/4;r(22+Math.cos(a)*20,20+Math.sin(a)*18,5,5,'#c7a5e5');}r(19,5,12,10,'#343454');r(23,7,4,6,glow);}
+  if(v===9){for(let i=0;i<5;i++){r(2+i*9,5+i%2*8,3,29,'#779d67');r(i*9,5+i%2*8,7,3,'#b3d28c');}r(7,38,5,25,'#628456');r(37,38,5,25,'#628456');}
+  if(v===10){r(10,2,29,5,'#b0dbd5');r(5,7,39,9,'#527a87');r(11,9,27,5,'#c9e5cb');r(22,8,6,8,'#253b54');r(21,47,7,15,'#d9d9ab');}
+  if(v===11){for(let i=0;i<7;i++)r(2+i*7,18-i%3*8,4,25,'#a1d5e3');r(16,5,20,4,'#dfedf0');r(19,48,12,12,'#72a7bc');}
+  if(v===12){r(8,5,33,8,'#9ba766');r(14,11,23,13,'#69764c');r(20,21,8,15,'#c6c791');r(22,33,4,8,'#c6c791');r(4,30,7,30,'#a0ac72');}
+  if(v===13){for(let i=0;i<12;i++){const a=i*Math.PI/6;r(22+Math.cos(a)*19,20+Math.sin(a)*19,4,4,'#f2cd79');}r(18,8,16,13,'#e6b85f');r(19,13,13,3,'#fff0b5');}
+  if(v===14){r(5,2,29,4,'#bcc9f3');r(2,6,7,18,'#bcc9f3');r(6,24,27,4,'#bcc9f3');r(7,4,18,21,'#1a314b');r(38,20,5,39,'#899fce');}
+  if(v===15){for(let i=0;i<4;i++){r(2+i*12,5+i%2*5,9,17,'#d6cd99');r(4+i*12,9+i%2*5,5,2,'#716e56');}r(5,36,12,22,'#d6cd99');r(33,36,12,22,'#d6cd99');}
+  if(v===16){r(7,2,34,3,glow);r(7,2,3,33,glow);r(38,2,3,33,glow);r(7,32,34,3,glow);r(18,10,14,13,'#143d3e');r(23,13,5,7,glow);r(1,45,12,4,glow);r(37,45,11,4,glow);}
+ }
  return true;
 }
 export function drawNightLight(renderer,f,horizon){
- if(renderer.world.interior||f.life.expanse.swimming||!isNight(f)||!inDeepForest(f.x,f.y))return;const c=renderer.c,w=renderer.w,h=renderer.h,q=f.life.forest,lit=q.light!=='off',uv=q.light==='uv',radius=lit?lightRange(f)*12:28;
+ if(renderer.world.interior||f.life.expanse.swimming||f.minutes<(renderer.world.daylightUntil||0)||!isNight(f)||!inDeepForest(f.x,f.y))return;const c=renderer.c,w=renderer.w,h=renderer.h,q=f.life.forest,lit=q.light!=='off',uv=q.light==='uv',radius=lit?lightRange(f)*12:28;
  const shade=c.createRadialGradient(w/2,horizon+32,3,w/2,horizon+32,radius);shade.addColorStop(0,lit?'#02081218':renderer.settings.calm?'#02081299':'#020812dc');shade.addColorStop(.7,lit?'#02081266':'#020812ee');shade.addColorStop(1,renderer.settings.calm?'#020812ce':'#020812f5');c.fillStyle=shade;c.fillRect(0,0,w,h);
  if(uv){c.fillStyle='#8362c819';c.beginPath();c.moveTo(w/2,h);c.lineTo(w/2-95,horizon-40);c.lineTo(w/2+95,horizon-40);c.fill();}
 }

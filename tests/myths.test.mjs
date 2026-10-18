@@ -14,8 +14,8 @@ const sample=()=>{const s=newState();s.frontier=newFrontierState(91);return s;};
 const empty=()=>({size:SIZE,tiles:new Uint8Array(SIZE*SIZE),buckets:new Map(),colliders:[],sprites:[],traffic:[]});
 const give=(s,...n)=>s.frontier.life.forest.coins=n.map(n=>'buy-'+String(n).padStart(2,'0'));
 
-test('six original guardians have separate patterns and reachable clear arenas',()=>{
- assert.equal(new Set(MYTH_BOSSES.map(b=>b.attack)).size,6);
+test('seventeen guardians have varied patterns and reachable clear arenas',()=>{
+ assert.equal(new Set(MYTH_BOSSES.map(b=>b.attack)).size,8);
  for(const seed of [1,91,2026]){const w=makeFrontierWorld(seed);for(const b of MYTH_BOSSES){
   assert.ok(canStand(w,b.x,b.y,.4));const start={x:b.x,y:b.y+7};assert.ok(canStand(w,start.x,start.y));const path=route(w,start,b),p={...start};assert.ok(path.length);
   for(const step of path)moveInWorld(w,p,step.x-p.x,step.y-p.y);assert.ok(Math.hypot(p.x-b.x,p.y-b.y)<.02);

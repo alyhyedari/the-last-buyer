@@ -24,7 +24,7 @@ test('cars can run down zombies; a corpse cannot absorb another hit or pay again
 test('arena seals on entry, blocks high-speed escape, survives reload and opens on victory',()=>{
  for(const b of MYTH_BOSSES){const s=sample(),f=s.frontier,w=makeFrontierWorld(91);Object.assign(f,{x:b.x,y:b.y+6.5});assert.equal(syncArena(f,w).kind,'arenaSealed');const before={x:f.x,y:f.y};moveInWorld(w,f,0,30,.48);assert.ok(Math.hypot(f.x-b.x,f.y-b.y)+.48<=9.101);assert.ok(!canStand(w,b.x,b.y+12));
   const loaded=validateState(s);assert.ok(loaded);const restored=empty();restoreArena(loaded.frontier,restored);assert.equal(restored.arena.id,b.id);
-  f.life.combat.actors['boss-'+b.id]={x:b.x,y:b.y,hp:0,kind:b.kind,at:f.minutes};assert.equal(syncArena(f,w).kind,'arenaOpened');assert.equal(w.arena,null);assert.equal(f.life.combat.arena,null);assert.ok(canStand(empty(),before.x,before.y+12));
+  f.life.combat.actors['boss-'+b.id]={x:b.x,y:b.y,hp:0,kind:b.kind,at:f.minutes};assert.equal(syncArena(f,w).kind,'arenaOpened');assert.equal(w.arena,null);assert.equal(f.life.combat.arena,null);assert.ok(canStand(empty(),b.x,b.y-12));
  }
 });
 test('all bosses have three distinct health phases, changing patterns and telegraphs before each strike',()=>{

@@ -41,7 +41,9 @@ const bytes=assets.reduce((n,a)=>n+a.bytes,0),gzipBytes=assets.reduce((n,a)=>n+a
 // Narrator, field equipment and four real benchmark scenes load on demand.
 // Cities, tower interiors and phased combat remain in the lazy county bundle.
 // Preserve the initial ceiling; allow 30 KiB for the eight-language city expansion.
-const limits={totalGzipBytes:520*1024,scriptGzipBytes:238*1024};
+// Neon Pantheon adds 17 guardians, nine stories and regional scores in the lazy county.
+// Initial script ceiling is unchanged; measured expansion allowance is 36 KiB gzip.
+const limits={totalGzipBytes:556*1024,scriptGzipBytes:238*1024};
 const script=assets.find(a=>a.file===relative(out,resolve(root,js)).split(sep).join('/'));
 const initial=new Set();
 function visitInitial(path){if(initial.has(path))return;initial.add(path);for(const imported of result.metafile.outputs[path]?.imports||[])if(!imported.external&&imported.kind!=='dynamic-import')visitInitial(imported.path);}

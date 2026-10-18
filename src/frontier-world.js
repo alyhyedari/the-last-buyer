@@ -1,3 +1,4 @@
+import {terrainHeight} from './frontier-terrain.js';
 import {CITY_DESTINATIONS} from './metropolis-data.js';
 import {buildMetropolis} from './metropolis-world.js';
 import {familyResidents} from './frontier-residents.js';
@@ -60,6 +61,11 @@ export function makeFrontierWorld(seed){
  for(const lake of LAKES)for(let y=Math.floor(lake.y-lake.ry);y<=lake.y+lake.ry;y++)for(let x=Math.floor(lake.x-lake.rx);x<=lake.x+lake.rx;x++)if(((x-lake.x)/lake.rx)**2+((y-lake.y)/lake.ry)**2<1)tiles[y*SIZE+x]=3;
  road(32,23,47,23);
  road(74,181,150,196);road(150,196,234,238);road(234,238,318,262);road(234,238,192,312);road(192,312,280,334);road(280,334,336,374);
+ // Western highway and three mountain switchbacks connect to the original trunk.
+ road(74,184,74,374);road(74,194,128,194);road(128,194,128,374);road(74,212,135,212);road(74,374,336,374);
+ for(const [ax,ay,bx,by]of [[74,225,22,225],[22,225,48,239],[48,239,34,244],[74,270,108,276],[108,276,74,287],[74,287,104,294],[104,294,92,298],[74,326,27,330],[27,330,60,343],[60,343,44,353]])road(ax,ay,bx,by);
+ for(const b of MYTH_BOSSES.filter(b=>b.variant>=6))road(135,b.y+10,b.x,b.y+10);
+ road(135,202,135,374);
  for(const b of MYTH_BOSSES){for(let y=Math.floor(b.y)-9;y<=b.y+9;y++)for(let x=Math.floor(b.x)-9;x<=b.x+9;x++)if(Math.hypot(x+.5-b.x,y+.5-b.y)<9)tiles[y*SIZE+x]=0;}
  const addBuilding=(x,y,kind,id,width=5,depth=4)=>{const left=Math.floor(x-width/2),top=Math.floor(y-depth),style=kind==='manor'?5:kind==='house'?4:kind==='clinic'?6:7;for(let yy=top;yy<Math.floor(y);yy++)for(let xx=left;xx<left+width;xx++)tiles[yy*SIZE+xx]=style;buildings.push({id,x:left+width/2,y:top+depth/2,left,top,width,depth,kind,door:{x:left+Math.floor(width/2)+.5,y:top+depth+.7}});};
  for(const p of PLACES.filter(p=>!p.metro)){
@@ -102,7 +108,7 @@ export function makeFrontierWorld(seed){
  const buckets=new Map();for(const o of colliders){const key=Math.floor(o.x)+','+Math.floor(o.y);if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(o);}
  const traffic=[{id:'traffic-car',kind:'trafficCar',phase:0,speed:2.4,radius:.62,model:0},{id:'traffic-bike',kind:'trafficBike',phase:17,speed:1.8,radius:.35},{id:'traffic-motor',kind:'trafficMotor',phase:39,speed:2.9,radius:.4}];
  for(let i=0;i<9;i++)traffic.push({id:'traffic-neon-'+i,kind:i%4===3?'trafficMotor':'trafficCar',phase:i*11,speed:1.7+(i%3)*.25,radius:i%4===3?.4:.62,model:i%4,corners:[[114.15,81.85],[144.15,81.85],[144.15,116.85],[114.15,116.85]]});
- traffic.push(...city.traffic);
+ traffic.push(...city.traffic);for(let i=0;i<12;i++)traffic.push({id:'traffic-highway-'+i,kind:'trafficCar',phase:i*41,speed:2.8+i%3*.3,radius:.55,model:i%8,corners:[[74.15,194.15],[128.15,194.15],[128.15,374.15],[74.15,374.15]]});
  const spriteBuckets=new Map();for(const s of filtered){const k=Math.floor(s.x/8)+','+Math.floor(s.y/8);if(!spriteBuckets.has(k))spriteBuckets.set(k,[]);spriteBuckets.get(k).push(s);}
  const playTiles=new Set();for(const child of filtered.filter(s=>s.kind==='child'&&s.id.endsWith('-0')))for(let dy=0;dy<3;dy++)for(let dx=0;dx<2;dx++){const x=Math.floor(child.x)+dx,y=Math.floor(child.y)+dy;if([0,2].includes(tiles[y*SIZE+x]))playTiles.add(y*SIZE+x);}
  const facadeTiles=new Map();for(const b of buildings)for(let y=b.top;y<b.top+b.depth;y++)for(let x=b.left;x<b.left+b.width;x++)facadeTiles.set(y*SIZE+x,b.id);return{spatialCollision:true,playTiles,size:SIZE,tiles,sprites:filtered,seed,colliders,buckets,buildings,traffic,treasures,facadeTiles,spriteBuckets,cityBuildings:city.buildings};
@@ -113,7 +119,7 @@ export function canStand(world,x,y,radius=.22){if(!Number.isFinite(x)||!Number.i
 export function moveInWorld(world,f,dx,dy,radius=.22){const before={x:f.x,y:f.y},steps=Math.max(1,Math.ceil(Math.hypot(dx,dy)/.12));for(let i=0;i<steps;i++){if(canStand(world,f.x+dx/steps,f.y,radius))f.x+=dx/steps;if(canStand(world,f.x,f.y+dy/steps,radius))f.y+=dy/steps;}return Math.hypot(f.x-before.x,f.y-before.y);}
 export function clearSight(world,a,b){const d=Math.hypot(b.x-a.x,b.y-a.y),steps=Math.ceil(d/.1);for(let i=1;i<steps;i++)if(solid(world,a.x+(b.x-a.x)*i/steps,a.y+(b.y-a.y)*i/steps))return false;return true;}
 export function nearestOpen(world,point,radius=.22){if(canStand(world,point.x,point.y,radius))return{x:point.x,y:point.y};for(let r=.3;r<8;r+=.3)for(let a=0;a<Math.PI*2;a+=.3){const x=point.x+Math.cos(a)*r,y=point.y+Math.sin(a)*r;if(canStand(world,x,y,radius))return{x,y};}return{x:32.5,y:57.5};}
-export function elevationAt(x,y){return Math.max(0,1-Math.hypot((x-82)/17,(y-6)/20))*12;}
+export const elevationAt=terrainHeight;
 export function trafficAt(world,minutes){return(world.traffic||[]).map(v=>{const corners=v.corners||[[74.15,43.85],[85.15,43.85],[85.15,58.85],[74.15,58.85]],lengths=corners.map((a,i)=>Math.hypot(a[0]-corners[(i+1)%corners.length][0],a[1]-corners[(i+1)%corners.length][1])),total=lengths.reduce((a,b)=>a+b,0);let d=((minutes*1.1*v.speed+v.phase)%total+total)%total,i=0;while(d>lengths[i])d-=lengths[i++];const a=corners[i],b=corners[(i+1)%corners.length],t=d/lengths[i];return{...v,x:a[0]+(b[0]-a[0])*t,y:a[1]+(b[1]-a[1])*t,angle:Math.atan2(b[1]-a[1],b[0]-a[0])};});}
 export function* routeSearch(world,start,target,radius=.22,{maxNodes=12000,bounds=null}={}){
  const size=world.size||SIZE;

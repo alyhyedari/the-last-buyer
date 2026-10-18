@@ -27,6 +27,6 @@ export function buildMetropolis({tiles,size,sprites,buildings,road,seed,hash}){
  for(const d of CITY_DISCOVERIES.filter(d=>!d.floor))put(d.kind,d.x,d.y,0,0,'city-secret-'+d.id);
  for(let i=0;i<8;i++){put('bench',266.5+i*6,144.5,0,.5);put('metroLantern',266.5+i*6,162.7,i%3,.1);}
  for(let i=0;i<8;i++)sprites.push({id:'city-bird-'+i,kind:'bird',x:210+i*20,y:118,airborne:true,phase:i,metro:true});
- const traffic=[];for(let district=0;district<3;district++)for(let i=0;i<6;i++)traffic.push({id:'city-traffic-'+district+'-'+i,kind:i%3===2?'trafficMotor':'trafficCar',phase:i*31,speed:1.6+i%3*.3,radius:i%3===2?.4:.62,model:(i+district)%4,corners:[[204.15+district*56,46.85],[254.15+district*56,46.85],[254.15+district*56,106.85],[204.15+district*56,106.85]]});
+ const traffic=[];for(let district=0;district<3;district++)for(let i=0;i<6;i++)traffic.push({id:'city-traffic-'+district+'-'+i,kind:i%3===2?'trafficMotor':'trafficCar',phase:i*31,speed:1.6+i%3*.3,radius:i%3===2?.4:.62,model:(i+district)%8,corners:[[204.15+district*56,46.85],[254.15+district*56,46.85],[254.15+district*56,106.85],[204.15+district*56,106.85]]});
  return{traffic,buildings:new Map(CITY_BUILDINGS.map(b=>[b.id,b]))};
 }

@@ -1,3 +1,4 @@
+import {GOD_IDS} from './pantheon-state.js';
 import {TOWER_FLOORS} from './metropolis-state.js';
 import {normalizeMagazines} from './frontier-loadout-state.js';
 // Small, save-safe data shared with the main game. Rendering and AI stay lazy-loaded.
@@ -10,9 +11,9 @@ export function normalizeCombatState(value){
  const out=newCombatState();if(value==null)return out;if(typeof value!=='object'||Array.isArray(value))return null;
  out.magazines=normalizeMagazines(value.magazines);if(!out.magazines)return null;
  for(const key of ['deaths','kills','serial','shells','rockets','grenades','graceUntil','dodgeUntil']){if(value[key]===undefined)continue;if(!finite(value[key],0,['graceUntil','dodgeUntil'].includes(key)?1e8:key==='shells'?500:key==='rockets'||key==='grenades'?99:1e7))return null;out[key]=value[key];}
- if(![null,'stag','cinder','tide','clock','storm','void'].includes(value.arena??null))return null;out.arena=value.arena??null;
+ if(![null,...GOD_IDS].includes(value.arena??null))return null;out.arena=value.arena??null;
  const actors=value.actors??{};if(typeof actors!=='object'||!actors||Array.isArray(actors)||Object.keys(actors).length>8192)return null;
- for(const [id,a]of Object.entries(actors)){if(!/^[a-z0-9-]{1,60}$/.test(id)||!point(a)||!finite(a.hp,0,5000)||typeof a.kind!=='string'||!/^[a-zA-Z]{1,24}$/.test(a.kind)||!finite(a.at,0,1e8))return null;out.actors[id]={x:a.x,y:a.y,hp:a.hp,kind:a.kind,at:a.at};}
+ for(const [id,a]of Object.entries(actors)){if(!/^[a-z0-9-]{1,60}$/.test(id)||!point(a)||!finite(a.hp,0,id.startsWith('boss-')?500000:5000)||typeof a.kind!=='string'||!/^[a-zA-Z]{1,24}$/.test(a.kind)||!finite(a.at,0,1e8))return null;out.actors[id]={x:a.x,y:a.y,hp:a.hp,kind:a.kind,at:a.at};}
  const drops=value.drops??[];if(!Array.isArray(drops)||drops.length>8)return null;
  for(const d of drops){if(!point(d)||!Number.isInteger(d.id)||d.id<1||!finite(d.money,0,1e9)||!finite(d.ammo,0,1e9)||!finite(d.shells,0,1e9)||!finite(d.rockets,0,1e9)||!finite(d.grenades,0,1e9)||!finite(d.contraband,0,1e9)||typeof d.campKit!=='boolean'||!Array.isArray(d.weapons)||d.weapons.length>gear.length||d.weapons.some(w=>!gear.includes(w)))return null;out.drops.push({...d,weapons:[...new Set(d.weapons)]});}
  const treasures=value.treasures??[];if(!Array.isArray(treasures)||treasures.length>64||treasures.some(id=>!/^cache-\d{1,2}$/.test(id)))return null;out.treasures=[...new Set(treasures)];

@@ -20,7 +20,7 @@ test('stealing is local, transfers damage, raises consequences and cannot duplic
 });
 test('steering, gears and wet-road slip are time based and each car has a distinct profile',()=>{
  const run=(hz,wet)=>{const m={};let angle=0;for(let i=0;i<hz*3;i++)angle+=drivingStep(m,{dt:1/hz,turn:.8,speed:9,wet,model:1});return{...m,angle};};
- const a=run(30,false),b=run(60,false),rain=run(60,true);assert.ok(Math.abs(a.angle-b.angle)<.025);assert.ok(rain.slip>b.slip+.1);assert.equal(a.gear,5);assert.ok(a.rpm>900);assert.equal(new Set(CAR_MODELS.map(c=>c.speed)).size,4);
+ const a=run(30,false),b=run(60,false),rain=run(60,true);assert.ok(Math.abs(a.angle-b.angle)<.025);assert.ok(rain.slip>b.slip+.1);assert.equal(a.gear,5);assert.ok(a.rpm>900);assert.equal(new Set(CAR_MODELS.map(c=>c.speed)).size,8);
  const stopped={};assert.equal(drivingStep(stopped,{dt:1,turn:1,speed:0}),0);assert.ok(drivingStep(stopped,{dt:.1,turn:1,speed:-3})<0);
 });
 test('destroyed trunks clear collision and remain destroyed after save and world reconstruction',()=>{
@@ -47,7 +47,7 @@ test('visitors remember peaceful contact and attacks; smoking consumes inventory
  const s=sample(),f=s.frontier,w=makeFrontierWorld(91),alien=w.sprites.find(a=>a.alien);Object.assign(f,{x:alien.x,y:alien.y+2});assert.ok(contactAlien(s,alien));assert.equal(contactAlien(s,alien),false);damageActor(s,w,alien,5);assert.ok(f.life.expanse.alienTrust<0);assert.equal(contactAlien(s,w.sprites.find(a=>a.alien&&a.id!==alien.id)),false);f.life.expanse.cigarettes=3;const health=f.life.health;assert.ok(smoke(s));assert.equal(smoke(s),false);assert.equal(f.life.health,health-2);assert.equal(f.life.expanse.cigarettes,2);assert.ok(validateState(s));
 });
 test('diverse crowds spawn in open space and walk without crossing buildings or trunks',()=>{
- const s=sample(),f=s.frontier,w=makeFrontierWorld(5),people=w.sprites.filter(a=>a.kind==='resident');assert.ok(people.length>=140);assert.equal(new Set(people.map(a=>a.variant)).size,12);
+ const s=sample(),f=s.frontier,w=makeFrontierWorld(5),people=w.sprites.filter(a=>a.kind==='resident');f.life.neon.mode='prosperity';assert.ok(people.length>=140);assert.equal(new Set(people.map(a=>a.variant)).size,12);
  for(const source of people){const a=crowdPosition(w,source,f,0);assert.ok(a&&canStand(w,a.x,a.y,.2),source.id);}
  w.panic={x:74,y:48,until:f.minutes+12};for(let n=1;n<50;n++)for(const source of people.slice(0,20)){const a=crowdPosition(w,source,f,n*.1);assert.ok(canStand(w,a.x,a.y,.2),source.id);}
  f.minutes=23*60;assert.equal(crowdPosition(w,people[0],f,10),null);

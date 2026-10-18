@@ -1,3 +1,4 @@
+import {bossMaxHp,setTrialMode} from './pantheon.js';
 import {h,button} from './dom.js';
 import {MYTH_BOSSES,uvTouches,collectGme} from './frontier-myth.js';
 import {transact} from './frontier-state.js';
@@ -7,7 +8,8 @@ export function createMythGuide({state,root,ft,getWorld,getActors,panelShow,clos
  function cycleLight(){if(isPaused())return;const modes=['off',...(state.village.weapons.includes('lantern')?['lantern']:[]),...(q.uvOwned?['uv']:[])];if(modes.length===1){show();return;}q.light=modes[(modes.indexOf(q.light)+1)%modes.length];uvSelected=q.light==='uv';persist();update();}
  function clickLight(){if(!uvSelected||!q.uvOwned)return false;q.light=q.light==='uv'?'off':'uv';persist();update();return true;}
  function show(){panelShow(ft('mythBook'),ft('mythIntro'),r=>{r.append(h('p',{},ft('battleArenaHelp')));
-  r.append(h('p',{},ft('lightHelp')),h('p',{class:'frontier-ledger',dir:'ltr'},'GME '+q.gme.length+' / 6'));
+  r.append(h('p',{},ft('lightHelp')),h('p',{class:'frontier-ledger',dir:'ltr'},'GME '+q.gme.length+' / '+MYTH_BOSSES.length));
+  r.append(h('p',{class:'modal-note'},ft('enduranceHelp')));for(const mode of ['standard','endurance'])r.append(button(ft(mode),()=>{if(setTrialMode(f,mode)){persist();show();}},'btn secondary',{'aria-pressed':String(f.life.pantheon.mode===mode),disabled:!!f.life.combat.arena}));
   if(!q.uvOwned)r.append(button(ft('uvBuy'),()=>{if(!transact(state,65)){announce(ft('noMoney'));return;}q.uvOwned=true;q.light='uv';uvSelected=true;onBuy();persist();show();},'btn buy-small',{disabled:state.village.money<65}));
   for(const b of MYTH_BOSSES){const owned=q.gme.includes(b.id),dead=f.life.combat.actors['boss-'+b.id]?.hp===0,row=h('article',{class:'myth-boss-entry'},h('h3',{},(owned?'✓ ':'◇ ')+ft(b.id)),h('p',{},ft('gme_'+b.id)),h('p',{class:'modal-note'},ft(b.attack)));
    if(!owned)row.append(button(ft(dead?'mythClaim':'route'),()=>walkTo(dead?f.life.combat.actors['boss-'+b.id]:{...b,x:b.x,y:b.y+7}), 'btn secondary', {disabled:f.life.expanse.swimming}));r.append(row);
@@ -19,7 +21,7 @@ export function createMythGuide({state,root,ft,getWorld,getActors,panelShow,clos
   if(q.light==='uv')uvSelected=true;else if(q.light==='lantern')uvSelected=false;
   if(q.light==='lantern'&&!state.village.weapons.includes('lantern'))q.light='off';lightBtn.textContent=ft(q.light==='uv'?'uvLight':q.light==='lantern'?'lanternLight':'lightOff');lightBtn.setAttribute('aria-label',ft('uvLight')+' / '+ft('lanternLight'));lightBtn.setAttribute('aria-pressed',String(q.light!=='off'));lightBtn.hidden=!!getWorld().interior||f.life.expanse.swimming;
   const actor=getActors().filter(a=>a.boss&&!a.dead&&Math.hypot(a.x-f.x,a.y-f.y)<24).sort((a,b)=>Math.hypot(a.x-f.x,a.y-f.y)-Math.hypot(b.x-f.x,b.y-f.y))[0],boss=actor&&MYTH_BOSSES.find(b=>'boss-'+b.id===actor.id);bossBar.hidden=!boss;
-  if(boss){const p=getWorld().myth?.get(actor.id);bossBar.replaceChildren(h('strong',{},ft(boss.id)+' · '+ft('battlePhase')+' '+(actor.phase||1)+'/3'),h('progress',{max:boss.hp,value:actor.hp,'aria-label':ft('health')}),h('span',{},p?.windup?ft(p.attack||boss.attack):ft(uvTouches(f,getWorld(),actor)?'mythWeak':'mythArmored')));bossBar.dataset.phase=String(actor.phase||1);bossBar.dataset.boss=boss.id;bossBar.dataset.hp=String(Math.round(actor.hp));}
+  if(boss){const p=getWorld().myth?.get(actor.id);bossBar.replaceChildren(h('strong',{},ft(boss.id)+' · '+ft('battlePhase')+' ',h('bdi',{dir:'ltr'},(actor.phase||1)+'/3')),h('progress',{max:bossMaxHp(f,boss),value:actor.hp,'aria-label':ft('health')}),h('span',{},p?.windup?ft(p.attack||boss.attack):ft(uvTouches(f,getWorld(),actor)?'mythWeak':'mythArmored')));const trial=f.life.pantheon.trials[boss.id];if(trial?.mode==='endurance')bossBar.append(h('small',{},ft('trialClock')+' ',h('bdi',{dir:'ltr'},Math.floor(trial.seconds/60)+':'+String(Math.floor(trial.seconds%60)).padStart(2,'0')),' · '+(trial.seals===7?ft('mythWeak'):ft('trialSeals'))));bossBar.dataset.phase=String(actor.phase||1);bossBar.dataset.boss=boss.id;bossBar.dataset.hp=String(Math.round(actor.hp));}
   root.dataset.light=q.light;root.dataset.gme=String(q.gme.length);
  }
  return{lightBtn,show,interact,update,clickLight,nearbyGme};

@@ -1,3 +1,4 @@
+import {bossMaxHp,startTrial,tickTrial,trialSeals} from './pantheon.js';
 import {bossPhase,bossPattern,arenaActors} from './frontier-encounters.js';
 import {MYTH_BOSSES} from './frontier-myth-data.js';
 import {hash,earn,isNight} from './frontier-state.js';
@@ -10,32 +11,34 @@ export function uvTouches(f,world,point){if(f.life.forest.light!=='uv'||!f.life.
 export function revealUvSeals(f,world){if(world.interior||f.life.expanse.swimming)return[];const q=f.life.forest,opened=[];for(const coin of FOREST_COINS)if(coin.uv&&!q.opened.includes(coin.id)&&uvTouches(f,world,coin)){q.opened.push(coin.id);opened.push(coin.id);}return opened;}
 export function mythActors(world,f,time){
  if(world.interior)return[];const list=[],memory=world.myth??=new Map();
- for(const b of MYTH_BOSSES){if(Math.hypot(b.x-f.x,b.y-f.y)>45)continue;const id='boss-'+b.id,saved=f.life.combat.actors[id];
+ for(const b of MYTH_BOSSES){if(Math.hypot(b.x-f.x,b.y-f.y)>45)continue;const id='boss-'+b.id,saved=f.life.combat.actors[id],max=bossMaxHp(f,b);
   if(saved?.hp===0){if(!f.life.forest.gme.includes(b.id))list.push({id:'gme-'+b.id,kind:'gmeCoin',x:saved.x,y:saved.y,height:.35,boss:b.id,variant:b.variant});continue;}
-  let p=memory.get(id);if(!p){const start=saved&&canStand(world,saved.x,saved.y,.4)?saved:b;p={x:start.x,y:start.y,next:f.minutes+3,windup:0,tx:0,ty:0,pattern:0,phase:1,attack:b.attack,path:[],repath:0};memory.set(id,p);}
-  list.push(actorWithHealth(f,{id,kind:b.kind,x:p.x,y:p.y,variant:b.variant,boss:true,hostile:true,phase:bossPhase(saved?.hp??b.hp,b.hp),winding:!!p.windup,weak:uvTouches(f,world,p),height:b.id==='tide'?.3:0}));
+  let p=memory.get(id);if(!p){const start=saved&&canStand(world,saved.x,saved.y,.4)?saved:b;p={x:start.x,y:start.y,next:f.minutes+3,windup:0,tx:0,ty:0,pattern:f.life.pantheon.trials[b.id]?.turn||0,phase:bossPhase(saved?.hp??max,max),attack:b.attack,path:[],repath:0};memory.set(id,p);}
+  list.push(actorWithHealth(f,{id,kind:b.kind,x:p.x,y:p.y,variant:b.variant,boss:true,hostile:true,phase:bossPhase(saved?.hp??max,max),winding:!!p.windup,weak:uvTouches(f,world,p),height:b.id==='tide'?.3:0}));
   if(p.windup){const points=p.attack==='thunderfall'?[-4,0,4]:[0];for(const offset of points)list.push({id:'omen-'+b.id+'-'+offset,kind:'mythOmen',x:p.tx+offset,y:p.ty,variant:b.variant,height:0});}
  }
  // Persistent, seeded wildlife-like myths; only nearby packs enter the actor list.
- list.push(...arenaActors(world));
+ list.push(...arenaActors(world),...trialSeals(f,world));
  for(let i=0;i<96&&!world.arena;i++){const x=140+hash(f.seed,33000+i)*233,y=196+hash(f.seed,34000+i)*179;if(Math.hypot(x-f.x,y-f.y)>30||MYTH_BOSSES.some(b=>Math.hypot(x-b.x,y-b.y)<16))continue;const id='myth-'+i,kind=i<72?['wisp','briar','moth'][i%3]:['shade','spore'][i%2],hunters=world.hunters??=new Map();if(kind==='shade'&&!isNight(f))continue;let p=hunters.get(id);if(!p){const saved=f.life.combat.actors[id],point=nearestOpen(world,saved||{x,y},.25);p={...point,id,kind,path:[],repath:0,nextAttack:0,alert:false};hunters.set(id,p);}list.push(actorWithHealth(f,{id,kind,x:p.x,y:p.y,hostile:true,variant:i%3,winding:!!p.windup,height:kind==='moth'?.6:0}));}
  return list;
 }
 export function updateMyths(state,world,dt){
  const f=state.frontier,out=[];if(world.interior||f.life.expanse.swimming)return out;
  for(const b of MYTH_BOSSES){
-  const id='boss-'+b.id,p=world.myth?.get(id),hp=f.life.combat.actors[id]?.hp??b.hp;
+  const id='boss-'+b.id,p=world.myth?.get(id),max=bossMaxHp(f,b),hp=f.life.combat.actors[id]?.hp??max;
   if(!p||hp<=0||world.arena&&world.arena.id!==b.id)continue;
-  const phase=bossPhase(hp,b.hp);
-  if(phase>p.phase){p.phase=phase;p.windup=0;p.path=[];p.next=f.minutes+1.8;p.pattern=0;out.push({kind:'battlePhaseShift',boss:b.id,phase});continue;}
+  const phase=bossPhase(hp,max),trial=tickTrial(state,b,phase,world.arena?.id===b.id?dt:0);
+  if(phase>p.phase){p.phase=phase;p.windup=0;p.path=[];p.next=f.minutes+1.8;p.pattern=0;trial.turn=0;out.push({kind:'battlePhaseShift',boss:b.id,phase});continue;}
   if(Math.hypot(f.x-p.x,f.y-p.y)<1){const a=Math.atan2(p.y-f.y,p.x-f.x)||f.angle;moveInWorld(world,p,Math.cos(a)*1.25,Math.sin(a)*1.25,.4);}
   const d=Math.hypot(f.x-p.x,f.y-p.y);
-  if(d>(hp<b.hp?42:25)){p.windup=0;continue;}
+  if(d>(hp<max?42:25)){p.windup=0;continue;}
   if(p.windup){
    if(f.minutes<p.windup)continue;
    p.windup=0;p.next=f.minutes+[4.5,3.7,3.0][phase-1];const attack=p.attack||b.attack,targetDistance=Math.hypot(f.x-p.tx,f.y-p.ty);let hit=false;
    if(attack==='ring')hit=d<6&&d>2;
    else if(attack==='eclipse')hit=d<3||d>6&&d<10;
+   else if(attack==='cross')hit=Math.abs(f.x-p.tx)<.85&&Math.abs(f.y-p.ty)<9||Math.abs(f.y-p.ty)<.85&&Math.abs(f.x-p.tx)<9;
+   else if(attack==='pincer')hit=[-3,3].some(offset=>Math.hypot(f.x-p.tx-offset,f.y-p.ty)<2.2);
    else if(attack==='thunderfall')hit=[-4,0,4].some(offset=>Math.hypot(f.x-p.tx-offset,f.y-p.ty)<2.2);
    else if(attack==='fan'){const a=Math.atan2(f.y-p.y,f.x-p.x)-Math.atan2(p.ty-p.y,p.tx-p.x);hit=d<13&&Math.abs(Math.atan2(Math.sin(a),Math.cos(a)))<.45;}
    else hit=targetDistance<(attack==='charge'?2.2:2.8);
@@ -45,7 +48,7 @@ export function updateMyths(state,world,dt){
    continue;
   }
   if(d<16&&f.minutes>=p.next&&clearSight(world,p,f)){
-   p.attack=bossPattern(b,phase,p.pattern);p.windup=f.minutes+[1.65,1.45,1.25][phase-1];p.tx=f.x;p.ty=f.y;p.pattern++;
+   p.attack=bossPattern(b,phase,p.pattern,f.seed+f.life.combat.deaths*13);p.windup=f.minutes+[1.65,1.45,1.25][phase-1];p.tx=f.x;p.ty=f.y;p.pattern++;trial.turn=p.pattern;
    out.push({kind:'mythWarning',boss:b.id,attack:p.attack});continue;
   }
   if(d>4){
@@ -60,7 +63,7 @@ export function updateMyths(state,world,dt){
 export function collectGme(state,world,actor){
  const f=state.frontier,q=f.life.forest,b=MYTH_BOSSES.find(b=>b.id===actor?.boss),record=b&&f.life.combat.actors['boss-'+b.id];
  if(!b||!record||record.hp!==0||q.gme.includes(b.id)||world.interior||f.mounted||Math.hypot(record.x-f.x,record.y-f.y)>2.4||!clearSight(world,f,record))return false;
- q.gme.push(b.id);earn(state,250+b.variant*100);f.life.health=100;f.energy=100;return true;
+ q.gme.push(b.id);f.life.pantheon.power=b.id;earn(state,250+b.variant*100);f.life.health=100;f.energy=100;return true;
 }
 export function tickForestPerks(state,world,actors){
  const f=state.frontier,q=f.life.forest;if(f.minutes<q.regenAt||world.interior)return;q.regenAt=f.minutes+14.4;

@@ -1,3 +1,5 @@
+import {bossMaxHp,breakTrialSeal} from './pantheon.js';
+import {terrainSight,terrainHeight,terrainSlope} from './frontier-terrain.js';
 import {MYTH_BOSSES} from './frontier-myth-data.js';
 import {resetUnfinishedBosses} from './frontier-encounters.js';
 import {nightSchedule,nightKind} from './frontier-night-director.js';
@@ -25,22 +27,22 @@ for(const b of MYTH_BOSSES)HOSTILES[b.kind]={hp:b.hp,speed:b.speed,damage:b.dama
 export const actorMaxHealth=s=>HOSTILES[s.kind]?.hp||({tree:110,trafficCar:300,trafficBike:90,trafficMotor:140,bench:55,streetlamp:55,sign:50,laundry:30,crystal:160,relic:240,ufoFriend:240,mossling:90,rabbit:22,fox:40,owl:26,heron:30,bird:16,deer:60,boar:115,horse:150,dog:60,cat:35}[s.kind]||100);
 export const ammoCount=(f,weapon)=>{const key=WEAPONS[weapon]?.ammo;return key==='ammo'?f.life.ammo:key?f.life.combat[key]:Infinity;};
 export const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
-export function bulletSight(world,a,b){if(!clearSight(world,a,b))return false;const d=distance(a,b);if(!d)return true;const rx=(b.x-a.x)/d,ry=(b.y-a.y)/d,blocked=c=>{const dx=c.x-a.x,dy=c.y-a.y,depth=dx*rx+dy*ry;return depth>.15&&depth<d-.36&&Math.abs(dx*ry-dy*rx)<c.radius;};
+export function bulletSight(world,a,b){if(!clearSight(world,a,b)||!terrainSight(world,a,b))return false;const d=distance(a,b);if(!d)return true;const rx=(b.x-a.x)/d,ry=(b.y-a.y)/d,blocked=c=>{const dx=c.x-a.x,dy=c.y-a.y,depth=dx*rx+dy*ry;return depth>.15&&depth<d-.36&&Math.abs(dx*ry-dy*rx)<c.radius;};
  if(!world.spatialCollision)return !(world.colliders||[]).some(blocked);
  const visited=new Set();for(let n=0;n<=Math.ceil(d);n++){const x=Math.floor(a.x+rx*Math.min(n,d)),y=Math.floor(a.y+ry*Math.min(n,d));for(let yy=y-1;yy<=y+1;yy++)for(let xx=x-1;xx<=x+1;xx++){const key=xx+','+yy;if(visited.has(key))continue;visited.add(key);if((world.buckets.get(key)||[]).some(blocked))return false;}}return true;
 }
 export function targetUnderCrosshair(f,world,actors,weapon='pistol',angle=f.angle){
  const config=WEAPONS[weapon]||WEAPONS.pistol,ray={x:Math.cos(angle),y:Math.sin(angle)};
  // Classic vertical assistance: horizontal alignment and real cover decide hits.
- return actors.filter(s=>!s.dead&&(s.animal||isScenery(s)||s.alien||HOSTILES[s.kind]||['resident','companion','target'].includes(s.kind))).map(s=>{const dx=s.x-f.x,dy=s.y-f.y;return{s,depth:dx*ray.x+dy*ray.y,side:Math.abs(dx*ray.y-dy*ray.x)};}).filter(o=>o.depth>0&&o.depth<config.range&&o.side<(o.s.kind==='target'?.4:o.s.kind==='rabbit'?.24:.34)+o.depth*Math.min(.034,config.spread||.014)&&bulletSight(world,f,o.s)).sort((a,b)=>a.depth-b.depth)[0]?.s||null;
+ return actors.filter(s=>!s.dead&&(s.animal||isScenery(s)||s.alien||HOSTILES[s.kind]||['resident','companion','target','trialSeal'].includes(s.kind))).map(s=>{const dx=s.x-f.x,dy=s.y-f.y;return{s,depth:dx*ray.x+dy*ray.y,side:Math.abs(dx*ray.y-dy*ray.x)};}).filter(o=>o.depth>0&&o.depth<config.range&&o.side<(o.s.kind==='target'?.4:o.s.kind==='rabbit'?.24:.34)+o.depth*Math.min(.034,config.spread||.014)&&bulletSight(world,f,o.s)).sort((a,b)=>a.depth-b.depth)[0]?.s||null;
 }
 function remember(f,s,hp){const records=f.life.combat.actors;if(Object.keys(records).length>=480&&!records[s.id]){for(const [id,a]of Object.entries(records)){if(id.startsWith('night-')&&f.minutes-a.at>1440)delete records[id];}}
  records[s.id]={x:s.x,y:s.y,hp:Math.max(0,hp),kind:s.kind,at:f.minutes};
 }
-export function actorWithHealth(f,s){if(s.owned)return{...s,hp:f.life.expanse.carHealth*3,maxHp:300,dead:f.life.expanse.carHealth<=0,scenery:true};const record=f.life.combat.actors[s.id],hp=record?.hp??actorMaxHealth(s);return{...s,...(hp<=0&&record?{x:record.x,y:record.y}:{}),hp,maxHp:actorMaxHealth(s),dead:hp<=0,scenery:isScenery(s)};}
+export function actorWithHealth(f,s){if(s.owned)return{...s,hp:f.life.expanse.carHealth*3,maxHp:300,dead:f.life.expanse.carHealth<=0,scenery:true};const boss=MYTH_BOSSES.find(b=>'boss-'+b.id===s.id),max=boss?bossMaxHp(f,boss):actorMaxHealth(s),record=f.life.combat.actors[s.id],hp=record?.hp??max;return{...s,...(hp<=0&&record?{x:record.x,y:record.y}:{}),hp,maxHp:max,dead:hp<=0,scenery:isScenery(s)};}
 export function damageActor(state,world,s,damage,{crime=true}={}){
- if(s.peaceful||s.kind==='child')return null;const f=state.frontier,l=f.life,current=s.owned?l.expanse.carHealth*3:l.combat.actors[s.id]?.hp??s.hp??actorMaxHealth(s);if(current<=0||damage<=0)return null;
- if(s.boss||s.id?.startsWith('boss-'))damage*=uvTouches(f,world,s)?1.3:.65;const hp=Math.max(0,current-damage),killed=hp===0;remember(f,s,hp);
+ if(s.kind==='trialSeal')return breakTrialSeal(state,world,s);if(s.peaceful||s.kind==='child')return null;const f=state.frontier,l=f.life,current=s.owned?l.expanse.carHealth*3:l.combat.actors[s.id]?.hp??s.hp??actorMaxHealth(s);if(current<=0||damage<=0)return null;
+ if(s.boss||s.id?.startsWith('boss-')){const t=f.life.pantheon.trials[s.id.slice(5)];damage*=t?.mode==='endurance'?(t.seals===7?(uvTouches(f,world,s)?1.6:1):.12):(uvTouches(f,world,s)?1.3:.65);}const hp=Math.max(0,current-damage),killed=hp===0;remember(f,s,hp);
  if(s.owned)l.expanse.carHealth=hp/3;const scenery=isScenery(s);if(s.alien){l.expanse.alienTrust=Math.max(-12,l.expanse.alienTrust-2);world.alienAlertUntil=f.minutes+30;}
  const protectedTarget=s.domestic||['resident','companion'].includes(s.kind);
  if(protectedTarget&&crime){l.heat=Math.min(100,l.heat+40);l.debts=Math.min(99999,l.debts+60);state.village.reputation=Math.max(-9,state.village.reputation-2);f.trust=Math.max(0,f.trust-1);l.companion=false;}
@@ -53,7 +55,7 @@ export function damageActor(state,world,s,damage,{crime=true}={}){
 export function shoot(state,world,actors,{aiming=false}={}){
  const f=state.frontier,l=f.life,weapon=state.village.weapon,c=WEAPONS[weapon];if(l.expanse.swimming||f.mounted||!c||f.minutes<Math.max(l.impairedUntil,f.soberAt))return{kind:'cannotShoot'};if(ammoCount(f,weapon)<=0)return{kind:'noAmmo'};if(magazineRounds(f,weapon,ammoCount(f,weapon))<=0)return{kind:'reloadNeeded'};
  l.forest.shots++;const damagePower=(aiming&&hasBuy(f,5)?1.2:1)*(hasBuy(f,16)&&l.forest.shots%5===0?1.6:1)*(hasGme(f,'storm')?1.25:1);if(!(hasBuy(f,20)&&l.forest.shots%4===0)){if(c.ammo==='ammo')l.ammo--;else if(c.ammo)l.combat[c.ammo]--;spendMagazine(f,weapon);}
- if(c.projectile){const p={id:(world.shotSerial=(world.shotSerial||0)+1),kind:c.projectile,x:f.x,y:f.y,angle:f.angle,age:0,speed:c.projectile==='rocket'?16:8,ttl:c.projectile==='rocket'?2.2:1.25,blast:c.blast,damage:c.damage*damagePower,height:.55};(world.projectiles??=[]).push(p);return{kind:'projectile',weapon};}
+ if(c.projectile){const p={id:(world.shotSerial=(world.shotSerial||0)+1),kind:c.projectile,x:f.x,y:f.y,angle:f.angle,age:0,speed:c.projectile==='rocket'?16:8,ttl:c.projectile==='rocket'?2.2:1.25,blast:c.blast,damage:c.damage*damagePower,height:.55,z:world.interior?.55:terrainHeight(f.x,f.y)+.55,vz:world.interior?0:terrainSlope(f.x,f.y,f.angle)};const target=targetUnderCrosshair(f,world,actors,weapon);if(target&&!world.interior)p.vz=(terrainHeight(target.x,target.y)+.65-p.z)/Math.max(1,distance(f,target));(world.projectiles??=[]).push(p);return{kind:'projectile',weapon};}
  const hits=[],penalized=new Set();for(let n=0;n<(c.pellets||1);n++){const offset=c.pellets?(n-2)*c.spread/4:0,s=targetUnderCrosshair(f,world,actors,weapon,f.angle+offset);if(!s)continue;if(s.kind==='target'){l.skills=Math.min(100,l.skills+1);hits.push({kind:'targetHit',target:s.id,victim:'target',hp:100,maxHp:100});continue;}
   const damage=damageActor(state,world,s,c.damage*damagePower*(c.pellets?Math.max(.3,1-distance(f,s)/24):1),{crime:!penalized.has(s.id)});penalized.add(s.id);if(damage)hits.push(damage);
  }
@@ -122,7 +124,7 @@ export function updateThreats(state,world,actors,dt,time){
   const rule=HOSTILES[s.kind],p=world.hunters?.get(s.id);if(!rule||!p)continue;
   if(forestWard(f,p)){p.windup=0;p.path=[];p.repath=0;continue;}
   const d=distance(f,p);if(d>32){p.alert=false;p.windup=0;continue;}
-  const visible=d<rule.notice*(hasBuy(f,4)?.8:1)&&bulletSight(world,p,f),noise=world.panic&&world.panic.until>f.minutes&&distance(p,world.panic)<rule.notice*1.25;
+  const visible=f.minutes>=(world.godHiddenUntil||0)&&d<rule.notice*(hasBuy(f,4)?.8:1)&&bulletSight(world,p,f),noise=world.panic&&world.panic.until>f.minutes&&distance(p,world.panic)<rule.notice*1.25;
   if(visible||noise){p.alert=true;p.lastSeen=time;p.lastKnown=visible?{x:f.x,y:f.y}:{x:world.panic.x,y:world.panic.y};}
   if(p.alert&&time-p.lastSeen>9){p.alert=false;p.windup=0;p.path=[];p.lastKnown=null;}
   if(!p.alert)continue;
@@ -140,15 +142,15 @@ export function updateThreats(state,world,actors,dt,time){
     if(nextPath!==null){p.path=nextPath;p.repath=time+.8+hash(f.seed,s.id.length)*.5;}
    }
    while(p.path.length&&distance(p,p.path[0])<.15)p.path.shift();const goal=p.path[0];
-   if(goal){const a=Math.atan2(goal.y-p.y,goal.x-p.x),speed=rule.speed*(s.kind==='vampire'&&Math.sin(time*1.7)>.65?1.6:1);moveInWorld(world,p,Math.cos(a)*dt*speed,Math.sin(a)*dt*speed,.25);const saved=f.life.combat.actors[s.id];if(saved&&saved.hp>0){saved.x=p.x;saved.y=p.y;}}
+   if(goal){const a=Math.atan2(goal.y-p.y,goal.x-p.x),speed=rule.speed*(f.minutes<(world.godSlowUntil||0)?.5:1)*(s.kind==='vampire'&&Math.sin(time*1.7)>.65?1.6:1);moveInWorld(world,p,Math.cos(a)*dt*speed,Math.sin(a)*dt*speed,.25);const saved=f.life.combat.actors[s.id];if(saved&&saved.hp>0){saved.x=p.x;saved.y=p.y;}}
   }
  }
  return events;
 }
 export function updateProjectiles(state,world,actors,dt){
- const events=[],f=state.frontier;for(const p of world.projectiles||[]){p.age+=dt;let blocked=false;const steps=Math.max(1,Math.ceil(p.speed*dt/.1));for(let i=0;i<steps;i++){const old={x:p.x,y:p.y},move=p.speed*dt/steps;moveInWorld(world,p,Math.cos(p.angle)*move,Math.sin(p.angle)*move,.07);if(distance(old,p)<move*.5){blocked=true;break;}if(p.age>.07&&actors.some(a=>!a.dead&&(a.animal||isScenery(a)||a.alien||HOSTILES[a.kind]||a.kind==='resident')&&distance(p,a)<.4)){blocked=true;break;}}
+ const events=[],f=state.frontier;for(const p of world.projectiles||[]){p.age+=dt;let blocked=false;const steps=Math.max(1,Math.ceil(p.speed*dt/.1));for(let i=0;i<steps;i++){const old={x:p.x,y:p.y},move=p.speed*dt/steps;moveInWorld(world,p,Math.cos(p.angle)*move,Math.sin(p.angle)*move,.07);if(p.kind==='rocket'){p.z=(p.z??(terrainHeight(old.x,old.y)+.55))+(p.vz||0)*move;p.height=p.z-(world.interior?0:terrainHeight(p.x,p.y));if(p.height<.08){blocked=true;break;}}if(distance(old,p)<move*.5){blocked=true;break;}if(p.age>.07&&actors.some(a=>!a.dead&&(a.animal||isScenery(a)||a.alien||HOSTILES[a.kind]||['resident','trialSeal'].includes(a.kind))&&distance(p,a)<.4)){blocked=true;break;}}
   if(p.kind==='grenade'){p.speed=Math.max(0,p.speed-dt*6);p.height=Math.max(.12,Math.sin(p.age/1.25*Math.PI)*.9);if(blocked){p.angle+=Math.PI*.7;p.speed*=.4;}}
-  if(p.age>=p.ttl||blocked&&p.kind==='rocket'){p.done=true;(world.effects??=[]).push({kind:'explosion',x:p.x,y:p.y,age:0,ttl:.65,seed:p.id});events.push({kind:'explosion'});world.panic={x:p.x,y:p.y,until:f.minutes+12};blastFacades(state,world,p);for(const a of actors){const d=distance(p,a);if(d<p.blast&&!a.dead&&(a.animal||isScenery(a)||a.alien||HOSTILES[a.kind]||['resident','companion'].includes(a.kind))&&bulletSight(world,p,a)){const hit=damageActor(state,world,a,p.damage*Math.max(.2,1-d/p.blast));if(hit)events.push(hit);}}
+  if(p.age>=p.ttl||blocked&&p.kind==='rocket'){p.done=true;(world.effects??=[]).push({kind:'explosion',x:p.x,y:p.y,age:0,ttl:.65,seed:p.id});events.push({kind:'explosion'});world.panic={x:p.x,y:p.y,until:f.minutes+12};blastFacades(state,world,p);for(const a of actors){const d=distance(p,a);if(d<p.blast&&!a.dead&&(a.animal||isScenery(a)||a.alien||HOSTILES[a.kind]||['resident','companion','trialSeal'].includes(a.kind))&&bulletSight(world,p,a)){const hit=damageActor(state,world,a,p.damage*Math.max(.2,1-d/p.blast));if(hit)events.push(hit);}}
    if(distance(p,f)<p.blast&&bulletSight(world,p,f)){const hit=hostileHit(state,p.damage*.6*(1-distance(p,f)/p.blast),'explosion');if(hit)events.push(hit);}
   }
  }world.projectiles=(world.projectiles||[]).filter(p=>!p.done);return events;

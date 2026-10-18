@@ -5,6 +5,7 @@ export const NIGHT_ZONES=[
  [224,62],[243,91],[276,51],[294,91],[334,52],[354,91],[222,152],[287,142],[344,163]
 ].map(([x,y],i)=>({x,y,forest:i>=4&&i<12,city:i>=12,index:i}));
 export function nightSchedule(f,night){
+ if(f.minutes<(f.life.neon?.reliefUntil||0))return[];
  return NIGHT_ZONES.filter(z=>(z.forest||night||f.life.heat>=55)&&Math.hypot(z.x-f.x,z.y-f.y)<46).sort((a,b)=>Math.hypot(a.x-f.x,a.y-f.y)-Math.hypot(b.x-f.x,b.y-f.y)).slice(0,4).map(z=>({...z,count:night?(z.forest?6:14):z.forest?2:2}));
 }
 export function nightKind(zone,n,day,night){
