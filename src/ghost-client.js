@@ -1,4 +1,5 @@
 import {GHOST_MANIFEST,MAX_PEERS,validatePose,validSpace} from './ghost-protocol.js';
+import {unpackSnapshot} from './ghost-wire.js';
 
 const BUFFER_LIMIT=6,RENDER_LIMIT=24,PACKET_LIMIT=MAX_PEERS*512+1024,EXPIRE_MS=8000;
 const ownKeys=(value,allowed)=>value!==null&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).every(k=>allowed.includes(k));
@@ -13,7 +14,7 @@ const safeCall=(fn,value)=>{try{fn?.(value);}catch{/* Host UI callbacks must not
 
 /** Presence only. Remote poses never enter inventory, collision, combat or saves. */
 export class GhostClient{
- constructor({url,WebSocketImpl=globalThis.WebSocket,now=()=>globalThis.performance.now(),wallNow=Date.now,onStatus,onWelcome,random=Math.random,setTimeoutImpl=globalThis.setTimeout,clearTimeoutImpl=globalThis.clearTimeout}={}){
+ constructor({url,WebSocketImpl=globalThis.WebSocket,now=()=>globalThis.performance.now(),wallNow=Date.now,onStatus,onWelcome,random=Math.random,setTimeoutImpl=(fn,ms)=>globalThis.setTimeout(fn,ms),clearTimeoutImpl=id=>globalThis.clearTimeout(id)}={}){
   Object.assign(this,{url,WebSocketImpl,now,wallNow,onStatus,onWelcome,random,setTimeoutImpl,clearTimeoutImpl});
   this._status={state:'offline',pingMs:null,jitterMs:0,peers:0,room:GHOST_MANIFEST.room,reason:null};
   this._peers=new Map();this._pings=new Map();this._visible=true;this._disposed=false;this._terminal=false;this._started=false;this._socket=null;this._timer=null;this._manifest=null;this._id=null;this._seq=0;this._nonce=0;this._attempt=0;this._retryAt=Infinity;this._pose=null;this._sentPose=null;this._sentAt=-Infinity;this._pingAt=-Infinity;this._lastPacket=0;this._lastSnapshot=-Infinity;this._serverAt=0;this._serverMono=0;this._lastClock=null;this._lastRtt=null;this._arrival=null;this._serverArrival=null;
@@ -100,14 +101,14 @@ export class GhostClient{
  }
  _receive(raw){
   if(typeof raw!=='string'||raw.length>PACKET_LIMIT)return;
-  let message;try{message=JSON.parse(raw);}catch{return;}
+  let message;try{message=unpackSnapshot(JSON.parse(raw));}catch{return;}
   if(!message||typeof message!=='object'||Array.isArray(message))return;
   const now=this.now();
   if(message.type==='welcome'){
-   if(!ownKeys(message,['type','id','serverTime',...manifestKeys])||!stamp(message.serverTime)||typeof message.id!=='string'||!(/^[A-Za-z0-9_-]{1,64}$/).test(message.id)||!manifestKeys.every(k=>message[k]===GHOST_MANIFEST[k])){this._fail('incompatible_world');return;}
+   if(!ownKeys(message,['type','id','shard','serverTime',...manifestKeys])||!Number.isInteger(message.shard)||message.shard<0||message.shard>=GHOST_MANIFEST.maxRooms||!stamp(message.serverTime)||typeof message.id!=='string'||!(/^[A-Za-z0-9_-]{1,64}$/).test(message.id)||!manifestKeys.every(k=>message[k]===GHOST_MANIFEST[k])){this._fail('incompatible_world');return;}
    if(this._manifest&&!manifestKeys.every(k=>message[k]===this._manifest[k])){this._fail('incompatible_world');return;}
    if(this._status.state==='online')return;
-   this._manifest=Object.fromEntries(manifestKeys.map(k=>[k,message[k]]));this._id=message.id;this._serverAt=message.serverTime;this._serverMono=now;this._lastPacket=now;this._attempt=0;this._peers.clear();this._setStatus({state:'online',reason:null,peers:0,room:message.room});if(this._disposed||this._terminal)return;safeCall(this.onWelcome,{...message});this._tick();return;
+   this._manifest=Object.fromEntries(manifestKeys.map(k=>[k,message[k]]));this._id=message.id;this._serverAt=message.serverTime;this._serverMono=now;this._lastPacket=now;this._attempt=0;this._peers.clear();const reconnect=new URL(this._url);reconnect.searchParams.set('room',message.shard);this._url=reconnect.href;this._setStatus({state:'online',reason:null,peers:0,room:message.room,shard:message.shard});if(this._disposed||this._terminal)return;safeCall(this.onWelcome,{...message});this._tick();return;
   }
   if(this._status.state!=='online')return;
   if(message.type==='pong'){

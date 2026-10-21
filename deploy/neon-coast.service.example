@@ -14,6 +14,7 @@ EnvironmentFile=/etc/neon-coast.env
 ExecStart=/usr/bin/node /opt/neon-coast/server/network-server.mjs --dist
 Restart=on-failure
 RestartSec=5
+LimitNOFILE=65536
 TimeoutStopSec=15
 NoNewPrivileges=true
 PrivateTmp=true

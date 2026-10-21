@@ -120,3 +120,9 @@ test('disposing from a status callback cannot create a socket or invoke welcome 
  const h=harness();h.client.onStatus=s=>{if(s.state==='connecting')h.client.dispose();};h.client.connect();assert.equal(h.sockets.length,0);assert.equal(h.timers.size,0);
  const other=harness();other.client.onStatus=s=>{if(s.state==='online')other.client.dispose();};other.online();assert.equal(other.welcomes.length,0);assert.equal(other.timers.size,0);assert.equal(other.client.status.state,'offline');
 });
+
+test('default timers preserve the browser Window receiver',()=>{
+ const originalSet=globalThis.setTimeout,originalClear=globalThis.clearTimeout;let scheduled=false,cleared=false;
+ try{globalThis.setTimeout=function(fn,ms){assert.equal(this,globalThis);scheduled=true;return 17;};globalThis.clearTimeout=function(id){assert.equal(this,globalThis);assert.equal(id,17);cleared=true;};const client=new GhostClient({url:'ws://localhost/api/ghost-socket'});const handle=client.setTimeoutImpl(()=>{},20);client.clearTimeoutImpl(handle);assert.ok(scheduled&&cleared);}
+ finally{globalThis.setTimeout=originalSet;globalThis.clearTimeout=originalClear;}
+});

@@ -1,12 +1,14 @@
 const p95=values=>{const s=[...values].sort((a,b)=>a-b);return s[Math.min(s.length-1,Math.floor(s.length*.95))]||0;};
 export class AdaptiveQuality{
  constructor(recommendation='high'){this.reset(recommendation);}
- reset(recommendation='high'){this.quality=recommendation==='low'?'low':'high';this.detail=this.quality==='low'?1:0;this.elapsed=0;this.frames=[];this.costs=[];this.good=0;this.bad=0;this.stalls=0;this.draws=0;this.pressure=0;this.report={fps:0,frameP95:0,workP95:0,peak:0,samples:0};}
- rendered(ms){if(Number.isFinite(ms)&&ms>=0){this.costs.push(ms);if(this.costs.length>240)this.costs.shift();}}
+ reset(recommendation='high'){this.quality=recommendation==='low'?'low':'high';this.detail=this.quality==='low'?1:0;this.elapsed=0;this.frames=[];this.costs=[];this.good=0;this.bad=0;this.stalls=0;this.draws=0;this.pressure=0;this.hot=0;this.report={fps:0,frameP95:0,workP95:0,peak:0,samples:0};}
+ lighten(detail=1){this.quality='low';this.detail=Math.max(this.detail,detail);this.good=0;this.bad=0;}
+ rendered(ms){if(Number.isFinite(ms)&&ms>=0){this.costs.push(ms);if(this.costs.length>240)this.costs.shift();this.hot=ms>18?(this.hot||0)+1:0;if(ms>=50)this.lighten(2);else if(this.hot>=3)this.lighten();}}
  presented(){this.draws++;}
  sample(ms){
-  if(!Number.isFinite(ms)||ms<=0||ms>2000)return this.quality;
-  if(ms>100){if(++this.stalls>=3){this.quality='low';this.detail=2;this.good=0;this.stalls=0;}}else this.stalls=Math.max(0,this.stalls-.1);
+  if(!Number.isFinite(ms)||ms<=0)return this.quality;
+  if(ms>=250)this.lighten(2);
+  if(ms>100){if(++this.stalls>=2){this.lighten(2);this.stalls=0;}}else this.stalls=Math.max(0,this.stalls-.1);
   this.frames.push(ms);if(this.frames.length>240)this.frames.shift();this.elapsed+=ms;
   if(this.elapsed<2000)return this.quality;
   if(this.frames.length&&this.costs.length){

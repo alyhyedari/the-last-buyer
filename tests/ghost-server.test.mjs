@@ -7,17 +7,18 @@ import {createMemoryGhostStore,createRedisGhostStore} from '../server/ghost-stor
 import {allowedGhostOrigin,createRateGate} from '../server/ghost-security.js';
 import {createGhostHttpServer,ghostRoomResponse} from '../server/ghost-http.js';
 import {createGhostHub} from '../server/ghost-hub.js';
+import {unpackSnapshot} from '../src/ghost-wire.js';
 
 const pose=(changes={})=>({type:'pose',seq:1,x:74.5,y:194.5,angle:0,space:'outdoor',vehicle:'car',model:4,tone:2,paused:false,...changes});
 const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function fixture(t,options={}){
- const store=createMemoryGhostStore({local:true}),server=createGhostHttpServer({getStore:async()=>store,local:true,...options}),clients=[];
+ const store=createMemoryGhostStore({local:true}),server=createGhostHttpServer({getStore:async()=>store,local:true,matchmaking:false,...options}),clients=[];
  server.listen(0,'127.0.0.1');await once(server,'listening');
  const origin='http://127.0.0.1:'+server.address().port,url=origin.replace('http:','ws:')+'/api/ghost-socket';
  function connect(overrideOrigin=origin){
   const socket=new WebSocket(url,{origin:overrideOrigin}),messages=[],waiting=[];
   clients.push(socket);socket.on('error',()=>{});
-  socket.on('message',data=>{const value=JSON.parse(data.toString());messages.push(value);for(const waiter of [...waiting])if(waiter.predicate(value)){clearTimeout(waiter.timer);waiting.splice(waiting.indexOf(waiter),1);waiter.resolve(value);}});
+  socket.on('message',data=>{const value=unpackSnapshot(JSON.parse(data.toString()));messages.push(value);for(const waiter of [...waiting])if(waiter.predicate(value)){clearTimeout(waiter.timer);waiting.splice(waiting.indexOf(waiter),1);waiter.resolve(value);}});
   const closed=new Promise(resolve=>socket.once('close',(code,reason)=>resolve({code,reason:reason.toString()})));
   function wait(predicate,timeout=2500){
    const existing=messages.find(predicate);if(existing)return Promise.resolve(existing);
@@ -135,6 +136,6 @@ test('room limit is shared by reservations and function rotation is reconnectabl
  const f=await fixture(t,{rotationMs:150});
  for(let i=0;i<MAX_PEERS-1;i++)await f.store.reserve('occupied'+i,Date.now());
  const a=f.connect();const welcome=await a.wait(m=>m.type==='welcome');const overflow=f.connect();assert.equal((await overflow.closed).code,4003);
- assert.equal((await a.wait(m=>m.type==='reconnect')).retryAfter,500);assert.equal((await a.closed).code,1012);
+ const retry=(await a.wait(m=>m.type==='reconnect')).retryAfter;assert.ok(retry>=500&&retry<1500);assert.equal((await a.closed).code,1012);
  await delay(20);const next=f.connect();const resumed=await next.wait(m=>m.type==='welcome');assert.notEqual(resumed.id,welcome.id);assert.equal(resumed.seed,welcome.seed);assert.equal(resumed.epochMs,welcome.epochMs);
 });

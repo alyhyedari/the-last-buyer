@@ -3,15 +3,15 @@ import {pathToFileURL} from 'node:url';
 import {createStaticServer} from '../server.mjs';
 import {createMemoryGhostStore,getProductionGhostStore} from './ghost-store.js';
 import {attachGhostWebSockets,handleGhostRoom,JSON_HEADERS} from './ghost-http.js';
-export async function createNetworkServer({local=false,production=!local,getStore}={}){
+export async function createNetworkServer({local=false,production=!local,getStore,rotationMs}={}){
  const memory=local&&!getStore?createMemoryGhostStore({local:true}):null,storeProvider=getStore||(memory?async()=>memory:getProductionGhostStore),staticServer=await createStaticServer({production});
  const server=createServer((req,res)=>{let pathname;try{pathname=new URL(req.url,'http://localhost').pathname;}catch{res.writeHead(400);res.end();return;}
   if(pathname==='/api/ghost-room'){void handleGhostRoom(req,res,storeProvider,{local});return;}
   if(pathname==='/healthz'){if(req.method!=='GET'&&req.method!=='HEAD'){res.writeHead(405,{Allow:'GET, HEAD'});res.end();return;}void Promise.resolve().then(storeProvider).then(store=>{const healthy=!!store?.healthy();res.writeHead(healthy?200:503,JSON_HEADERS);res.end(req.method==='HEAD'?undefined:JSON.stringify({ok:healthy,service:'neon-coast-presence',mode:local?'local':'production'}));}).catch(()=>{res.writeHead(503,JSON_HEADERS);res.end(JSON.stringify({ok:false}));});return;}
   staticServer.emit('request',req,res);
  });
- const sockets=attachGhostWebSockets(server,{getStore:storeProvider,local});let closing=null;
- return{server,async close(){if(closing)return closing;closing=(async()=>{await sockets.close();await memory?.close();await new Promise(resolve=>{server.close(resolve);server.closeIdleConnections?.();});})();return closing;}};
+ const sockets=attachGhostWebSockets(server,{getStore:storeProvider,local,rotationMs});let closing=null;
+ return{server,stats:()=>sockets.stats(),async occupancy(){const store=await storeProvider();return store?.occupancy(Date.now())||[];},async close(){if(closing)return closing;closing=(async()=>{await sockets.close();await memory?.close();await new Promise(resolve=>{server.close(resolve);server.closeIdleConnections?.();});})();return closing;}};
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
  const local=process.argv.includes('--local'),production=process.argv.includes('--dist')||!local;

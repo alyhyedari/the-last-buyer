@@ -1,8 +1,9 @@
 // Public, immutable room contract. No inventory, damage, identity or save data travels here.
 export const MAX_PEERS=32;
+export const MAX_ROOMS=32;
 export const MAX_PAYLOAD=2048;
 export const PRESENCE_TTL=15000;
-export const GHOST_MANIFEST=Object.freeze({v:1,room:'afterlight',seed:20261018,worldVersion:'coast-1',epochMs:Date.UTC(2026,9,18),baseMinutes:480,clockRate:1.2,maxPeers:MAX_PEERS});
+export const GHOST_MANIFEST=Object.freeze({v:2,room:'afterlight',seed:20261018,worldVersion:'coast-1',epochMs:Date.UTC(2026,9,18),baseMinutes:480,clockRate:1.2,maxPeers:MAX_PEERS,maxRooms:MAX_ROOMS});
 export const GHOST_VEHICLES=Object.freeze(['foot','bike','motorcycle','car','horse','swim']);
 const poseKeys=new Set(['type','seq','x','y','angle','space','vehicle','model','tone','paused']);
 const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
@@ -23,6 +24,6 @@ export function parseClientMessage(raw){
  if(value.type==='bye'&&Object.keys(value).length===1)return {type:'bye'};
  return null;
 }
-export function makeWelcome(id,now=Date.now()){return {type:'welcome',...GHOST_MANIFEST,id,serverTime:now};}
+export function makeWelcome(id,now=Date.now(),shard=0){return {type:'welcome',...GHOST_MANIFEST,id,shard,serverTime:now};}
 export function roomInfo({enabled=true,reason,now=Date.now()}={}){return {...GHOST_MANIFEST,enabled,serverTime:now,socket:'/api/ghost-socket',...(reason?{reason}: {})};}
 export function sharedWorldMinutes(serverTime){return GHOST_MANIFEST.baseMinutes+Math.max(0,(serverTime-GHOST_MANIFEST.epochMs)/1000)*GHOST_MANIFEST.clockRate;}

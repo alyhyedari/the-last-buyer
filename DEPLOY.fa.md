@@ -43,7 +43,7 @@ git push -u origin main
 | Build Command | npm run build |
 | Output Directory | dist |
 | Node.js | 24.x |
-| Environment Variables | انفرادی: خالی؛ پژواک: REDIS_URL |
+| Environment Variables | انفرادی: خالی؛ پژواک: REDIS_URL و GHOST_NAMESPACE |
 | Production Branch | main |
 
 دستور نصب، ساخت و خروجی در `vercel.json` و نسخهٔ Node در `package.json` ثبت شده‌اند؛ نیازی به واردکردن دوبارهٔ آن‌ها نیست. اگر در داشبورد تنظیم قدیمی وجود دارد، مقدارهای بالا را بررسی کن. سپس **Deploy** را بزن. بعد از پایان موفق ساخت، نشانی منتشرشدهٔ بازی را باز کن.
@@ -80,7 +80,7 @@ npm run test:vercel
 پشتیبانی WebSocket طبق اعلام رسمی Vercel در ۲۰ اکتبر ۲۰۲۶ عمومی شده است. api/ghost-socket.js سرور HTTP را بدون listen صادر می‌کند؛ این همان قرارداد مستند فعلی است. Fluid compute در vercel.json صریحاً روشن است.
 
 ۱. در Environment Variables پروژه، مقدار REDIS_URL را برای محیط موردنظر قرار بده. این مقدار باید آدرس اتصال TCP از نوع redis:// یا rediss:// باشد؛ REST URL به تنهایی کافی نیست. Redis باید Lua و Pub/Sub را پشتیبانی کند.
-۲. Deploy تازه بگیر تا متغیر به توابع برسد. برای بازی انفرادی، این متغیر لازم نیست.
+۲. GHOST_NAMESPACE را برای Production برابر production و برای هر Preview یک نام جدا مانند preview-branch قرار بده تا اتاق‌های آزمایش و عمومی مخلوط نشوند. Deploy تازه بگیر تا متغیرها به توابع برسند. برای بازی انفرادی، این متغیر لازم نیست.
 ۳. روی دامنهٔ منتشرشده مسیر /api/ghost-room را باز کن: enabled:true یعنی اتاق آماده است؛ reason:not_configured یعنی متغیر تنظیم نشده و unavailable یعنی اتصال Redis برقرار نشده است. این وضعیت‌ها از خطای Build جدا هستند.
 ۴. از دو مرورگر «سرور پژواک» را باز کن و متصل شو. تعداد هم‌بازی‌ها و حرکت را بررسی کن. آدرس /api/ghost-socket برای WebSocket است؛ باز کردن عادی آن پاسخ 426 می‌دهد و این پاسخ به تنهایی نشانهٔ خرابی نیست.
 

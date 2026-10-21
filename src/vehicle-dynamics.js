@@ -7,8 +7,9 @@ const profiles={
 export function engineFor(id){const [cylinders,redline,response,cabin]=profiles[id]||profiles.sedan;return{cylinders,redline,response,cabin,id,idle:cylinders===0?0:cabin==='bike'?1300:780,gears:cylinders===0?1:cabin==='offroad'?5:6};}
 const smooth=(a,b,dt,t)=>a+(b-a)*(1-Math.exp(-dt/t));
 export function powertrainStep(m,{vehicle,throttle=0,brake=false,dt,maxSpeed=vehicle.speed}){
- const e=vehicle.engine;if(!e||dt<=0)return m;const previous=m.engineId;m.engineId=e.id;
- if(previous!==e.id){m.gear=1;m.rpm=e.idle;m.gas=0;m.shiftTime=0;}
+ const e=vehicle.engine;if(!e)return m;const previous=m.engineId;m.engineId=e.id;
+ if(previous!==e.id){m.gear=1;m.rpm=e.idle;m.gas=0;m.shiftTime=0;m.powerThrottle=0;m.torque=1;}
+ if(!Number.isFinite(dt)||dt<=0)return m;dt=Math.min(dt,.06);
  const gas=brake?0:Math.min(1,Math.abs(throttle));m.gas=smooth(m.gas||0,gas,dt,e.response);m.load=smooth(m.load||0,gas,dt,.18);
  const fraction=Math.min(1.3,Math.abs(m.speed)/Math.max(1,maxSpeed));m.shiftTime=Math.max(0,(m.shiftTime||0)-dt);
  if(throttle<0&&m.speed<.1)m.gear=-1;else if(m.gear<1)m.gear=1;

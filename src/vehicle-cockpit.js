@@ -1,11 +1,12 @@
 import {CAR_MODELS} from './frontier-cars.js';
 import {engineFor} from './vehicle-dynamics.js';
-export function premiumCockpit(c,f,d,speed,time,reduced,wet){
+export function premiumCockpit(c,f,d,speed,time,reduced,wet,detail=0){
  const model=CAR_MODELS[f.life.expanse.carModel]||CAR_MODELS[0],engine=engineFor(model.id),type=engine.cabin,off=type==='offroad',ev=type==='electric',sport=type==='sport',lux=type==='luxury',accent=({mint:'#67e8c1',cherry:'#f06c92',gold:'#d9b36a',violet:'#aa8aff',ice:'#9ddbf4',pearl:'#e6e6dc',copper:'#cf8e65',midnight:'#455a85'})[f.life.cyber.paint]||(off?'#ffc96c':model.color);
  const rect=(x,y,w,h,color)=>{c.fillStyle=color;c.fillRect(x,y,w,h);},label=(text,x,y,color=accent,size=6)=>{c.fillStyle=color;c.font=`${size}px monospace`;c.textAlign='left';c.fillText(text,x,y);};
  c.save();const bounce=reduced?0:Math.sin(d.phase*2)*Math.min(1.6,Math.abs(speed)*.07)*(off?.6:1);c.translate(0,bounce);
  const dash=off?210:sport?228:219,material=lux?'#30251f':off?'#303a39':ev?'#131e31':'#1a222c';
  rect(0,dash,480,270-dash,material);rect(0,dash,480,2,accent);rect(0,0,480,7,material);rect(0,0,off?17:9,dash,material);rect(off?463:471,0,17,dash,material);
+ if(detail===2){rect(72,dash+7,342,43,'#071523');label(model.id.toUpperCase(),82,dash+18);label(Math.round(Math.abs(speed)*9)+' KM/H',82,dash+35,'#e9f7ff',12);label(Math.round(d.rpm||0)+' RPM',207,dash+19);label('G '+(d.gear===-1?'R':d.gear||1)+' / FUEL '+Math.round(f.fuel)+'%',207,dash+34);label('SEATS '+f.life.cyber.passengers.length,331,dash+19);if(off)label(f.life.cyber.lowRange?'4L':'4H',331,dash+34);c.restore();return;}
  // Stitching, carbon weave, vents and physical controls remain visible at native resolution.
  for(let x=3;x<480;x+=8){rect(x,dash+5,3,1,lux?'#a58c68':'#55616b');if(sport)rect(x,dash+11,4,1,'#394553');}
  for(const x of [26,256,432]){rect(x,dash+13,25,15,'#0b121c');for(let y=0;y<4;y++)rect(x+2,dash+15+y*3,21,1,'#687479');}
