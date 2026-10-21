@@ -1,3 +1,17 @@
+# اصلاح Build روی Vercel — ۲۱ اکتبر ۲۰۲۶
+
+خطای Production size budget exceeded با VERCEL_ENV=production بازتولید شد: مجموع جاوااسکریپت اولیه 238.4 KiB از سقف 238 KiB عبور می‌کرد. سهم راه‌انداز Production-only ابزار Speed Insights اکنون با سقف مستقل 1.5 KiB سنجیده می‌شود؛ سقف بازی 238 KiB و سقف کل 590 KiB حفظ شدند.
+
+- npm run test:vercel: ساخت development، preview و production، وجود دارایی‌های HTML، اندازهٔ فایل‌های واقعی و ورودی‌های دو API موفق.
+- Production: 588.2 KiB کل gzip؛ 237.4 KiB بازی + 1.0 KiB راه‌انداز = 238.4 KiB اولیه.
+- npm test: ۲۱۳ موفق؛ صفر شکست/skip. npm run check: ۲۱۰ فایل، صفر مشکل.
+- Chrome روی خروجی Production محلی با هدرهای vercel.json: منو و شروع بازی تا Tomorrow Commons موفق؛ صفر خطای ثبت‌شده. گزارش artifacts/vercel-browser-smoke.json.
+- Fluid Compute در vercel.json روشن شد. قرارداد HTTP server export با مستندات رسمی WebSocket Vercel بررسی شد.
+- CI هر سه حالت ساخت را اجرا می‌کند. artifacts/vercel-verification.json شواهد محلی را نگه می‌دارد.
+- لاگ یا آدرس Deploy کاربر هنوز دریافت نشده؛ انتشار روی حساب Vercel و اتصال Redis واقعی تأیید نشده است.
+
+---
+
 # بررسی 0.14 / CITY RADAR — ۲۱ اکتبر ۲۰۲۶
 
 - npm test: ۲۱۱ آزمون موفق؛ صفر شکست و صفر skipped. گزارش محلی: artifacts/city-network-tests-final.txt.

@@ -19,7 +19,8 @@
     "dev:network": "node server/network-server.mjs --local",
     "start:network": "node server/network-server.mjs --dist",
     "test:network": "node --test tests/ghost-*.test.mjs",
-    "test:network:live": "node tools/network-smoke.mjs"
+    "test:network:live": "node tools/network-smoke.mjs",
+    "test:vercel": "node tools/verify-vercel.mjs"
   },
   "engines": {
     "node": "24.x"

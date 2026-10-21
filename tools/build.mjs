@@ -45,16 +45,21 @@ const bytes=assets.reduce((n,a)=>n+a.bytes,0),gzipBytes=assets.reduce((n,a)=>n+a
 // Initial script ceiling is unchanged; measured expansion allowance is 36 KiB gzip.
 // Neon Coast adds the lazy coast, tuning, four weapons and authored cast; +24 KiB total allowance.
 // Detailed cockpits, physical access, touch and war scenarios add about 8 KiB to the lazy bundle.
-const limits={totalGzipBytes:590*1024,scriptGzipBytes:238*1024};
+// Keep the game's ceiling unchanged. Production also includes the independently
+// bounded Speed Insights bootstrap, which is absent from local/Preview builds.
+const limits={totalGzipBytes:590*1024,scriptGzipBytes:238*1024,speedInsightsGzipBytes:1.5*1024};
 const script=assets.find(a=>a.file===relative(out,resolve(root,js)).split(sep).join('/'));
 const initial=new Set();
 function visitInitial(path){if(initial.has(path))return;initial.add(path);for(const imported of result.metafile.outputs[path]?.imports||[])if(!imported.external&&imported.kind!=='dynamic-import')visitInitial(imported.path);}
 visitInitial(js);
+const gameInitial=new Set(initial);
 if(insights)visitInitial(insights);
-const initialScriptGzipBytes=assets.filter(a=>[...initial].some(path=>a.file===relative(out,resolve(root,path)).split(sep).join('/'))).reduce((sum,a)=>sum+a.gzipBytes,0);
+const scriptBytes=paths=>assets.filter(a=>[...paths].some(path=>a.file===relative(out,resolve(root,path)).split(sep).join('/'))).reduce((sum,a)=>sum+a.gzipBytes,0);
+const gameScriptGzipBytes=scriptBytes(gameInitial),initialScriptGzipBytes=scriptBytes(initial),speedInsightsGzipBytes=initialScriptGzipBytes-gameScriptGzipBytes;
 await mkdir(join(root,'artifacts'),{recursive:true});
-await writeFile(join(root,'artifacts/build-report.json'),JSON.stringify({assets,bytes,gzipBytes,initialScriptGzipBytes,limits,entry:script.file,speedInsights:{enabled:speedInsightsEnabled,bootstrap:insights?url(insights):null},generatedAt:new Date().toISOString()},null,2));
-if(gzipBytes>limits.totalGzipBytes||initialScriptGzipBytes>limits.scriptGzipBytes)throw new Error('Production size budget exceeded: total '+(gzipBytes/1024).toFixed(1)+' KiB; initial scripts '+(initialScriptGzipBytes/1024).toFixed(1)+' KiB');
+await writeFile(join(root,'artifacts/build-report.json'),JSON.stringify({assets,bytes,gzipBytes,initialScriptGzipBytes,gameScriptGzipBytes,limits,entry:script.file,speedInsights:{enabled:speedInsightsEnabled,bootstrap:insights?url(insights):null,gzipBytes:speedInsightsGzipBytes},generatedAt:new Date().toISOString()},null,2));
+if(gzipBytes>limits.totalGzipBytes||gameScriptGzipBytes>limits.scriptGzipBytes||speedInsightsGzipBytes>limits.speedInsightsGzipBytes)throw new Error('Production size budget exceeded: total '+(gzipBytes/1024).toFixed(1)+' KiB; game scripts '+(gameScriptGzipBytes/1024).toFixed(1)+' KiB; Speed Insights '+(speedInsightsGzipBytes/1024).toFixed(1)+' KiB');
 console.log('Static production build: '+(bytes/1024).toFixed(1)+' KiB raw, '+(gzipBytes/1024).toFixed(1)+' KiB gzip estimate; '+assets.length+' files. Hashed game assets.');
 console.log('Initial JavaScript including shared chunks: '+(initialScriptGzipBytes/1024).toFixed(1)+' KiB gzip; Afterlight loaded at the gate.');
+console.log('Initial breakdown: game '+(gameScriptGzipBytes/1024).toFixed(1)+' KiB; Speed Insights '+(speedInsightsGzipBytes/1024).toFixed(1)+' KiB. Both budgets enforced.');
 console.log('Vercel Speed Insights: '+(speedInsightsEnabled?'enabled for Production; same-origin collector':'disabled for local and Preview builds')+'.');

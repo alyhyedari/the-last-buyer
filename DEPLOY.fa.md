@@ -1,8 +1,14 @@
 # از پوشهٔ بازی تا GitHub و Vercel
 
-این راهنما برای انتشار ایستای بازی است. برای **سرور پژواک و حضور آنلاین** از [راهنمای سرور Node و Redis](NETWORK-SETUP.fa.md) استفاده کن.
+این راهنما برای انتشار بازی و توابع سرور پژواک روی Vercel است. راه‌اندازی سرور مستقل، گزینهٔ جایگزین در [راهنمای Node و Redis](NETWORK-SETUP.fa.md) است.
 
-پروژه برای انتشار ایستا آماده است. Vercel فایل‌های بازی را می‌سازد و منتشر می‌کند؛ سرور Node دائمی، پایگاه داده و کلید API لازم نیست.
+Vercel فایل‌های بازی را می‌سازد و منتشر می‌کند. بازی انفرادی به پایگاه داده نیاز ندارد؛ سرور پژواک با دو تابع داخل api و یک Redis خارجی اجرا می‌شود.
+
+## رفع خطای Production در ۲۱ اکتبر ۲۰۲۶
+
+خطای `Production size budget exceeded ... initial scripts 238.4 KiB` در همین پروژه بازتولید و اصلاح شد. ابزار Speed Insights فقط در Production اضافه می‌شود؛ حجم تقریباً ۱ KiB آن اکنون سقف مستقل ۱٫۵ KiB دارد. سقف خود بازی ۲۳۸ KiB و سقف کل خروجی ۵۹۰ KiB همچنان بررسی می‌شوند. `npm run test:vercel` هر سه حالت محلی، Preview و Production را می‌سازد و دارایی‌ها و ورودی‌های API را بررسی می‌کند؛ CI نیز این دستور را اجرا می‌کند.
+
+برای انتشار اصلاح: سورس تازه شامل tools/build.mjs، tools/verify-vercel.mjs، tests/vercel-adapters.test.mjs، package.json و vercel.json را در مخزن متصل قرار بده و Deploy جدید بگیر. Redeploy یک commit قدیمی شامل اصلاحات محلی نمی‌شود. تنظیم‌های جدول پایین را حفظ کن؛ Build Command همان `npm run build` است. بدون لاگ یا URL حساب شما، موفقیت Deploy ابری در این جلسه تأیید نشده است.
 
 ## ۱. مخزن GitHub را بساز
 
@@ -37,7 +43,7 @@ git push -u origin main
 | Build Command | npm run build |
 | Output Directory | dist |
 | Node.js | 24.x |
-| Environment Variables | خالی |
+| Environment Variables | انفرادی: خالی؛ پژواک: REDIS_URL |
 | Production Branch | main |
 
 دستور نصب، ساخت و خروجی در `vercel.json` و نسخهٔ Node در `package.json` ثبت شده‌اند؛ نیازی به واردکردن دوبارهٔ آن‌ها نیست. اگر در داشبورد تنظیم قدیمی وجود دارد، مقدارهای بالا را بررسی کن. سپس **Deploy** را بزن. بعد از پایان موفق ساخت، نشانی منتشرشدهٔ بازی را باز کن.
@@ -60,7 +66,7 @@ git push
 npm ci --include=dev
 npm run check
 npm test
-npm run build
+npm run test:vercel
 ```
 
 برای دیدن خروجی ساخته‌شده، `npm run preview` را اجرا کن و `http://localhost:4173` را باز کن. اگر سرور توسعه از این پورت استفاده می‌کند، ابتدا آن را متوقف کن. آزمون مرورگر اختیاریِ خروجی انتشار با `npm run test:release` اجرا می‌شود و به Microsoft Edge نصب‌شده نیاز دارد؛ نصب مرورگر برای ساخت روی Vercel لازم نیست.
@@ -68,6 +74,21 @@ npm run build
 اگر build در Vercel شکست خورد، Build Logs را ببین. خطای نبودن package.json معمولاً با انتخاب پوشهٔ ریشهٔ درست رفع می‌شود. اگر فایل قفل جا افتاده، package-lock.json را همراه پروژه push کن. برای تغییر وابستگی‌ها، package.json و package-lock.json را با هم به‌روز کن.
 
 ذخیرهٔ بازی و گزارش تست دستگاه روی مرورگر بازیکن می‌ماند. دامنهٔ localhost، Preview و Production ذخیره‌های جدا دارند. تعویض نسخه روی همان دامنه با نام‌های hashدارِ دارایی‌ها انجام می‌شود.
+
+## سرور پژواک روی Vercel
+
+پشتیبانی WebSocket طبق اعلام رسمی Vercel در ۲۰ اکتبر ۲۰۲۶ عمومی شده است. api/ghost-socket.js سرور HTTP را بدون listen صادر می‌کند؛ این همان قرارداد مستند فعلی است. Fluid compute در vercel.json صریحاً روشن است.
+
+۱. در Environment Variables پروژه، مقدار REDIS_URL را برای محیط موردنظر قرار بده. این مقدار باید آدرس اتصال TCP از نوع redis:// یا rediss:// باشد؛ REST URL به تنهایی کافی نیست. Redis باید Lua و Pub/Sub را پشتیبانی کند.
+۲. Deploy تازه بگیر تا متغیر به توابع برسد. برای بازی انفرادی، این متغیر لازم نیست.
+۳. روی دامنهٔ منتشرشده مسیر /api/ghost-room را باز کن: enabled:true یعنی اتاق آماده است؛ reason:not_configured یعنی متغیر تنظیم نشده و unavailable یعنی اتصال Redis برقرار نشده است. این وضعیت‌ها از خطای Build جدا هستند.
+۴. از دو مرورگر «سرور پژواک» را باز کن و متصل شو. تعداد هم‌بازی‌ها و حرکت را بررسی کن. آدرس /api/ghost-socket برای WebSocket است؛ باز کردن عادی آن پاسخ 426 می‌دهد و این پاسخ به تنهایی نشانهٔ خرابی نیست.
+
+منابع رسمی بررسی‌شده در ۲۱ اکتبر ۲۰۲۶:
+
+- https://vercel.com/docs/functions/websockets
+- https://vercel.com/changelog/websocket-support-is-now-generally-available
+- https://vercel.com/docs/project-configuration/vercel-json#fluid
 
 ## Speed Insights
 

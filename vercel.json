@@ -3,6 +3,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": null,
+  "fluid": true,
   "cleanUrls": true,
   "trailingSlash": false,
   "headers": [
