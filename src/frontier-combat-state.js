@@ -1,11 +1,12 @@
+import {WORLD_SIZE} from './cyber-state.js';
 import {GOD_IDS} from './pantheon-state.js';
 import {TOWER_FLOORS} from './metropolis-state.js';
 import {normalizeMagazines} from './frontier-loadout-state.js';
 // Small, save-safe data shared with the main game. Rendering and AI stay lazy-loaded.
-export const EXTRA_WEAPONS=['pistol','shotgun','smg','launcher','grenade'];
+export const EXTRA_WEAPONS=['pistol','shotgun','smg','launcher','grenade','arc','rail','pulse','monoblade'];
 export const newCombatState=()=>({actors:{},drops:[],treasures:[],magazines:{},deaths:0,kills:0,serial:0,shells:0,rockets:0,grenades:0,graceUntil:0,dodgeUntil:0,arena:null,interior:null});
 const finite=(n,lo,hi)=>Number.isFinite(n)&&n>=lo&&n<=hi;
-const point=p=>p&&finite(p.x,1,383)&&finite(p.y,1,383);
+const point=p=>p&&finite(p.x,1,WORLD_SIZE-1)&&finite(p.y,1,WORLD_SIZE-1);
 const gear=['stick','lantern','bow','rifle',...EXTRA_WEAPONS];
 export function normalizeCombatState(value){
  const out=newCombatState();if(value==null)return out;if(typeof value!=='object'||Array.isArray(value))return null;
@@ -17,6 +18,6 @@ export function normalizeCombatState(value){
  const drops=value.drops??[];if(!Array.isArray(drops)||drops.length>8)return null;
  for(const d of drops){if(!point(d)||!Number.isInteger(d.id)||d.id<1||!finite(d.money,0,1e9)||!finite(d.ammo,0,1e9)||!finite(d.shells,0,1e9)||!finite(d.rockets,0,1e9)||!finite(d.grenades,0,1e9)||!finite(d.contraband,0,1e9)||typeof d.campKit!=='boolean'||!Array.isArray(d.weapons)||d.weapons.length>gear.length||d.weapons.some(w=>!gear.includes(w)))return null;out.drops.push({...d,weapons:[...new Set(d.weapons)]});}
  const treasures=value.treasures??[];if(!Array.isArray(treasures)||treasures.length>64||treasures.some(id=>!/^cache-\d{1,2}$/.test(id)))return null;out.treasures=[...new Set(treasures)];
- if(value.interior!=null){const i=value.interior;if(!i||!/^[-a-z0-9]{1,60}$/.test(i.id)||!point(i.outside)||!finite(i.outside.angle,-1e6,1e6))return null;if(i.floor!==undefined&&(!TOWER_FLOORS.includes(i.floor)||i.id!=='tether'))return null;out.interior={id:i.id,...(i.id==='tether'?{floor:i.floor??'lobby'}:{}),outside:{x:i.outside.x,y:i.outside.y,angle:i.outside.angle}};}
+ if(value.interior!=null){const i=value.interior;if(!i||!/^[-a-z0-9]{1,60}$/.test(i.id)||!point(i.outside)||!finite(i.outside.angle,-1e6,1e6))return null;if(i.floor!==undefined&&(!TOWER_FLOORS.includes(i.floor)||i.id!=='tether'))return null;if(i.level!==undefined&&(!Number.isInteger(i.level)||i.level<0||i.level>5))return null;out.interior={id:i.id,level:i.level??0,...(i.id==='tether'?{floor:i.floor??'lobby'}:{}),outside:{x:i.outside.x,y:i.outside.y,angle:i.outside.angle}};}
  return out;
 }

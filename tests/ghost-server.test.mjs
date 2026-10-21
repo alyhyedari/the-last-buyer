@@ -31,7 +31,7 @@ async function fixture(t,options={}){
 
 test('ghost protocol accepts only bounded poses and never authority over gameplay',()=>{
  assert.deepEqual(validatePose(pose()),{seq:1,x:74.5,y:194.5,angle:0,space:'outdoor',vehicle:'car',model:4,tone:2,paused:false});
- for(const changes of [{money:999},{seed:1},{damage:10},{id:'someone-else'},{x:Infinity},{x:-1},{y:385},{seq:-1},{seq:2**31},{model:8},{tone:4},{space:'home:../secret:0'},{space:'home:cabin:100'},{vehicle:'tank'},{paused:1}])assert.equal(validatePose(pose(changes)),null,JSON.stringify(changes));
+ for(const changes of [{money:999},{seed:1},{damage:10},{id:'someone-else'},{x:Infinity},{x:-1},{y:513},{seq:-1},{seq:2**31},{model:14},{tone:4},{space:'home:../secret:0'},{space:'home:cabin:100'},{vehicle:'tank'},{paused:1}])assert.equal(validatePose(pose(changes)),null,JSON.stringify(changes));
  assert.equal(validatePose(pose({space:'home:aurora_2:12',angle:Math.PI*5})).space,'home:aurora_2:12');
  assert.ok(Math.abs(validatePose(pose({angle:Math.PI*5})).angle)<=Math.PI+.0001);
  for(const raw of ['null','[]','{}','{"type":"shoot"}','x'.repeat(2049),'not-json','{"type":"ping","nonce":-1}','{"type":"ping","nonce":1,"save":{}}'])assert.equal(parseClientMessage(raw),null);
@@ -41,7 +41,7 @@ test('ghost protocol accepts only bounded poses and never authority over gamepla
 
 test('shared room has a fixed world seed and server anchored clock',()=>{
  const welcome=makeWelcome('server-id',GHOST_MANIFEST.epochMs+10000);
- assert.equal(welcome.seed,20261018);assert.equal(welcome.room,'afterlight');assert.equal(welcome.worldVersion,'neon-1');assert.equal(welcome.maxPeers,32);
+ assert.equal(welcome.seed,20261018);assert.equal(welcome.room,'afterlight');assert.equal(welcome.worldVersion,'coast-1');assert.equal(welcome.maxPeers,32);
  assert.equal(sharedWorldMinutes(welcome.serverTime),492);assert.equal(sharedWorldMinutes(GHOST_MANIFEST.epochMs-1000),480);
  assert.equal(welcome.type,'welcome');assert.equal(welcome.id,'server-id');
 });

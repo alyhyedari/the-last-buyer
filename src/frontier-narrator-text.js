@@ -1,5 +1,12 @@
+import {cr} from './cyber-data.js';
 import {L} from './i18n.js';
 export const NARRATOR_TEXT={
+ jokeRent:cr('City fact: the landlord believes in parallel universes. He charges rent in all of them.','فکت شهری: صاحبخونه به جهان‌های موازی اعتقاد داره؛ از همه‌شون اجاره می‌گیره.'),
+ jokeCar:cr('Garage fact: money cannot buy happiness. It can buy a louder engine, so you cannot hear the difference.','فکت گاراژی: پول خوشبختی نمی‌آره؛ موتور پرصداتر می‌خره که فرقشو نشنوی.'),
+ jokeStealth:cr('Security fact: the city knows everything about you. Except why you came into this room.','فکت امنیتی: شهر همه‌چیزتو می‌دونه؛ جز اینکه چرا اومدی توی این اتاق.'),
+ jokeBeach:cr('Beach fact: the sea is free. The view has a subscription.','فکت ساحلی: دریا رایگانه؛ منظره‌ش اشتراک می‌خواد.'),
+ jokeUpdate:cr('Software fact: they fixed all the bugs. Now they call them premium features.','فکت نرم‌افزاری: همهٔ باگ‌ها رفع شدن؛ الان بهشون می‌گن قابلیت پریمیوم.'),
+ jokeBoss:cr('Career fact: this boss has three phases. Your last manager only had unreasonable expectations.','فکت شغلی: این باس سه فاز داره؛ مدیر قبلیت فقط توقع بی‌جا داشت.'),
  name:L('شاهدِ بیرون قاب','The Witness Beyond the Frame','画框之外的见证者','شاهد خارج الإطار','El testigo fuera del marco','फ़्रेम के बाहर का साक्षी','Le témoin hors cadre','A testemunha fora do quadro'),
  title:L('راوی و راهنمای سفر','Narrator & field guide','旁白与旅行指南','الراوي ودليل الرحلة','Narrador y guía','कथावाचक और मार्गदर्शक','Narrateur et guide','Narrador e guia'),
  close:L('بعداً می‌بینمت','See you later','回头见','أراك لاحقاً','Hasta luego','फिर मिलेंगे','À plus tard','Até mais'),

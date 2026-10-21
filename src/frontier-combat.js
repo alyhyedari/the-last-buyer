@@ -1,3 +1,5 @@
+import {hitBuilding} from './building-access.js';
+import {activeCyber} from './cyber-systems.js';
 import {bossMaxHp,breakTrialSeal} from './pantheon.js';
 import {terrainSight,terrainHeight,terrainSlope} from './frontier-terrain.js';
 import {MYTH_BOSSES} from './frontier-myth-data.js';
@@ -12,6 +14,10 @@ import {gameDay,isNight,hash,earn,advanceTime,worldTime} from './frontier-state.
 import {canStand,moveInWorld,clearSight,nearestOpen,localRoute,tileAt} from './frontier-world.js';
 
 export const WEAPONS={
+ arc:{damage:38,range:18,delay:.8,spread:.025,ammo:'ammo',chain:2,stun:2,sound:'shot'},
+ rail:{damage:150,range:58,delay:1.4,spread:.008,ammo:'ammo',pierce:3,sound:'shot'},
+ pulse:{damage:23,range:32,delay:.14,spread:.02,ammo:'ammo',automatic:true,sound:'pistol'},
+ monoblade:{damage:44,range:2.2,delay:.3,spread:.06,ammo:null,sound:'bump'},
  stick:{damage:26,range:1.9,delay:.46,spread:.08,ammo:null,sound:'bump'},
  bow:{damage:65,range:25,delay:.8,spread:.014,ammo:'ammo',sound:'bow'},
  pistol:{damage:34,range:30,delay:.29,spread:.024,ammo:'ammo',sound:'pistol'},
@@ -60,6 +66,8 @@ export function shoot(state,world,actors,{aiming=false}={}){
  if(c.projectile){const p={id:(world.shotSerial=(world.shotSerial||0)+1),kind:c.projectile,x:f.x,y:f.y,angle:f.angle,age:0,speed:c.projectile==='rocket'?16:8,ttl:c.projectile==='rocket'?2.2:1.25,blast:c.blast,damage:c.damage*damagePower,height:.55,z:world.interior?.55:terrainHeight(f.x,f.y)+.55,vz:world.interior?0:terrainSlope(f.x,f.y,f.angle)};const target=targetUnderCrosshair(f,world,actors,weapon);if(target&&!world.interior)p.vz=(terrainHeight(target.x,target.y)+.65-p.z)/Math.max(1,distance(f,target));(world.projectiles??=[]).push(p);return{kind:'projectile',weapon};}
  const hits=[],penalized=new Set();for(let n=0;n<(c.pellets||1);n++){const offset=c.pellets?(n-2)*c.spread/4:0,s=targetUnderCrosshair(f,world,actors,weapon,f.angle+offset);if(!s)continue;if(s.kind==='target'){l.skills=Math.min(100,l.skills+1);hits.push({kind:'targetHit',target:s.id,victim:'target',hp:100,maxHp:100});continue;}
   const damage=damageActor(state,world,s,c.damage*damagePower*(c.pellets?Math.max(.3,1-distance(f,s)/24):1),{crime:!penalized.has(s.id)});penalized.add(s.id);if(damage)hits.push(damage);
+  if(c.stun&&world.hunters?.has(s.id))world.hunters.get(s.id).stunnedUntil=f.minutes+c.stun;
+  if(c.chain||c.pierce){const extra=actors.filter(a=>a.id!==s.id&&!a.dead&&a.hostile&&bulletSight(world,f,a)&&(c.chain?distance(s,a)<4:distance(f,a)<c.range&&Math.abs(Math.atan2(Math.sin(Math.atan2(a.y-f.y,a.x-f.x)-f.angle),Math.cos(Math.atan2(a.y-f.y,a.x-f.x)-f.angle)))<.025)).sort((a,b)=>distance(f,a)-distance(f,b)).slice(0,c.chain||c.pierce-1);for(const a of extra){const hit=damageActor(state,world,a,c.damage*damagePower*(c.chain?.6:.75),{crime:false});if(hit)hits.push(hit);if(c.stun&&world.hunters?.has(a.id))world.hunters.get(a.id).stunnedUntil=f.minutes+c.stun;}}
  }
  if(!hits.length){const hit=shootFacade(state,world,c.range,c.damage);if(hit)hits.push(hit);}const best=hits.find(s=>s.killed)||hits[0];return best?{...best,hits,weapon}:{kind:'miss',weapon};
 }
@@ -77,8 +85,8 @@ export function hurtPlayer(state,amount,{ignoreGrace=false,bypassVehicle=false}=
  if(!ignoreGrace&&(f.minutes<f.life.combat.graceUntil||f.minutes<(f.life.combat.dodgeUntil||0)))return false;
  // Car condition represents a 300-point hull. A hit which destroys it ejects
  // the driver; subsequent hits reach Vlad. Bikes and horses have no cabin.
- if(!bypassVehicle&&f.mounted&&state.village.vehicle==='car'&&f.life.expanse.carHealth>0){damageCar(state,amount/3);return false;}
- f.life.health=Math.max(0,f.life.health-amount*(hasBuy(f,14)?.88:1)*(hasGme(f,'cinder')?.85:1));if(f.life.health>0)return false;dropOnDeath(state);return true;
+ if(!bypassVehicle&&f.mounted&&state.village.vehicle==='car'&&f.life.expanse.carHealth>0){damageCar(state,amount/3*(activeCyber(f,'aegis')?.45:1));return false;}
+ f.life.health=Math.max(0,f.life.health-amount*(activeCyber(f,'aegis')?.45:1)/(1+(f.mounted&&state.village.vehicle==='motorcycle'?(f.life.cyber.tunes[14+f.life.cyber.motor]?.armor||0)*.22:0))*(hasBuy(f,14)?.88:1)*(hasGme(f,'cinder')?.85:1));if(f.life.health>0)return false;dropOnDeath(state);return true;
 }
 export function hostileHit(state,amount,victim){
  const f=state.frontier,hp=f.life.health,hull=f.life.expanse.carHealth,died=hurtPlayer(state,amount);
@@ -124,9 +132,10 @@ export function updateThreats(state,world,actors,dt,time){
  const f=state.frontier,events=[];if(world.interior||f.life.expanse.swimming)return events;
  for(const s of actors.filter(s=>s.kind!=='playerGhost'&&s.hostile&&!s.boss&&!s.dead).sort((a,b)=>distance(f,a)-distance(f,b)).slice(0,12)){
   const rule=HOSTILES[s.kind],p=world.hunters?.get(s.id);if(!rule||!p)continue;
+  if(f.minutes<(p.stunnedUntil||0)){p.windup=0;continue;}
   if(forestWard(f,p)){p.windup=0;p.path=[];p.repath=0;continue;}
   const d=distance(f,p);if(d>32){p.alert=false;p.windup=0;continue;}
-  const visible=f.minutes>=(world.godHiddenUntil||0)&&d<rule.notice*(hasBuy(f,4)?.8:1)&&bulletSight(world,p,f),noise=world.panic&&world.panic.until>f.minutes&&distance(p,world.panic)<rule.notice*1.25;
+  const visible=!activeCyber(f,'ghost')&&f.minutes>=(world.godHiddenUntil||0)&&d<rule.notice*(hasBuy(f,4)?.8:1)&&bulletSight(world,p,f),noise=world.panic&&world.panic.until>f.minutes&&distance(p,world.panic)<rule.notice*1.25;
   if(visible||noise){p.alert=true;p.lastSeen=time;p.lastKnown=visible?{x:f.x,y:f.y}:{x:world.panic.x,y:world.panic.y};}
   if(p.alert&&time-p.lastSeen>9){p.alert=false;p.windup=0;p.path=[];p.lastKnown=null;}
   if(!p.alert)continue;
@@ -161,7 +170,7 @@ export function forestTreasure(state,world,cache){const f=state.frontier,c=f.lif
 export function weatherHazard(f){const skyTime=worldTime(f),block=Math.floor(skyTime/180),storm=hash(f.seed,block+7721)<.22,local=skyTime%180,phase=local%42,thunder=storm&&phase<3,warning=storm&&phase>37,index=block*7+Math.floor(local/42)+(warning?1:0),strike=storm?{x:9+hash(f.seed,index+552)*44,y:77+hash(f.seed,index+553)*43}:null;const tornado=storm&&hash(f.seed,block+918)<.27&&local>70&&local<140?{x:15+local*.25,y:78+Math.sin(local*.04)*14}:null;return{storm,thunder,warning,tornado,strike,index};}
 export function tickWeather(state,world,dt,time){const f=state.frontier,h=weatherHazard(f),events=[];if(world.interior)return events;if(h.thunder&&world.thunderBlock!==h.index){world.thunderBlock=h.index;events.push({kind:'thunder'});if(distance(f,h.strike)<1.5){const hit=hostileHit(state,38,'thunder');if(hit){events.push(hit);if(hit.kind==='died')return events;}}}if(h.tornado&&distance(f,h.tornado)<3&&time>(world.windDamageAt||0)){world.windDamageAt=time+1;const hit=hostileHit(state,16,'tornado');if(hit)events.push(hit);if(hit?.kind!=='died'){const a=Math.atan2(f.y-h.tornado.y,f.x-h.tornado.x);moveInWorld(world,f,Math.cos(a)*.6,Math.sin(a)*.6,.22);}}return events;}
 
-function markFacade(state,world,b,damage,point){const f=state.frontier,id='facade-'+b.id,old=f.life.combat.actors[id]?.hp??500,hp=Math.max(0,old-damage);remember(f,{id,kind:'facade',x:point.x,y:point.y},hp);if(old>hp){f.life.heat=Math.min(100,f.life.heat+4);f.life.debts=Math.min(99999,f.life.debts+2);}(world.effects??=[]).push({kind:'sparks',x:point.x,y:point.y,age:0,ttl:.5,seed:old});return{kind:'objectHit',target:id,hp,maxHp:500,victim:'facade'};}
+function markFacade(state,world,b,damage,point){const f=state.frontier,{id,hp,maxHp,old}=hitBuilding(state,world,b,damage,point);if(old>hp){f.life.heat=Math.min(100,f.life.heat+4);f.life.debts=Math.min(99999,f.life.debts+2);}(world.effects??=[]).push({kind:'sparks',x:point.x,y:point.y,age:0,ttl:.5,seed:old});return{kind:'objectHit',target:id,hp,maxHp,victim:'facade'};}
 function shootFacade(state,world,range,damage){const f=state.frontier;for(let d=.3;d<range;d+=.12){const x=f.x+Math.cos(f.angle)*d,y=f.y+Math.sin(f.angle)*d,t=tileAt(world,x,y);if(t<4)continue;const b=world.buildings?.find(b=>x>=b.left&&x<b.left+b.width&&y>=b.top&&y<b.top+b.depth);return b?markFacade(state,world,b,damage,{x:x-Math.cos(f.angle)*.15,y:y-Math.sin(f.angle)*.15}):null;}return null;}
 function blastFacades(state,world,p){for(const b of world.buildings||[]){const x=Math.max(b.left-.1,Math.min(b.left+b.width+.1,p.x)),y=Math.max(b.top-.1,Math.min(b.top+b.depth+.1,p.y)),d=Math.hypot(x-p.x,y-p.y);if(d<p.blast&&clearSight(world,p,{x,y}))markFacade(state,world,b,p.damage*(1-d/p.blast),{x,y});}}
 

@@ -16,4 +16,4 @@ export const FOREST_COINS=[
  [309.5,326.5,'stormwood','arch',false],[327.5,355.5,'lastsanctum','log',true],[367.5,368.5,'lastsanctum','stones',true]
 ].map(([x,y,trail,landmark,sealed],i)=>({id:forestCoinId(i),x,y,trail,landmark,sealed,uv:sealed&&i>=14,kind:'buyCoin',variant:i%3,number:i+1}));
 export const FOREST_MILESTONES=[{at:1,reward:30,key:'award1'},{at:3,reward:70,key:'award3'},{at:6,reward:100,key:'award6'},{at:9,reward:150,key:'award9'},{at:12,reward:250,key:'award12'},{at:18,reward:300,key:'award18'},{at:24,reward:400,key:'award24'},{at:30,reward:600,key:'award30'}];
-export const inDeepForest=(x,y)=>(x<57&&y>78&&y<124)||(x<129&&y>127&&y<187)||(x>130&&y>190);
+export const inDeepForest=(x,y)=>(x<57&&y>78&&y<124)||(x<129&&y>127&&y<187)||(x>130&&x<384&&y>190&&y<384);

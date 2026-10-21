@@ -1,3 +1,4 @@
+import {CYBER_COMPANIONS} from './cyber-state.js';
 import {challengeFor} from './neon-challenges.js';
 import {gameHour,gameDay,hash,earn,transact,advanceTime} from './frontier-state.js';
 import {NEON_CAST,NEON_QUESTS} from './neon-data.js';
@@ -15,19 +16,19 @@ export function finishNeonStep(state,world,answer=null){const f=state.frontier,n
  const q=NEON_QUESTS.find(q=>q.id===p.id);n.quest.step++;if(n.quest.step<q.steps.length)return'next';n.completed.push(q.id);n.quest=null;earn(state,q.reward);n.stability=Math.min(9,n.stability+1);if(q.id==='evacuation')n.reliefUntil=f.minutes+1440;return'complete';
 }
 export function buySpecialCar(state,index){const f=state.frontier,e=f.life.expanse,p=CAR_MODELS[index];if(!p||f.mounted||e.swimming||f.life.combat.interior||f.life.combat.arena||!transact(state,supplyQuote(state,p.cost)))return false;
- if(!state.village.vehicles.includes('car'))state.village.vehicles.push('car');state.village.vehicle='car';e.carModel=index;e.carHealth=100;e.parked={x:f.x,y:f.y,angle:f.angle};return true;
+ if(!state.village.vehicles.includes('car'))state.village.vehicles.push('car');state.village.vehicle='car';for(const owned of [e.carModel,index])if(!f.life.cyber.owned.includes(owned))f.life.cyber.owned.push(owned);e.carModel=index;e.carHealth=100;e.parked={x:f.x,y:f.y,angle:f.angle};return true;
 }
 export function canMeet(f){return!f.mounted&&!f.life.expanse.swimming&&!f.life.combat.interior&&!f.life.combat.arena&&f.minutes>=Math.max(f.soberAt,f.life.impairedUntil)&&f.life.heat<20&&gameHour(f)>=7&&gameHour(f)<19;}
-export function inviteNeon(state,id){const f=state.frontier,n=f.life.neon,p=NEON_CAST.find(c=>c.id===id);if(!['mira','arin'].includes(id)||!p||!canMeet(f)||Math.hypot(p.x-f.x,p.y-f.y)>3||n.completed.length<1)return false;n.companion=id;n.bond=Math.max(n.bond,Math.min(6,n.completed.length));return true;}
+export function inviteNeon(state,id){const f=state.frontier,n=f.life.neon,p=NEON_CAST.find(c=>c.id===id);if(!['mira','arin',...CYBER_COMPANIONS].includes(id)||!p||!canMeet(f)||Math.hypot(p.x-f.x,p.y-f.y)>3||n.completed.length<1)return false;n.companion=id;n.bond=Math.max(n.bond,Math.min(6,n.completed.length));return true;}
 export function dateNeon(state,id){const f=state.frontier,n=f.life.neon,p=NEON_CAST.find(c=>c.id===id);if(!p||n.companion!==id||n.bond<2||!canMeet(f)||Math.hypot(p.x-f.x,p.y-f.y)>3||n.dateDay===gameDay(f))return false;n.dateDay=gameDay(f);n.bond=Math.min(6,n.bond+1);advanceTime(f,90);f.energy=Math.min(100,f.energy+20);return true;}
 export function neonActors(world,f,time){
  if(world.interior)return[];const actors=[],night=gameHour(f)<6||gameHour(f)>=19;
- for(const c of NEON_CAST){if(Math.hypot(c.x-f.x,c.y-f.y)>42||c.night&&!night)continue;const walk=c.id==='chaplin'?Math.sin(time*.6)*.65:0;actors.push({...c,x:canStand(world,c.x+walk,c.y,.2)?c.x+walk:c.x,y:c.y,peaceful:true,variant:c.variant*2+(c.id==='chaplin'&&Math.sin(time*3)>0?1:0)});}
+ for(const c of NEON_CAST){if(Math.hypot(c.x-f.x,c.y-f.y)>42||c.night&&!night)continue;const walk=c.kind==='neonEcho'?Math.sin(time*.6+c.variant)*.65:0;actors.push({...c,x:canStand(world,c.x+walk,c.y,.2)?c.x+walk:c.x,y:c.y,peaceful:true,variant:c.variant*2+(c.id==='chaplin'&&Math.sin(time*3)>0?1:0)});}
  const companion=f.life.neon.companion;if(companion&&!f.mounted&&!f.life.expanse.swimming){
   const spawn=Array.from({length:8},(_,i)=>({x:f.x+Math.cos(f.angle+Math.PI+i*Math.PI/4)*1.6,y:f.y+Math.sin(f.angle+Math.PI+i*Math.PI/4)*1.6})).find(p=>canStand(world,p.x,p.y,.2)&&clearSight(world,f,p));const m=world.neonCompanion??={...(spawn||f),at:time,next:0,path:[]},dt=Math.max(0,Math.min(.1,time-m.at));m.at=time;
   if(Math.hypot(m.x-f.x,m.y-f.y)>2){if(time>=m.next){const path=localRoute(world,m,f,.2);if(path!==null){m.path=path;m.next=time+1.5;}}
    while(m.path.length&&Math.hypot(m.x-m.path[0].x,m.y-m.path[0].y)<.12)m.path.shift();const g=m.path[0];if(g){const d=Math.hypot(g.x-m.x,g.y-m.y),step=Math.min(d,dt*3.2);if(d)moveInWorld(world,m,(g.x-m.x)/d*step,(g.y-m.y)/d*step,.2);}
-  }actors.push({id:'neon-companion',kind:'neonEcho',variant:companion==='mira'?4:6,x:m.x,y:m.y,peaceful:true});
+  }actors.push({id:'neon-companion',kind:'neonEcho',variant:(NEON_CAST.find(c=>c.id===companion)?.variant||0)*2,x:m.x,y:m.y,peaceful:true});
  }else world.neonCompanion=null;
  const p=questPoint(f);if(p&&Math.hypot(f.x-p.x,f.y-p.y)<45)actors.push({...p,id:'neon-quest',kind:'neonBeacon',peaceful:true,height:.4});
  const district=neonDistrict(f.x,f.y);if(district!=='county'&&districtMode(f)==='conflict'&&!world.arena){

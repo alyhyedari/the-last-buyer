@@ -154,7 +154,7 @@ export class GhostClient{
    else{
     let between=false;
     for(let i=1;i<samples.length;i++){const a=samples[i-1],b=samples[i];if(target>b.at)continue;const t=clamp((target-a.at)/Math.max(1,b.at-a.at),0,1);x=a.x+(b.x-a.x)*t;y=a.y+(b.y-a.y)*t;angle=wrap(a.angle+wrap(b.angle-a.angle)*t);between=true;break;}
-    if(!between&&samples.length>1&&!last.paused){const previous=samples.at(-2),elapsed=(last.at-previous.at)/1000;if(elapsed>.02){const vx=(last.x-previous.x)/elapsed,vy=(last.y-previous.y)/elapsed,scale=Math.min(1,32/(Math.hypot(vx,vy)||1)),seconds=clamp((target-last.at)/1000,0,.25);x=clamp(last.x+vx*scale*seconds,0,384);y=clamp(last.y+vy*scale*seconds,0,384);}}
+    if(!between&&samples.length>1&&!last.paused){const previous=samples.at(-2),elapsed=(last.at-previous.at)/1000;if(elapsed>.02){const vx=(last.x-previous.x)/elapsed,vy=(last.y-previous.y)/elapsed,scale=Math.min(1,32/(Math.hypot(vx,vy)||1)),seconds=clamp((target-last.at)/1000,0,.25);x=clamp(last.x+vx*scale*seconds,0,512);y=clamp(last.y+vy*scale*seconds,0,512);}}
    }
    const age=Math.max(0,at-last.at),fadeAt=last.paused?6000:1500,opacity=(last.paused?.68:1)*(1-clamp((age-fadeAt)/(EXPIRE_MS-fadeAt),0,1));
    actors.push({kind:'playerGhost',id:'ghost-'+id,x,y,angle,vehicle:last.vehicle,model:last.model,tone:last.tone,paused:last.paused,opacity,variant:last.tone,distance:Math.hypot(x-view.x,y-view.y)});

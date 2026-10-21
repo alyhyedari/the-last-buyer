@@ -1,0 +1,10 @@
+import {NEON_CAST} from './neon-data.js';
+import {advanceTime,transact} from './frontier-state.js';
+export const ACTIVITIES=[
+ {id:'chat',fa:'گفت‌وگو و شوخی',en:'Talk and joke',cost:0,minutes:8,replyFa:'با خنده می‌گوید: «فکت: راهنمای ماشینت هم از تصمیم‌های ناگهانی تو استعفا داده!»',replyEn:'“Fact: even your navigation system resigned over your sudden decisions!”'},
+ {id:'flirt',fa:'تعریف محترمانه و معاشقه',en:'Compliment and flirt',cost:0,minutes:10,replyFa:'لبخند می‌زند: «این تعریف خوب بود؛ حالا بگو واقعاً چی برات مهمه؟»',replyEn:'“That was sweet. Now tell me what really matters to you.”'},
+ {id:'meal',fa:'دعوت به شام · $25',en:'Dinner together · $25',cost:25,minutes:40,replyFa:'دربارهٔ رویاها و سفر بعدی حرف می‌زنید. او مقصد بعدی را انتخاب می‌کند.',replyEn:'You talk about dreams and your next trip. Your companion picks the destination.'},
+ {id:'photo',fa:'عکس یادگاری در ساحل',en:'Beach portrait',cost:0,minutes:5,replyFa:'کنار آب یک عکس یادگاری می‌گیرید و لحظه در دفتر خاطرات ثبت می‌شود.',replyEn:'A seaside portrait is added to your shared memories.'},
+ {id:'ride',fa:'گشت با ماشین',en:'Go for a drive',cost:0,minutes:0,replyFa:'«من آماده‌ام. تو رانندگی کن، مسیر ساحلی با من.» همراهت روی صندلی کنار راننده می‌نشیند.',replyEn:'“Ready. You drive; I will pick the coastal route.” Your companion takes the passenger seat.'}
+];
+export function companionActivity(state,id,activity){const f=state.frontier,n=f.life.neon,c=f.life.cyber,a=ACTIVITIES.find(a=>a.id===activity);if(!a||n.companion!==id||!NEON_CAST.some(p=>p.id===id)||f.life.combat.interior||f.life.expanse.swimming||f.life.heat>=20||f.minutes<Math.max(f.soberAt,f.life.impairedUntil,c.socialReady||0))return false;if(activity==='ride'&&(!f.mounted||state.village.vehicle!=='car'))return false;if(activity!=='ride'&&f.mounted)return false;if(activity==='photo'&&(f.x<460||f.y<210))return false;if(activity==='flirt'&&n.bond<2)return false;if(a.cost&&!transact(state,a.cost))return false;advanceTime(f,a.minutes);c.socialReady=f.minutes+30;c.memories=Math.min(9999,(c.memories||0)+1);n.bond=Math.min(6,n.bond+1);f.energy=Math.min(100,f.energy+(activity==='meal'?15:3));return a;}

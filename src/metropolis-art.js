@@ -61,9 +61,9 @@ export function drawCityFacade(c,b,{x,top,base,height,columns,wallX,night}){
 
 // A fixed number of authored silhouettes, independent of population. Nearby
 // geometry is rendered by the same solid raycast as the rest of the county.
-export function drawCitySkyline(c,f,w,h,horizon,night){
+export function drawCitySkyline(c,f,w,h,horizon,night,extra=[]){
  const ca=Math.cos(f.angle),sa=Math.sin(f.angle);
- const distant=CITY_BUILDINGS.map(b=>{const dx=b.x-f.x,dy=b.y-f.y;return{b,depth:dx*ca+dy*sa,side:-dx*sa+dy*ca};}).filter(a=>a.depth>44&&a.depth<280).sort((a,b)=>b.depth-a.depth);
+ const distant=[...CITY_BUILDINGS,...extra].map(b=>{const dx=b.x-f.x,dy=b.y-f.y;return{b,depth:dx*ca+dy*sa,side:-dx*sa+dy*ca};}).filter(a=>a.depth>44&&a.depth<280).sort((a,b)=>b.depth-a.depth);
  for(const {b,depth,side}of distant){const sx=w*.5*(1+side/(depth*.7)),bw=Math.max(2,w*.5*(b.width+b.depth*.35)/(depth*.7)),height=h*b.height/depth,base=horizon+h*.53/depth,top=base-height;if(sx+bw<0||sx-bw>w)continue;c.fillStyle=night?'#244451':b.style==='brick'?'#7b8f90':'#5f8b94';c.fillRect(Math.round(sx-bw/2),Math.round(top),Math.ceil(bw),Math.ceil(height));c.fillStyle=b.id==='tether'?'#6de4bc':night?'#8bb0a8':'#a7c3bb';c.fillRect(sx-bw/2,top,bw,1);if(bw>5)for(let y=Math.max(0,top+4);y<base;y+=5){c.fillStyle=night?'#acdbbd55':'#a9ccc54d';c.fillRect(sx-bw/2+2,y,Math.max(1,bw-4),1);}if(b.id==='tether'){c.fillStyle='#7fe9c0';c.fillRect(sx-1,top-7,2,7);if(bw>30){c.save();c.fillStyle='#caebd6';c.font='6px monospace';c.textAlign='center';c.fillText('TETHER',sx,top+10);c.restore();}}}
 }
 

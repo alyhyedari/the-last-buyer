@@ -1,3 +1,5 @@
+import {WORLD_SIZE} from './cyber-state.js';
+import {buildCoast} from './cyber-world.js';
 import {terrainHeight} from './frontier-terrain.js';
 import {CITY_DESTINATIONS} from './metropolis-data.js';
 import {buildMetropolis} from './metropolis-world.js';
@@ -6,8 +8,8 @@ import {hash} from './frontier-state.js';
 import {growForest,outsideCoinGlade} from './frontier-forest-world.js';
 import {inDeepForest} from './frontier-forest-data.js';
 import {MYTH_BOSSES,MYTH_TRAILS} from './frontier-myth-data.js';
-export const SIZE=384;
-export const LAKES=[{id:'mirrorwater',x:54,y:19,rx:12,ry:9,shore:{x:61.5,y:29.5},entry:{x:58.5,y:24.5}},{id:'bluebasin',x:150,y:164,rx:18,ry:14,shore:{x:149.5,y:181.5},entry:{x:149.5,y:173.5}}];
+export const SIZE=WORLD_SIZE;
+export const LAKES=[{id:'mirrorwater',x:54,y:19,rx:12,ry:9,shore:{x:61.5,y:29.5},entry:{x:58.5,y:24.5}},{id:'bluebasin',x:150,y:164,rx:18,ry:14,shore:{x:149.5,y:181.5},entry:{x:149.5,y:173.5}},{id:'glasswater',x:490,y:320,rx:15,ry:180,shore:{x:472.5,y:260.5},entry:{x:480.5,y:260.5}}];
 export const PLACES=[...MYTH_TRAILS,...CITY_DESTINATIONS,
  {id:'gate',x:32.5,y:57.5,color:'#c8e397',kind:'gate'},
  {id:'garage',x:28.5,y:49.5,color:'#dba05f',kind:'garage'},
@@ -50,7 +52,7 @@ export function makeFrontierWorld(seed){
  const tiles=new Uint8Array(SIZE*SIZE),sprites=[],colliders=[],buildings=[],treasures=[];
  for(let y=0;y<SIZE;y++)for(let x=0;x<SIZE;x++){
   const edge=x<2||y<2||x>SIZE-3||y>SIZE-3;tiles[y*SIZE+x]=edge?1:0;
-  if(!edge&&hash(seed,x+y*(x<192&&y<192?192:SIZE))<(inDeepForest(x,y)?(y>190?.2:.24)+.055*Math.sin(x*.13)*Math.cos(y*.11):y>125?.19:x<57&&y>72?.12:.07))sprites.push({id:'tree-'+x+'-'+y,x:x+.5,y:y+.5,kind:'tree',variant:Math.floor(hash(seed,x*y+401)*(inDeepForest(x,y)?5:3))+(inDeepForest(x,y)?3:0)});
+  if(!edge&&hash(seed,x+y*(x<192&&y<192?192:x<384&&y<384?384:SIZE))<(inDeepForest(x,y)?(y>190?.2:.24)+.055*Math.sin(x*.13)*Math.cos(y*.11):y>125?.19:x<57&&y>72?.12:.07))sprites.push({id:'tree-'+x+'-'+y,x:x+.5,y:y+.5,kind:'tree',variant:Math.floor(hash(seed,x*y+401)*(inDeepForest(x,y)?5:3))+(inDeepForest(x,y)?3:0)});
  }
  // One connected trunk, with broad branches to every destination. Roads are walkable.
  const road=(ax,ay,bx,by)=>{const steps=Math.ceil(Math.hypot(bx-ax,by-ay)*2);for(let n=0;n<=steps;n++){const x=Math.floor(ax+(bx-ax)*n/steps),y=Math.floor(ay+(by-ay)*n/steps);for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)if(x+dx>1&&x+dx<SIZE-2&&y+dy>1&&y+dy<SIZE-2)tiles[(y+dy)*SIZE+x+dx]=2;}};
@@ -58,7 +60,7 @@ export function makeFrontierWorld(seed){
  road(32,43,74,43);road(74,43,74,72);road(74,43,85,43);road(85,43,85,58);road(85,58,74,58);road(74,43,74,20);road(74,20,81,20);road(81,20,81,8);
  for(const p of PLACES.filter(p=>!p.metro&&p.x>=55&&p.y<192))road(74,p.y,p.x,p.y);
  road(74,70,74,184);road(74,81,144,81);road(114,81,114,130);road(114,108,74,108);road(106,65,106,116);road(32,77,74,77);road(144,81,144,116);road(114,116,144,116);
- for(const lake of LAKES)for(let y=Math.floor(lake.y-lake.ry);y<=lake.y+lake.ry;y++)for(let x=Math.floor(lake.x-lake.rx);x<=lake.x+lake.rx;x++)if(((x-lake.x)/lake.rx)**2+((y-lake.y)/lake.ry)**2<1)tiles[y*SIZE+x]=3;
+ for(const lake of LAKES)for(let y=Math.floor(lake.y-lake.ry);y<=lake.y+lake.ry;y++)for(let x=Math.floor(lake.x-lake.rx);x<=lake.x+lake.rx;x++)if(x>1&&x<SIZE-2&&y>1&&y<SIZE-2&&((x-lake.x)/lake.rx)**2+((y-lake.y)/lake.ry)**2<1)tiles[y*SIZE+x]=3;
  road(32,23,47,23);
  road(74,181,150,196);road(150,196,234,238);road(234,238,318,262);road(234,238,192,312);road(192,312,280,334);road(280,334,336,374);
  // Western highway and three mountain switchbacks connect to the original trunk.
@@ -99,6 +101,7 @@ export function makeFrontierWorld(seed){
  sprites.push({x:30.4,y:45.5,kind:'stranger',id:'stranger'},{x:14.5,y:17.5,kind:'ghost',id:'ghost'});
  const city=buildMetropolis({tiles,size:SIZE,sprites,buildings,road,seed,hash});
  growForest(sprites,tiles,SIZE,seed);
+ const coastTraffic=buildCoast({tiles,size:SIZE,sprites,buildings});for(const b of buildings.filter(b=>b.id.startsWith('coast-tower-')))city.buildings.set(b.id,b);
  // Wide, open ritual grounds; pillars frame the arena without sealing exits.
  for(const b of MYTH_BOSSES)for(let i=0;i<8;i++){const a=i*Math.PI/4,x=b.x+Math.cos(a)*8.5,y=b.y+Math.sin(a)*8.5;sprites.push({id:'pillar-'+b.id+'-'+i,kind:'mythPillar',x,y,variant:b.variant,radius:.3});}
  sprites.push(...familyResidents(buildings,seed));
@@ -108,10 +111,10 @@ export function makeFrontierWorld(seed){
  const buckets=new Map();for(const o of colliders){const key=Math.floor(o.x)+','+Math.floor(o.y);if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(o);}
  const traffic=[{id:'traffic-car',kind:'trafficCar',phase:0,speed:2.4,radius:.62,model:0},{id:'traffic-bike',kind:'trafficBike',phase:17,speed:1.8,radius:.35},{id:'traffic-motor',kind:'trafficMotor',phase:39,speed:2.9,radius:.4}];
  for(let i=0;i<9;i++)traffic.push({id:'traffic-neon-'+i,kind:i%4===3?'trafficMotor':'trafficCar',phase:i*11,speed:1.7+(i%3)*.25,radius:i%4===3?.4:.62,model:i%4,corners:[[114.15,81.85],[144.15,81.85],[144.15,116.85],[114.15,116.85]]});
- traffic.push(...city.traffic);for(let i=0;i<12;i++)traffic.push({id:'traffic-highway-'+i,kind:'trafficCar',phase:i*41,speed:2.8+i%3*.3,radius:.55,model:i%8,corners:[[74.15,194.15],[128.15,194.15],[128.15,374.15],[74.15,374.15]]});
+ traffic.push(...city.traffic,...coastTraffic);for(let i=0;i<12;i++)traffic.push({id:'traffic-highway-'+i,kind:'trafficCar',phase:i*41,speed:2.8+i%3*.3,radius:.55,model:i%8,corners:[[74.15,194.15],[128.15,194.15],[128.15,374.15],[74.15,374.15]]});
  const spriteBuckets=new Map();for(const s of filtered){const k=Math.floor(s.x/8)+','+Math.floor(s.y/8);if(!spriteBuckets.has(k))spriteBuckets.set(k,[]);spriteBuckets.get(k).push(s);}
  const playTiles=new Set();for(const child of filtered.filter(s=>s.kind==='child'&&s.id.endsWith('-0')))for(let dy=0;dy<3;dy++)for(let dx=0;dx<2;dx++){const x=Math.floor(child.x)+dx,y=Math.floor(child.y)+dy;if([0,2].includes(tiles[y*SIZE+x]))playTiles.add(y*SIZE+x);}
- const facadeTiles=new Map();for(const b of buildings)for(let y=b.top;y<b.top+b.depth;y++)for(let x=b.left;x<b.left+b.width;x++)facadeTiles.set(y*SIZE+x,b.id);return{spatialCollision:true,playTiles,size:SIZE,tiles,sprites:filtered,seed,colliders,buckets,buildings,traffic,treasures,facadeTiles,spriteBuckets,cityBuildings:city.buildings};
+ const facadeTiles=new Map();for(const b of buildings)for(let y=b.top;y<b.top+b.depth;y++)for(let x=b.left;x<b.left+b.width;x++)facadeTiles.set(y*SIZE+x,b.id);return{spatialCollision:true,playTiles,size:SIZE,tiles,sprites:filtered,seed,colliders,buckets,buildings,traffic,treasures,facadeTiles,spriteBuckets,cityBuildings:city.buildings,coastBuildings:buildings.filter(b=>b.id.startsWith('coast-tower-'))};
 }
 export const tileAt=(world,x,y)=>{const size=world.size||SIZE;return x<0||y<0||x>=size||y>=size?1:world.tiles[Math.floor(y)*size+Math.floor(x)];};
 export const solid=(world,x,y)=>{const t=tileAt(world,x,y);return t!==0&&t!==2;};

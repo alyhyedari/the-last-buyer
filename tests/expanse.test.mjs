@@ -20,7 +20,7 @@ test('stealing is local, transfers damage, raises consequences and cannot duplic
 });
 test('steering, gears and wet-road slip are time based and each car has a distinct profile',()=>{
  const run=(hz,wet)=>{const m={};let angle=0;for(let i=0;i<hz*3;i++)angle+=drivingStep(m,{dt:1/hz,turn:.8,speed:9,wet,model:1});return{...m,angle};};
- const a=run(30,false),b=run(60,false),rain=run(60,true);assert.ok(Math.abs(a.angle-b.angle)<.025);assert.ok(rain.slip>b.slip+.1);assert.equal(a.gear,5);assert.ok(a.rpm>900);assert.equal(new Set(CAR_MODELS.map(c=>c.speed)).size,8);
+ const a=run(30,false),b=run(60,false),rain=run(60,true);assert.ok(Math.abs(a.angle-b.angle)<.025);assert.ok(rain.slip>b.slip+.1);assert.equal(a.gear,5);assert.ok(a.rpm>900);assert.equal(new Set(CAR_MODELS.map(c=>c.speed)).size,14);
  const stopped={};assert.equal(drivingStep(stopped,{dt:1,turn:1,speed:0}),0);assert.ok(drivingStep(stopped,{dt:.1,turn:1,speed:-3})<0);
 });
 test('destroyed trunks clear collision and remain destroyed after save and world reconstruction',()=>{

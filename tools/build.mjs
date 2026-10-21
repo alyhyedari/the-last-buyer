@@ -43,7 +43,9 @@ const bytes=assets.reduce((n,a)=>n+a.bytes,0),gzipBytes=assets.reduce((n,a)=>n+a
 // Preserve the initial ceiling; allow 30 KiB for the eight-language city expansion.
 // Neon Pantheon adds 17 guardians, nine stories and regional scores in the lazy county.
 // Initial script ceiling is unchanged; measured expansion allowance is 36 KiB gzip.
-const limits={totalGzipBytes:556*1024,scriptGzipBytes:238*1024};
+// Neon Coast adds the lazy coast, tuning, four weapons and authored cast; +24 KiB total allowance.
+// Detailed cockpits, physical access, touch and war scenarios add about 8 KiB to the lazy bundle.
+const limits={totalGzipBytes:590*1024,scriptGzipBytes:238*1024};
 const script=assets.find(a=>a.file===relative(out,resolve(root,js)).split(sep).join('/'));
 const initial=new Set();
 function visitInitial(path){if(initial.has(path))return;initial.add(path);for(const imported of result.metafile.outputs[path]?.imports||[])if(!imported.external&&imported.kind!=='dynamic-import')visitInitial(imported.path);}

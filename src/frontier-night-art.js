@@ -37,7 +37,9 @@ export function drawCombatEffects(renderer,state,time,options){const c=renderer.
 export function drawFPSWeapon(c,weapon,w,h,motion,options){
  const r=(x,y,a,b,col)=>{c.fillStyle=col;c.fillRect(Math.round(x),Math.round(y),a,b);},reload=options.reloading?Math.sin((options.reloadProgress||0)*Math.PI):0,x=w/2+motion+reload*24,y=h-8+(options.recoil||0)*9+reload*42;
  c.save();c.translate(x,y);r(-25,-20,26,32,'#2c545b');r(9,-21,28,33,'#2c545b');r(-23,-32,27,20,'#b98e67');r(12,-30,24,20,'#d5ab7a');r(-18,-34,20,6,'#e6c398');
- if(weapon==='stick'){c.rotate((options.recoil||0)*-.6+.13);r(-5,-111,11,130,'#85694a');r(-3,-106,3,120,'#c2a46a');r(1,-93,3,13,'#695c42');}
+ if(weapon==='monoblade'){r(-6,-35,13,50,'#39445d');r(-4,-138,8,103,'#8effe4');r(-1,-142,2,108,'#eefff7');r(-17,-39,36,6,'#d071af');}
+ else if(['arc','rail','pulse'].includes(weapon)){const tone=weapon==='arc'?'#69ede0':weapon==='rail'?'#e889c5':'#ae95ff';r(-13,-72,28,85,'#26384d');r(-9,-65,20,32,'#62728a');r(-8,-110,18,40,'#394b64');r(-4,weapon==='rail'?-143:-113,4,51,tone);r(5,-108,3,43,tone);r(-14,-53,30,3,tone);if(weapon==='arc'){r(-15,-99,7,20,tone);r(12,-99,7,20,tone);}if(weapon==='pulse')r(14,-43,12,30,'#947aaf');}
+ else if(weapon==='stick'){c.rotate((options.recoil||0)*-.6+.13);r(-5,-111,11,130,'#85694a');r(-3,-106,3,120,'#c2a46a');r(1,-93,3,13,'#695c42');}
  else if(weapon==='bow'){c.strokeStyle='#b89c6b';c.lineWidth=5;c.beginPath();c.ellipse(0,-63,27,74,0,-Math.PI/2,Math.PI/2);c.stroke();c.strokeStyle='#e0d3a3';c.lineWidth=1;c.beginPath();c.moveTo(0,-137);c.lineTo(-9,-49);c.lineTo(0,11);c.stroke();r(-2,-120,3,108,'#cab385');r(-4,-124,7,8,'#a5b4ac');}
  else if(weapon==='grenade'){r(-10,-55,24,34,'#596b43');r(-7,-57,18,5,'#899568');r(-7,-46,17,3,'#344b3c');r(-7,-35,17,3,'#344b3c');r(6,-66,5,12,'#bdc3a0');r(3,-69,12,4,'#7f8e80');}
  else if(weapon==='launcher'){r(-21,-75,43,84,'#526449');r(-19,-76,38,9,'#2a393a');r(-15,-74,30,4,'#101f27');r(-16,-61,32,46,'#7a885a');r(-18,-38,36,8,'#344d43');r(-7,-12,13,25,'#58473b');r(17,-65,8,26,'#334746');r(18,-67,5,7,'#d6caa0');r(-4,-81,8,6,'#bbc6a2');}

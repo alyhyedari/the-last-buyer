@@ -57,7 +57,7 @@ test('packet loss permits only 250ms bounded extrapolation, then freezes, fades 
 
 test('invalid, malicious, stale and oversized snapshots are rejected before storage',()=>{
  const h=harness(),socket=h.online();h.snapshot([peer()]);
- const invalid=[{...peer(),x:NaN},{...peer(),x:-1},{...peer(),space:'home:<script>:1'},{...peer(),model:8},{...peer(),at:base+9000},{...peer(),id:'<img src=x>'},{...peer(),money:100}];
+ const invalid=[{...peer(),x:NaN},{...peer(),x:-1},{...peer(),space:'home:<script>:1'},{...peer(),model:14},{...peer(),at:base+9000},{...peer(),id:'<img src=x>'},{...peer(),money:100}];
  for(const p of invalid){h.snapshot([peer({id:'allowed',x:200}),p]);assert.equal(h.client.status.peers,1);}
  h.snapshot([peer({id:'same'}),peer({id:'same'})]);h.snapshot(Array.from({length:MAX_PEERS+1},(_,i)=>peer({id:'peer-'+i})));socket.receive('x'.repeat(20000));socket.receive('[');socket.receive({type:'snapshot',serverTime:base,peers:[],money:9});assert.equal(h.client.status.peers,1);
  h.advance(200);h.snapshot([peer({seq:2,x:11,at:base+200})]);h.snapshot([peer({seq:3,x:80,at:base+100})],base+100);h.snapshot([peer({seq:1,x:90,at:base+200})]);h.advance(100);assert.ok(h.client.sample(view)[0].x<12);h.client.dispose();

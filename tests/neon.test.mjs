@@ -55,8 +55,8 @@ test('mountain height, uphill traction and bullet sight share one field; rockets
  assert.equal(terrainSight(w,{x:55,y:298},{x:128,y:298}),false);assert.equal(bulletSight(w,{x:55,y:298},{x:128,y:298}),false);assert.equal(terrainSight(w,{x:84,y:296},{x:88,y:296}),true);
  const s=sample();Object.assign(s.frontier,f);s.village.weapon='launcher';s.village.weapons=['launcher'];s.frontier.life.combat.rockets=3;shoot(s,w,[]);const p=w.projectiles[0],z=p.z;updateProjectiles(s,w,[],.1);assert.ok(p.z>z);assert.ok(p.height>.05);
 });
-test('eight car models can be purchased without free replacement, with protected terrain roles',()=>{
- const s=sample(),f=s.frontier;s.village.money=9000;for(let i=0;i<CAR_MODELS.length;i++){assert.ok(buySpecialCar(s,i));assert.equal(f.life.expanse.carModel,i);assert.ok(validateState(s));}f.mounted=true;assert.equal(buySpecialCar(s,4),false);assert.ok(CAR_MODELS[4].speed>CAR_MODELS[5].speed);assert.ok(CAR_MODELS[5].climb>CAR_MODELS[4].climb);assert.ok(CAR_MODELS[6].armor<1);
+test('fourteen car models can be purchased without free replacement, with protected terrain roles',()=>{
+ const s=sample(),f=s.frontier;s.village.money=30000;for(let i=0;i<CAR_MODELS.length;i++){assert.ok(buySpecialCar(s,i));assert.equal(f.life.expanse.carModel,i);assert.ok(validateState(s));}f.mounted=true;assert.equal(buySpecialCar(s,4),false);assert.ok(CAR_MODELS[4].speed>CAR_MODELS[5].speed);assert.ok(CAR_MODELS[5].climb>CAR_MODELS[4].climb);assert.ok(CAR_MODELS[6].armor<1);
 });
 test('western highway and summit approaches remain traversable across seeds with no jump across obstacles',()=>{
  for(const seed of [1,91,2026]){const w=makeFrontierWorld(seed);for(const target of [{x:34.5,y:244.5},{x:92.5,y:298.5},{x:44.5,y:353.5}]){

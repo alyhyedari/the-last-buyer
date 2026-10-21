@@ -16,7 +16,7 @@ const sample=()=>{const s=newState();s.frontier=newFrontierState(91);s.village.m
 const locate=(s,id)=>Object.assign(s.frontier,CITY_DESTINATIONS.find(p=>p.id===id));
 
 test('city districts connect to the county; every hidden trace and full-width traffic lane is reachable',()=>{
- for(const seed of [1,91]){const w=makeFrontierWorld(seed),start={x:144.5,y:119.5};assert.equal(w.cityBuildings.size,27);
+ for(const seed of [1,91]){const w=makeFrontierWorld(seed),start={x:144.5,y:119.5};assert.equal(w.cityBuildings.size,35);
   for(const p of [...CITY_DESTINATIONS,...CITY_DISCOVERIES.filter(d=>!d.floor)]){assert.ok(canStand(w,p.x,p.y),p.id);assert.ok(route(w,start,p).length,p.id);}
   for(let minutes=0;minutes<150;minutes+=.3)for(const v of trafficAt(w,minutes).filter(v=>v.id.startsWith('city-')))assert.ok(canStand(w,v.x,v.y,v.radius),v.id+' '+v.x+','+v.y);
  }

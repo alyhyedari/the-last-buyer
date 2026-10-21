@@ -1,0 +1,26 @@
+import {CAR_MODELS} from './frontier-cars.js';
+import {engineFor} from './vehicle-dynamics.js';
+export function premiumCockpit(c,f,d,speed,time,reduced,wet){
+ const model=CAR_MODELS[f.life.expanse.carModel]||CAR_MODELS[0],engine=engineFor(model.id),type=engine.cabin,off=type==='offroad',ev=type==='electric',sport=type==='sport',lux=type==='luxury',accent=off?'#ffc96c':model.color;
+ const rect=(x,y,w,h,color)=>{c.fillStyle=color;c.fillRect(x,y,w,h);},label=(text,x,y,color=accent,size=6)=>{c.fillStyle=color;c.font=`${size}px monospace`;c.textAlign='left';c.fillText(text,x,y);};
+ c.save();const bounce=reduced?0:Math.sin(d.phase*2)*Math.min(1.6,Math.abs(speed)*.07)*(off?.6:1);c.translate(0,bounce);
+ const dash=off?210:sport?228:219,material=lux?'#30251f':off?'#303a39':ev?'#131e31':'#1a222c';
+ rect(0,dash,480,270-dash,material);rect(0,dash,480,2,accent);rect(0,0,480,7,material);rect(0,0,off?17:9,dash,material);rect(off?463:471,0,17,dash,material);
+ // Stitching, carbon weave, vents and physical controls remain visible at native resolution.
+ for(let x=3;x<480;x+=8){rect(x,dash+5,3,1,lux?'#a58c68':'#55616b');if(sport)rect(x,dash+11,4,1,'#394553');}
+ for(const x of [26,256,432]){rect(x,dash+13,25,15,'#0b121c');for(let y=0;y<4;y++)rect(x+2,dash+15+y*3,21,1,'#687479');}
+ rect(197,7,86,21,'#101721');rect(201,10,78,14,'#536d78');rect(202,18,76,5,'#283d45');label('REAR',204,16,'#d3e4e7',5);
+ const gauge=(x,y,r,value,max,title)=>{c.strokeStyle='#080f18';c.lineWidth=5;c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.stroke();for(let i=0;i<10;i++){const a=2.4+i*.5;rect(x+Math.cos(a)*(r-2),y+Math.sin(a)*(r-2),2,2,i>7?'#ff6d7b':'#b8c8c9');}const a=2.4+Math.min(1,value/max)*4.8;c.strokeStyle=accent;c.lineWidth=1.5;c.beginPath();c.moveTo(x,y);c.lineTo(x+Math.cos(a)*(r-6),y+Math.sin(a)*(r-6));c.stroke();label(title,x-r+6,y+10,'#cbd4d2',5);};
+ if(off||type==='classic'||lux){gauge(111,dash+23,20,Math.abs(speed)*9,off?150:220,'KM/H');gauge(163,dash+23,20,d.rpm||engine.idle,engine.redline,'RPM');}
+ else{rect(83,dash+9,112,31,'#07111f');label(String(Math.round(Math.abs(speed)*9)).padStart(3,'0'),89,dash+29,'#e9f7ff',20);label('KM/H',132,dash+28,'#b4c5da');for(let i=0;i<18;i++)rect(87+i*5.6,dash+34,4,3,(d.rpm||0)/engine.redline>i/18?(i>14?'#ff637d':accent):'#263645');}
+ label('G '+(d.gear===-1?'R':d.gear||1),207,dash+22,'#ffffff',10);label(Math.round(d.rpm||0)+' RPM',202,dash+32);label('FUEL '+Math.round(f.fuel)+'%',202,dash+42,'#e4cba0');
+ rect(294,dash+9,119,42,'#071523');rect(296,dash+11,115,1,accent);
+ if(off){label('ATLAS FJ-X / TRAIL',300,dash+20);label((f.life.cyber.lowRange?'4L LOW RANGE':'4H HIGH RANGE')+'  DIFF AUTO',300,dash+29,'#f1d8ad');label('ROLL '+Math.round((d.slip||0)*12)+'   HDG '+Math.round(((f.angle*180/Math.PI)%360+360)%360),300,dash+38);label('GRIP '+model.grip+' / CLIMB '+model.climb,300,dash+47);rect(378,dash-20,26,16,'#1e2d34');label('N',388,dash-9);}
+ else{label(ev?'SPECTRA / DIGITAL COCKPIT':lux?'WARDEN / PRIVATE LOUNGE':'NEON DRIVE / PERFORMANCE',300,dash+20);label('LOCAL ID  '+model.id.toUpperCase(),300,dash+29,'#bfd9e7');label('GARAGE LEDGER / OWNED',300,dash+38);label('BOOST '+Math.round((d.boost||0)*100)+'%   '+Math.round(f.x)+':'+Math.round(f.y),300,dash+47);}
+ if(model.cost>=900){label('◇ '+model.id.toUpperCase(),321,47,accent,7);label(Math.round(Math.abs(speed)*9)+' KM/H  ·  '+(d.gear===-1?'R':d.gear||1),321,58,'#d2e8f2',7);c.globalAlpha=.5;rect(320,63,Math.min(90,(d.rpm||0)/engine.redline*90),1,accent);c.globalAlpha=1;}
+ // Separate passenger seat: a consenting invited companion occupies it while mounted.
+ if(f.life.neon?.companion){rect(446,196,34,74,lux?'#6c5040':'#374c60');rect(450,188,23,21,'#b8866a');rect(448,182,28,10,'#302b3b');rect(447,215,33,51,'#7c769b');rect(450,216,3,47,'#d2ccad');}
+ c.save();c.translate(off?143:145,280);c.rotate((d.steering||0)*.8);c.strokeStyle='#080f18';c.lineWidth=sport?8:10;c.beginPath();c.arc(0,0,off?45:43,Math.PI*.92,Math.PI*2.08);c.stroke();rect(-38,-4,76,6,lux?'#9b7d55':'#677987');rect(-10,-10,20,22,'#243543');label(model.id.slice(0,3).toUpperCase(),-8,1,accent,5);rect(-43,-25,12,18,'#c89977');rect(31,-25,12,18,'#c89977');c.restore();
+ if(wet&&!reduced){const a=Math.sin(time*2.3)*.85;c.strokeStyle='#192932';c.lineWidth=3;c.beginPath();c.moveTo(250,dash);c.lineTo(250+Math.sin(a)*113,dash-Math.cos(a)*85);c.stroke();}
+ if(f.life.expanse.carHealth<45){c.strokeStyle='#c7edf288';c.lineWidth=1;c.beginPath();c.moveTo(430,33);c.lineTo(395,65);c.lineTo(408,99);c.moveTo(395,65);c.lineTo(370,66);c.stroke();}c.restore();
+}

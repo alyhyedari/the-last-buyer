@@ -1,3 +1,5 @@
+import {ACTIVITIES,companionActivity} from './companion-activities.js';
+import {CYBER_COMPANIONS} from './cyber-state.js';
 import {challengeFor} from './neon-challenges.js';
 import {h,button} from './dom.js';
 import {tr} from './i18n.js';
@@ -23,7 +25,7 @@ export function createNeonGuide({state,root,ft,waypoint,getWorld,getActors,panel
   for(const q of NEON_QUESTS){const done=n.completed.includes(q.id);r.append(h('article',{class:'neon-story'},h('h3',{},(done?'✓ ':'')+tr(q.title)),h('p',{},tr(q.intro)),h('bdi',{dir:'ltr'},'+$'+q.reward),act(ft(done?'neonJournal':'neonAccept'),()=>{if(done)panelShow(tr(q.title),q.steps.map(s=>tr(s.text)).join('\n\n'),p=>p.append(act(ft('back'),missions)));else if(beginNeonQuest(f,q.id)){persist();track();}},false,!done&&!!n.quest)));}
   r.append(act(ft('back'),show));
  });}
- function talk(c){panelShow(tr(c.name),tr(c.body),r=>{r.append(act(ft('route'),()=>route(c)),act(ft('neonMission'),missions,true));if(['mira','arin'].includes(c.id)){r.append(h('p',{},ft('neonConsent')),
+ function talk(c){if(!c)return;panelShow(tr(c.name),tr(c.body),r=>{r.append(act(ft('route'),()=>route(c)),act(ft('neonMission'),missions,true));if(n.companion===c.id){const fa=document.documentElement.lang==='fa';r.append(h('p',{},(fa?'خاطره‌های مشترک: ':'Shared memories: ')+f.life.cyber.memories));for(const activity of ACTIVITIES)r.append(act(fa?activity.fa:activity.en,()=>{const result=companionActivity(state,c.id,activity.id);if(result){persist();panelShow(tr(c.name),fa?result.replyFa:result.replyEn,p=>p.append(act(ft('back'),()=>talk(c))));}else announce(ft('neonUnavailable'));}));r.append(act(fa?'پایان همراهی':'Say goodbye',()=>{n.companion=null;persist();talk(c);}));}if(['mira','arin',...CYBER_COMPANIONS].includes(c.id)){r.append(h('p',{},ft('neonConsent')),
   act(ft('neonInvite'),()=>{if(inviteNeon(state,c.id)){persist();talk(c);}else announce(ft('neonUnavailable'));},false,!canMeet(f)||n.completed.length<1||Math.hypot(f.x-c.x,f.y-c.y)>3),
   act(ft('neonDate'),()=>{if(!dateNeon(state,c.id))return;persist();panelShow(ft('neonDate'),ft('neonGoodnight'),r=>r.append(act(ft('back'),closePanel,true)));const fade=h('div',{class:'neon-private-scene',role:'status'},h('p',{},ft('neonGoodnight')));root.append(fade);ambient.call('guide');fadeTimer=setTimeout(()=>fade.remove(),settings.reducedMotion?1200:2800);},false,n.companion!==c.id||n.bond<2||!canMeet(f)||Math.hypot(f.x-c.x,f.y-c.y)>3));}
   r.append(act(ft('back'),show));

@@ -1,3 +1,4 @@
+import {WORLD_SIZE} from './cyber-state.js';
 import {CITY_PLACES} from './metropolis-state.js';
 import {hasBuy} from './frontier-perks.js';
 import {newLifeState,normalizeLifeState} from './frontier-life-state.js';
@@ -11,7 +12,7 @@ export function newFrontierState(seed){if(!Number.isInteger(seed)){const values=
 export function normalizeFrontier(input){
  if(input==null)return newFrontierState();if(typeof input!=='object'||Array.isArray(input))return null;
  const d=newFrontierState(Number.isInteger(input.seed)?input.seed:1),out={...d};
- const nums={seed:[0,4294967295],x:[1,383],y:[1,383],angle:[-1e6,1e6],minutes:[0,1e8],energy:[0,100],fuel:[0,100],tutorial:[0,5],fish:[0,9999],released:[0,9999],deliveries:[0,9999],repairs:[0,9999],concerts:[0,9999],rangeScore:[0,100],trust:[0,6],lastTalkDay:[-1,1e7],drinks:[0,9999],soberAt:[0,1e8],company:[0,9999],donated:[0,999999],restCount:[0,99999],purchases:[0,999999],spent:[0,99999999],earned:[0,99999999],distance:[0,1e9],jobSerial:[0,999999]};
+ const nums={seed:[0,4294967295],x:[1,WORLD_SIZE-1],y:[1,WORLD_SIZE-1],angle:[-1e6,1e6],minutes:[0,1e8],energy:[0,100],fuel:[0,100],tutorial:[0,5],fish:[0,9999],released:[0,9999],deliveries:[0,9999],repairs:[0,9999],concerts:[0,9999],rangeScore:[0,100],trust:[0,6],lastTalkDay:[-1,1e7],drinks:[0,9999],soberAt:[0,1e8],company:[0,9999],donated:[0,999999],restCount:[0,99999],purchases:[0,999999],spent:[0,99999999],earned:[0,99999999],distance:[0,1e9],jobSerial:[0,999999]};
  for(const [k,[lo,hi]]of Object.entries(nums)){if(input[k]===undefined)continue;if(!Number.isFinite(input[k]))return null;out[k]=Math.max(lo,Math.min(hi,input[k]));}out.seed=out.seed>>>0;
  for(const k of ['active','mounted','tutorialHidden','romance']){if(input[k]!==undefined&&typeof input[k]!=='boolean')return null;out[k]=input[k]??d[k];}
  for(const [k,allowed,max]of [['visits',FRONTIER_PLACES,FRONTIER_PLACES.length],['photos',['deer','fox','rabbit','boar','owl','heron'],6],['receipts',['pond','tower','club'],3],['endingHistory',FRONTIER_ENDINGS,12],['events',['stranger-helped','stranger-ignored','storm-shelter','ghost-heard'],4]]){const list=input[k]??[];if(!Array.isArray(list)||list.length>max||!list.every(v=>allowed.includes(v)))return null;out[k]=[...new Set(list)];}
@@ -33,4 +34,4 @@ export function transact(state,cost){const v=state.village,f=state.frontier;if(!
 export function earn(state,amount){if(!Number.isFinite(amount)||amount<=0)return;amount=Math.round(amount*(hasBuy(state.frontier,10)?1.1:1));state.village.money=Math.min(999999,state.village.money+amount);state.frontier.earned+=amount;return amount;}
 export function canMount(state){const f=state.frontier;return !f.life?.expanse?.swimming&&(state.village.vehicle!=='car'||(f.life?.expanse?.carHealth??100)>0)&&state.village.vehicle!=='foot'&&f.minutes>=Math.max(f.soberAt,f.life?.impairedUntil||0)&&(VEHICLES[state.village.vehicle]?.fuel===0||f.fuel>0);}
 export function toggleMount(state){const f=state.frontier;if(f.mounted){f.mounted=false;return true;}if(!canMount(state))return false;f.mounted=true;return true;}
-export function travelStep(state,distance){const f=state.frontier,v=VEHICLES[f.mounted?state.village.vehicle:'foot'];f.distance+=Math.max(0,distance);if(f.mounted&&v.fuel)f.fuel=Math.max(0,f.fuel-distance*v.fuel*(hasBuy(f,22)?.75:1));if(f.fuel<=0&&v.fuel)f.mounted=false;f.energy=Math.max(0,f.energy-distance*(f.mounted?.008:.035)*(hasBuy(f,17)?.65:1));}
+export function travelStep(state,distance){const f=state.frontier,v=VEHICLES[f.mounted?state.village.vehicle:'foot'];f.distance+=Math.max(0,distance);if(f.mounted&&v.fuel)f.fuel=Math.max(0,f.fuel-distance*v.fuel*(state.village.vehicle==='car'&&f.life.expanse.carModel>=8?.55:1)*(hasBuy(f,22)?.75:1));if(f.fuel<=0&&v.fuel)f.mounted=false;f.energy=Math.max(0,f.energy-distance*(f.mounted?.008:.035)*(hasBuy(f,17)?.65:1));}

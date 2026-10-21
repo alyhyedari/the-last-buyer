@@ -1,7 +1,9 @@
+import {premiumCockpit} from './vehicle-cockpit.js';
 import {CAR_MODELS,isScenery} from './frontier-expanse.js';
 const pixel=c=>(x,y,w,h,color)=>{c.fillStyle=color;c.fillRect(Math.round(x),Math.round(y),w,h);};
 export function drawExpanseSprite(c,kind,v=0){
  const r=pixel(c);
+ if(kind==='floorStairs'){for(let i=0;i<6;i++){r(6+i*4,58-i*6,36-i*4,6,i%2?'#809fa4':'#56737f');}r(6,17,3,38,'#e4c58f');c.fillStyle='#c8f3ed';c.font='12px monospace';c.fillText('↑',19,15);return true;}
  if(kind==='trafficCar'){
   const color=CAR_MODELS[Math.floor(v/4)%CAR_MODELS.length].color,side=v%4===1||v%4===3,front=v%4===0;
   r(1,61,46,3,'#101b2588');r(4,49,9,14,'#111d28');r(35,49,9,14,'#111d28');
@@ -10,7 +12,7 @@ export function drawExpanseSprite(c,kind,v=0){
   if(side){r(24,33,2,12,color);r(5,54,9,9,'#18232d');r(34,54,9,9,'#18232d');r(7,57,5,4,'#889692');r(36,57,5,4,'#889692');r(27,47,5,1,'#d8ded3');r(23,47,1,8,'#253f4a');r(v%4===1?2:43,48,3,4,'#f1dab2');}
   else{r(3,48,9,4,front?'#f4d99b':'#c55868');r(36,48,9,4,front?'#f4d99b':'#c55868');r(16,50,16,5,'#162935');r(19,57,10,3,'#d7d6bb');r(13,37,3,6,'#6c898d');}
   if(Math.floor(v/4)===2){r(20,28,12,4,'#ebd180');r(10,50,5,3,'#242c37');r(31,50,5,3,'#242c37');}
-  const model=Math.floor(v/4);if(model===4){r(0,48,48,5,color);r(3,30,7,3,color);r(38,30,7,3,color);r(12,34,24,6,'#173b47');r(0,56,48,3,'#182c32');}if(model===5){r(1,54,11,10,'#13262b');r(36,54,11,10,'#13262b');r(6,28,37,4,'#d2c3a3');r(9,27,7,4,'#f2d79c');r(32,27,7,4,'#f2d79c');}if(model===6){r(1,34,7,23,'#465c65');r(40,34,7,23,'#465c65');r(13,36,23,3,'#0f2939');r(8,52,32,6,'#263d49');}if(model===7){r(4,48,40,2,'#b7f0ed');r(22,33,3,12,'#dae8cf');}
+  const model=Math.floor(v/4);if(model>=8){r(3,48,42,2,model%2?'#a9fff1':'#ff9bd0');r(7,29,34,3,color);if(model===8||model===11)r(1,37,7,4,color);if(model===10||model===13){r(3,38,7,20,'#3c4e60');r(38,38,7,20,'#3c4e60');}if(model===12)r(0,32,10,3,color);if(model===10){r(7,27,34,5,'#e9e4cf');r(11,33,26,10,'#183644');r(6,47,7,7,'#fff0b4');r(35,47,7,7,'#fff0b4');r(16,48,16,5,'#24383c');r(4,57,40,4,'#d4d6c1');}}if(model===4){r(0,48,48,5,color);r(3,30,7,3,color);r(38,30,7,3,color);r(12,34,24,6,'#173b47');r(0,56,48,3,'#182c32');}if(model===5){r(1,54,11,10,'#13262b');r(36,54,11,10,'#13262b');r(6,28,37,4,'#d2c3a3');r(9,27,7,4,'#f2d79c');r(32,27,7,4,'#f2d79c');}if(model===6){r(1,34,7,23,'#465c65');r(40,34,7,23,'#465c65');r(13,36,23,3,'#0f2939');r(8,52,32,6,'#263d49');}if(model===7){r(4,48,40,2,'#b7f0ed');r(22,33,3,12,'#dae8cf');}
   return true;
  }
  if(kind==='resident'){
@@ -36,18 +38,7 @@ export function drawExpanseSprite(c,kind,v=0){
 export function drawWreck(c,kind){const r=pixel(c);if(kind==='tree'){r(14,52,22,12,'#614e3d');r(12,50,26,5,'#af9263');r(17,51,16,2,'#6d614a');r(2,60,11,3,'#53765d');}
  else if(kind==='trafficCar'){r(2,51,44,10,'#3a454a');r(10,42,28,12,'#566064');r(15,45,15,5,'#1e2f3e');r(4,58,9,6,'#152630');r(35,58,9,6,'#152630');r(8,52,15,3,'#977c65');r(26,55,14,2,'#b39a77');}
  else{r(4,58,19,4,'#738778');r(26,55,15,5,'#9a9e86');r(13,51,5,9,'#4c6e70');}return true;}
-export function drawCarCockpit(c,f,drive,speed,time,reduced,wet=false){
- const r=pixel(c),e=f.life.expanse,steer=drive.steering||0;
- if(wet&&!reduced){const angle=Math.sin(time*2.3)*.85;c.strokeStyle='#18363c';c.lineWidth=3;c.beginPath();c.moveTo(258,227);c.lineTo(258+Math.sin(angle)*110,227-Math.cos(angle)*89);c.stroke();}
- r(0,228,480,42,'#172b35');r(0,225,480,3,'#78918f');r(0,253,480,17,'#0f202b');r(4,0,8,234,'#223d48');r(468,0,8,234,'#223d48');r(0,0,480,8,'#162c38');
- r(196,8,90,22,'#132e3b');r(200,11,82,14,'#607f84');r(201,17,80,7,'#344d53');r(235,8,3,14,'#99b4a2');
- r(292,235,82,22,'#081e2d');c.fillStyle='#b6d9bd';c.font='9px monospace';c.textAlign='left';c.fillText(String(Math.round(speed*9)).padStart(2,'0')+' km/h',300,247);c.fillStyle='#87bcaf';c.font='6px monospace';c.fillText('G '+(drive.gear===-1?'R':drive.gear||1)+'  '+Math.round(e.carHealth)+'%',300,255);
- r(201,237,74,2,'#354e58');r(201,237,Math.min(74,(drive.rpm||900)/5000*74),2,'#b8d598');r(201,248,74,2,'#354e58');r(201,248,f.fuel*.74,2,'#d3b585');
- c.save();c.translate(177,266);c.rotate(steer*.8);c.strokeStyle='#0b1a24';c.lineWidth=9;c.beginPath();c.arc(0,0,51,0,Math.PI*2);c.stroke();c.strokeStyle='#718582';c.lineWidth=2;c.beginPath();c.arc(0,0,46,Math.PI,Math.PI*2);c.stroke();r(-8,-9,16,20,'#405966');r(-43,-2,86,6,'#2a4652');r(-3,0,6,39,'#2a4652');r(-51,-25,15,17,'#c49a78');r(35,-25,15,17,'#c49a78');r(-56,-11,19,43,'#315766');r(36,-11,20,43,'#315766');c.restore();
- if(e.carHealth<45){c.strokeStyle='#abc3c655';c.lineWidth=1;c.beginPath();c.moveTo(430,33);c.lineTo(395,65);c.lineTo(408,99);c.moveTo(395,65);c.lineTo(370,66);c.stroke();}
- if(!reduced&&(f.minutes%1440>1080||f.minutes%1440<360)&&e.headlights){c.fillStyle='#e6deb011';c.beginPath();c.moveTo(112,223);c.lineTo(208,148);c.lineTo(279,148);c.lineTo(399,223);c.fill();}
- if(!reduced&&drive.slip>.07){r(0,0,2,225,'#bedbcc33');}
-}
+export const drawCarCockpit=premiumCockpit;
 export function drawWaterView(c,f,time,speed,reduced){
  const e=f.life.expanse,r=pixel(c);if(!e.swimming)return;
  if(e.depth>.45){c.fillStyle='#08698733';c.fillRect(0,0,480,270);for(let i=0;i<5;i++){c.fillStyle='#b1e7c509';c.beginPath();c.moveTo(i*110-20,0);c.lineTo(i*110+10,0);c.lineTo(i*110+110,270);c.lineTo(i*110+40,270);c.fill();}for(let i=0;i<22;i++){const x=(i*83+Math.sin(time*.5+i)*4)%480,y=(i*53-(reduced?0:time*17)%270+540)%270;r(x,y,2,2,'#9de2d977');}}
