@@ -4,13 +4,16 @@ export const MOTOR_IDS=['needle','ronin','nomad','spectre'];
 export const ABILITY_IDS=['overdrive','aegis','ghost'];
 export const BLEND_IDS=['prism','velvet','static'];
 export const CYBER_COMPANIONS=['nova','roxie','leila','jade','selene','yasmin'];
-export const newCyber=()=>({war:null,warMedals:0,socialReady:0,memories:0,lowRange:false,owned:[],tunes:{},motor:0,abilities:[],ready:{},active:{},blends:{prism:0,velvet:0,static:0},blend:null,blendUntil:0,crashUntil:0,helperAt:0,helperSerial:0,helperLast:null,race:null,best:0,wins:0});
+export const GOOD_IDS=['espresso','trailmeal','medpatch','battery','repairfoam','ammo-pouch',...['mint','cherry','gold','violet','ice','pearl','copper','midnight'].map(id=>'paint-'+id),...['concert','cinema','jazz','dinner','gallery','picnic','sunset','portrait'].map(id=>'ticket-'+id)];
+export const newCyber=()=>({passengers:[],dropoffs:{},goods:{},paint:null,war:null,warMedals:0,socialReady:0,memories:0,lowRange:false,owned:[],tunes:{},motor:0,abilities:[],ready:{},active:{},blends:{prism:0,velvet:0,static:0},blend:null,blendUntil:0,crashUntil:0,helperAt:0,helperSerial:0,helperLast:null,race:null,best:0,wins:0});
 const object=v=>v&&typeof v==='object'&&!Array.isArray(v);
 const finite=(v,lo=0,hi=1e8)=>Number.isFinite(v)&&v>=lo&&v<=hi;
 export function normalizeCyber(value){
  const out=newCyber();if(value==null)return out;if(!object(value))return null;
  if(value.lowRange!=null&&typeof value.lowRange!=='boolean')return null;out.lowRange=value.lowRange??false;
  for(const key of ['warMedals','socialReady','memories']){const n=value[key]??0;if(!finite(n)||key!=='socialReady'&&!Number.isInteger(n))return null;out[key]=n;}if(value.war!=null){const w=value.war;if(!object(w)||!['ww1','ww2'].includes(w.era)||!Number.isInteger(w.rescued)||w.rescued<0||w.rescued>2||!finite(w.started)||!Number.isInteger(w.lastStrike)||w.lastStrike< -1||w.lastStrike>1e8)return null;out.war={era:w.era,rescued:w.rescued,started:w.started,lastStrike:w.lastStrike};}
+ const passengerIds=['mira','arin',...CYBER_COMPANIONS],passengers=value.passengers??[];if(!Array.isArray(passengers)||passengers.length>3||new Set(passengers).size!==passengers.length||passengers.some(id=>!passengerIds.includes(id)))return null;out.passengers=[...passengers];const dropoffs=value.dropoffs??{};if(!object(dropoffs)||Object.keys(dropoffs).length>8)return null;for(const[id,p]of Object.entries(dropoffs)){if(!passengerIds.includes(id)||!object(p)||!finite(p.x,0,511)||!finite(p.y,0,511))return null;out.dropoffs[id]={x:p.x,y:p.y};}
+ const goods=value.goods??{};if(!object(goods)||Object.keys(goods).length>GOOD_IDS.length)return null;for(const[id,n]of Object.entries(goods)){if(!GOOD_IDS.includes(id)||!Number.isInteger(n)||n<0||n>(id.startsWith('paint-')?1:9))return null;out.goods[id]=n;}if(value.paint!=null&&(!GOOD_IDS.includes('paint-'+value.paint)||!out.goods['paint-'+value.paint]))return null;out.paint=value.paint??null;
  const owned=value.owned??[];if(!Array.isArray(owned)||owned.length>18||owned.some(v=>!Number.isInteger(v)||v<0||v>17))return null;out.owned=[...new Set(owned)];
  const tunes=value.tunes??{};if(!object(tunes)||Object.keys(tunes).length>18)return null;
  for(const [id,t]of Object.entries(tunes)){if(!/^(?:[0-9]|1[0-7])$/.test(id)||!object(t))return null;out.tunes[id]={};for(const k of ['engine','grip','armor','brakes']){const n=t[k]??0;if(!Number.isInteger(n)||n<0||n>3)return null;out.tunes[id][k]=n;}}

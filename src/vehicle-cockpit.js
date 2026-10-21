@@ -1,7 +1,7 @@
 import {CAR_MODELS} from './frontier-cars.js';
 import {engineFor} from './vehicle-dynamics.js';
 export function premiumCockpit(c,f,d,speed,time,reduced,wet){
- const model=CAR_MODELS[f.life.expanse.carModel]||CAR_MODELS[0],engine=engineFor(model.id),type=engine.cabin,off=type==='offroad',ev=type==='electric',sport=type==='sport',lux=type==='luxury',accent=off?'#ffc96c':model.color;
+ const model=CAR_MODELS[f.life.expanse.carModel]||CAR_MODELS[0],engine=engineFor(model.id),type=engine.cabin,off=type==='offroad',ev=type==='electric',sport=type==='sport',lux=type==='luxury',accent=({mint:'#67e8c1',cherry:'#f06c92',gold:'#d9b36a',violet:'#aa8aff',ice:'#9ddbf4',pearl:'#e6e6dc',copper:'#cf8e65',midnight:'#455a85'})[f.life.cyber.paint]||(off?'#ffc96c':model.color);
  const rect=(x,y,w,h,color)=>{c.fillStyle=color;c.fillRect(x,y,w,h);},label=(text,x,y,color=accent,size=6)=>{c.fillStyle=color;c.font=`${size}px monospace`;c.textAlign='left';c.fillText(text,x,y);};
  c.save();const bounce=reduced?0:Math.sin(d.phase*2)*Math.min(1.6,Math.abs(speed)*.07)*(off?.6:1);c.translate(0,bounce);
  const dash=off?210:sport?228:219,material=lux?'#30251f':off?'#303a39':ev?'#131e31':'#1a222c';
@@ -19,7 +19,7 @@ export function premiumCockpit(c,f,d,speed,time,reduced,wet){
  else{label(ev?'SPECTRA / DIGITAL COCKPIT':lux?'WARDEN / PRIVATE LOUNGE':'NEON DRIVE / PERFORMANCE',300,dash+20);label('LOCAL ID  '+model.id.toUpperCase(),300,dash+29,'#bfd9e7');label('GARAGE LEDGER / OWNED',300,dash+38);label('BOOST '+Math.round((d.boost||0)*100)+'%   '+Math.round(f.x)+':'+Math.round(f.y),300,dash+47);}
  if(model.cost>=900){label('◇ '+model.id.toUpperCase(),321,47,accent,7);label(Math.round(Math.abs(speed)*9)+' KM/H  ·  '+(d.gear===-1?'R':d.gear||1),321,58,'#d2e8f2',7);c.globalAlpha=.5;rect(320,63,Math.min(90,(d.rpm||0)/engine.redline*90),1,accent);c.globalAlpha=1;}
  // Separate passenger seat: a consenting invited companion occupies it while mounted.
- if(f.life.neon?.companion){rect(446,196,34,74,lux?'#6c5040':'#374c60');rect(450,188,23,21,'#b8866a');rect(448,182,28,10,'#302b3b');rect(447,215,33,51,'#7c769b');rect(450,216,3,47,'#d2ccad');}
+ if(f.life.cyber.passengers.length){rect(446,196,34,74,lux?'#6c5040':'#374c60');rect(450,188,23,21,'#b8866a');rect(448,182,28,10,'#302b3b');rect(447,215,33,51,'#7c769b');rect(450,216,3,47,'#d2ccad');}for(let i=1;i<f.life.cyber.passengers.length;i++){rect(207+(i-1)*43,13,11,9,i===1?'#a77c65':'#d1a788');rect(206+(i-1)*43,10,13,4,'#312c39');rect(205+(i-1)*43,21,16,4,i===1?'#7f8dba':'#bd83a0');}label('SEATS '+f.life.cyber.passengers.length+'/'+([1,4,8,9,11,12].includes(f.life.expanse.carModel)?1:3),300,dash-4,'#c4e5df',6);
  c.save();c.translate(off?143:145,280);c.rotate((d.steering||0)*.8);c.strokeStyle='#080f18';c.lineWidth=sport?8:10;c.beginPath();c.arc(0,0,off?45:43,Math.PI*.92,Math.PI*2.08);c.stroke();rect(-38,-4,76,6,lux?'#9b7d55':'#677987');rect(-10,-10,20,22,'#243543');label(model.id.slice(0,3).toUpperCase(),-8,1,accent,5);rect(-43,-25,12,18,'#c89977');rect(31,-25,12,18,'#c89977');c.restore();
  if(wet&&!reduced){const a=Math.sin(time*2.3)*.85;c.strokeStyle='#192932';c.lineWidth=3;c.beginPath();c.moveTo(250,dash);c.lineTo(250+Math.sin(a)*113,dash-Math.cos(a)*85);c.stroke();}
  if(f.life.expanse.carHealth<45){c.strokeStyle='#c7edf288';c.lineWidth=1;c.beginPath();c.moveTo(430,33);c.lineTo(395,65);c.lineTo(408,99);c.moveTo(395,65);c.lineTo(370,66);c.stroke();}c.restore();

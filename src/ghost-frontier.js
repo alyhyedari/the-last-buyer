@@ -2,7 +2,7 @@ import {h,button} from './dom.js';
 import {tr} from './i18n.js';
 import {GT} from './ghost-text.js';
 
-export const ghostSpace=f=>f.life.combat.interior?'home:'+f.life.combat.interior.id+':'+(f.life.combat.interior.floor||0):'outdoor';
+export const ghostSpace=f=>f.life.combat.interior?'home:'+f.life.combat.interior.id+':'+(f.life.combat.interior.floor??f.life.combat.interior.level??0):'outdoor';
 export function createGhostOverlay({client,state,settings,root,header,panelShow,closePanel,onLeave}){
  const f=state.frontier,text=key=>tr(GT[key]);let lastStatus='',nextStatus=0,closed=false;
  const chip=button('',show,'frontier-btn ghost-status',{'aria-label':text('title')});header.querySelector('nav').append(chip);

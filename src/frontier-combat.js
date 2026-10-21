@@ -78,7 +78,7 @@ export function dropOnDeath(state){
  const occupied=drop.money||drop.weapons.length||drop.ammo||drop.shells||drop.rockets||drop.grenades||drop.campKit||drop.contraband;
  if(occupied){if(c.drops.length>=8){const oldest=c.drops.shift();for(const key of ['money','ammo','shells','rockets','grenades','contraband'])drop[key]+=oldest[key];drop.weapons=[...new Set([...oldest.weapons,...drop.weapons])];drop.campKit||=oldest.campKit;}c.drops.push(drop);}c.deaths++;v.money=hasBuy(f,29)?Math.floor(v.money*.2):0;v.weapons=[];v.weapon='none';l.ammo=0;c.shells=0;c.rockets=0;c.grenades=0;l.campKit=false;l.contraband=0;c.interior=null;
  resetUnfinishedBosses(f);l.forest.pulseUntil=0;l.forest.readyAt=0;
- l.expanse.swimming=false;l.expanse.depth=0;l.expanse.oxygen=100;f.x=32.5;f.y=57.5;f.angle=-Math.PI/2;f.mounted=false;l.health=100;l.companion=false;advanceTime(f,60);f.energy=100;c.graceUntil=f.minutes+60;return drop;
+ l.cyber.passengers=[];l.expanse.swimming=false;l.expanse.depth=0;l.expanse.oxygen=100;f.x=32.5;f.y=57.5;f.angle=-Math.PI/2;f.mounted=false;l.health=100;l.companion=false;advanceTime(f,60);f.energy=100;c.graceUntil=f.minutes+60;return drop;
 }
 export function hurtPlayer(state,amount,{ignoreGrace=false,bypassVehicle=false}={}){
  const f=state.frontier;if(!Number.isFinite(amount)||amount<=0)return false;

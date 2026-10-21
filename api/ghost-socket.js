@@ -1,7 +1,5 @@
-// Vercel native WebSockets public beta, official docs updated August 10, 2026:
-// https://vercel.com/docs/functions/websockets
-// Requires Fluid Compute and a TCP Redis service in the same region. Connections
-// rotate before maxDuration; shared leases/pub/sub survive function cold starts.
+// Legacy platform adapter. The verified deployment entry is server/network-server.mjs.
+// Platform-specific WebSocket hosting must be verified before deploying this adapter.
 import {createGhostHttpServer} from '../server/ghost-http.js';
 import {getProductionGhostStore} from '../server/ghost-store.js';
 

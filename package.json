@@ -1,6 +1,6 @@
 {
   "name": "the-last-buyer",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "private": true,
   "type": "module",
   "description": "An original multilingual pixel adventure about the price of a decision.",
@@ -15,7 +15,11 @@
     "test:input": "node tools/browser-input.mjs",
     "preview": "node server.mjs --dist",
     "test:release": "node tools/browser-release.mjs && node tools/browser-mobile.mjs --dist",
-    "test:mobile": "node tools/browser-mobile.mjs"
+    "test:mobile": "node tools/browser-mobile.mjs",
+    "dev:network": "node server/network-server.mjs --local",
+    "start:network": "node server/network-server.mjs --dist",
+    "test:network": "node --test tests/ghost-*.test.mjs",
+    "test:network:live": "node tools/network-smoke.mjs"
   },
   "engines": {
     "node": "24.x"
@@ -25,6 +29,8 @@
     "playwright-core": "1.63.0"
   },
   "dependencies": {
-    "@vercel/speed-insights": "2.0.0"
+    "@vercel/speed-insights": "2.0.0",
+    "ioredis": "6.0.0",
+    "ws": "8.22.0"
   }
 }

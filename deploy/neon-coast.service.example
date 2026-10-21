@@ -1,0 +1,22 @@
+[Unit]
+Description=Neon Coast game and presence server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=neoncoast
+WorkingDirectory=/opt/neon-coast
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=PORT=4178
+EnvironmentFile=/etc/neon-coast.env
+ExecStart=/usr/bin/node /opt/neon-coast/server/network-server.mjs --dist
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,12 +1,14 @@
+import {renderBuyCatalog} from './buy-catalog.js';
 import {supplyQuote} from './neon-world.js';
 import {h,button} from './dom.js';
 import {tr} from './i18n.js';
 import {EQUIPMENT,SUPPLIES,buySupply,supplyAvailable,buyEquipment,equipWeapon,equipVehicle} from './frontier-loadout.js';
-export function createLoadoutPanel({state,ft,panelShow,closePanel,persist,onBuy,onChange,announce}){
- let category='supplies';const trigger=button('▦ BUY',()=>show(),'frontier-btn quick-shop',{'aria-label':ft('quickShop')});
+export function createLoadoutPanel({state,ft,panelShow,closePanel,persist,onBuy,onChange,announce,showPeople,showPassengers}){
+ let category='catalog';const trigger=button('▦ BUY',()=>show(),'frontier-btn quick-shop',{'aria-label':ft('quickShop')});
  function show(){const f=state.frontier,v=state.village;panelShow(ft('quickShop'),ft('shopBody'),root=>{
   root.append(h('p',{class:'frontier-ledger'},h('bdi',{dir:'ltr'},'$'+v.money),' · ',ft('fuel')+' ',h('bdi',{dir:'ltr'},Math.round(f.fuel)+'%')));
-  const tabs=h('div',{class:'loadout-tabs','aria-label':ft('quickShop')});for(const id of ['supplies','weapons','vehicles','utilities'])tabs.append(button(ft(id),()=>{category=id;show();},'btn secondary',{'aria-pressed':String(id===category)}));root.append(tabs);
+  const tabs=h('div',{class:'loadout-tabs','aria-label':ft('quickShop')});for(const id of ['catalog','supplies','weapons','vehicles','utilities'])tabs.append(button(id==='catalog'?(document.documentElement.lang==='fa'?'بازار کامل':'Full catalogue'):ft(id),()=>{category=id;show();},'btn secondary',{'aria-pressed':String(id===category)}));root.append(tabs);
+  if(category==='catalog')renderBuyCatalog(root,{state,ft,persist,onBuy,onChange,announce,showPeople,showPassengers});
   const grid=h('div',{class:'loadout-grid'});root.append(grid);
   const finish=(ok,paid=false)=>{if(!ok){announce(ft('noMoney'));return;}if(paid)onBuy();onChange();persist();show();};
   if(category==='supplies')for(const base of SUPPLIES){const item={...base,cost:supplyQuote(state,base.cost)},active=supplyAvailable(state,item.id);const buy=button('BUY · $'+item.cost,()=>{buy.disabled=true;finish(buySupply(state,item.id),true);},'btn buy-small',{'data-supply':item.id,disabled:!active||v.money<item.cost});grid.append(h('article',{},h('h3',{},ft(item.id==='repairCar'?'fieldRepair':item.id)),buy));}
