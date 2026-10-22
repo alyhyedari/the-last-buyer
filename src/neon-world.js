@@ -1,3 +1,4 @@
+import {findOpen,trafficAt} from './frontier-world.js';
 import {crewActors} from './passengers.js';
 import {CYBER_COMPANIONS} from './cyber-state.js';
 import {challengeFor} from './neon-challenges.js';
@@ -16,8 +17,8 @@ export function finishNeonStep(state,world,answer=null){const f=state.frontier,n
  const challenge=challengeFor(p.id,p.step);if(challenge&&answer!==challenge.answer)return'challenge';
  const q=NEON_QUESTS.find(q=>q.id===p.id);n.quest.step++;if(n.quest.step<q.steps.length)return'next';n.completed.push(q.id);n.quest=null;earn(state,q.reward);n.stability=Math.min(9,n.stability+1);if(q.id==='evacuation')n.reliefUntil=f.minutes+1440;return'complete';
 }
-export function buySpecialCar(state,index){const f=state.frontier,e=f.life.expanse,p=CAR_MODELS[index];if(!p||f.mounted||e.swimming||f.life.combat.interior||f.life.combat.arena||!transact(state,supplyQuote(state,p.cost)))return false;
- if(!state.village.vehicles.includes('car'))state.village.vehicles.push('car');state.village.vehicle='car';for(const owned of [e.carModel,index])if(!f.life.cyber.owned.includes(owned))f.life.cyber.owned.push(owned);e.carModel=index;e.carHealth=100;e.parked={x:f.x,y:f.y,angle:f.angle};return true;
+export function buySpecialCar(state,index,world=null){const f=state.frontier,e=f.life.expanse,p=CAR_MODELS[index],parking=world?findOpen(world,{x:f.x+1.2*Math.cos(f.angle),y:f.y+1.2*Math.sin(f.angle)},.48,{avoid:[{x:f.x,y:f.y,radius:.22},...trafficAt(world,f.minutes).filter(a=>!e.taken.includes(a.id))]}):f;if(!parking||!p||f.mounted||e.swimming||f.life.combat.interior||f.life.combat.arena||!transact(state,supplyQuote(state,p.cost)))return false;
+ if(!state.village.vehicles.includes('car'))state.village.vehicles.push('car');state.village.vehicle='car';for(const owned of [e.carModel,index])if(!f.life.cyber.owned.includes(owned))f.life.cyber.owned.push(owned);e.carModel=index;e.carHealth=100;e.parked={x:parking.x,y:parking.y,angle:f.angle};return true;
 }
 export function canMeet(f){return!f.mounted&&!f.life.expanse.swimming&&!f.life.combat.interior&&!f.life.combat.arena&&f.minutes>=Math.max(f.soberAt,f.life.impairedUntil)&&f.life.heat<20&&gameHour(f)>=7&&gameHour(f)<19;}
 export function inviteNeon(state,id){const f=state.frontier,n=f.life.neon,p=NEON_CAST.find(c=>c.id===id);if(!['mira','arin',...CYBER_COMPANIONS].includes(id)||!p||!canMeet(f)||Math.hypot(p.x-f.x,p.y-f.y)>3||n.completed.length<1)return false;n.companion=id;n.bond=Math.max(n.bond,Math.min(6,n.completed.length));return true;}

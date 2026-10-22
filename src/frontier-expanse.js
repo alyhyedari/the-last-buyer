@@ -1,9 +1,10 @@
+import {carCapacity} from './passengers.js';
 import {tunedProfile} from './cyber-systems.js';
 import {VEHICLES} from './frontier-state.js';
 import {districtMode} from './neon-world.js';
 import {hasBuy,hasGme} from './frontier-perks.js';
 import {hash,gameHour,earn,advanceTime} from './frontier-state.js';
-import {LAKES,canStand,moveInWorld,tileAt,localRoute,nearestOpen,trafficAt} from './frontier-world.js';
+import {LAKES,canStand,moveInWorld,tileAt,localRoute,nearestOpen,findOpen,trafficAt} from './frontier-world.js';
 
 import {CAR_MODELS} from './frontier-cars.js';
 export {CAR_MODELS};
@@ -20,8 +21,9 @@ export function separateVehicle(world,position,car,radius){
  const a=d>.001?Math.atan2(dy,dx):(car.angle||0)+Math.PI/2,step=Math.min(.5,overlap);
  return moveInWorld(world,position,Math.cos(a)*step,Math.sin(a)*step,radius);
 }
-export function stealCar(state,actor){const f=state.frontier,e=f.life.expanse;if(f.mounted||e.swimming||actor.kind!=='trafficCar'||actor.dead||actor.id==='parked-car'||!actor.id||e.taken.includes(actor.id)||e.taken.length>=64||Math.hypot(f.x-actor.x,f.y-actor.y)>2.6)return false;
- e.taken.push(actor.id);e.carModel=(actor.model||0)%CAR_MODELS.length;e.carHealth=Math.max(8,(actor.hp??300)/300*100);e.parked=null;state.village.vehicle='car';if(!state.village.vehicles.includes('car'))state.village.vehicles.push('car');f.mounted=true;f.x=actor.x;f.y=actor.y;f.angle=actor.angle??f.angle;f.life.vehicleYaw=f.angle;f.life.crimes++;f.life.heat=Math.min(100,f.life.heat+38);f.life.debts=Math.min(99999,f.life.debts+90);state.village.reputation=Math.max(-9,state.village.reputation-2);return true;
+export function stealCar(state,actor,world=null){const f=state.frontier,e=f.life.expanse;if(f.mounted||e.swimming||actor.kind!=='trafficCar'||actor.id==='parked-car'||!actor.id||e.taken.includes(actor.id)||e.taken.length>=4096||Math.hypot(f.x-actor.x,f.y-actor.y)>2.6)return false;
+ let safe=actor;if(world){const buckets=new Map();for(const [k,list] of world.buckets||[])buckets.set(k,list.filter(o=>o.id!==actor.id));safe=findOpen({...world,buckets},actor,VEHICLES.car.radius,{avoid:trafficAt(world,f.minutes).filter(o=>o.id!==actor.id&&!e.taken.includes(o.id))});if(!safe)return false;}
+ e.taken.push(actor.id);e.carModel=(actor.model||0)%CAR_MODELS.length;e.carHealth=Math.max(8,(actor.hp??300)/300*100);e.parked=null;state.village.vehicle='car';if(!state.village.vehicles.includes('car'))state.village.vehicles.push('car');f.mounted=true;f.x=safe.x;f.y=safe.y;f.life.cyber.passengers.length=Math.min(f.life.cyber.passengers.length,carCapacity(e.carModel));f.angle=actor.angle??f.angle;f.life.vehicleYaw=f.angle;f.life.crimes++;f.life.heat=Math.min(100,f.life.heat+38);f.life.debts=Math.min(99999,f.life.debts+90);state.village.reputation=Math.max(-9,state.village.reputation-2);return true;
 }
 export function crowdPosition(world,s,f,time){const mood=districtMode(f,s.x,s.y),population=(mood==='conflict'?.25:mood==='inflation'?.7:1)*(gameHour(f)>=21||gameHour(f)<6?0:gameHour(f)>=18?.4:1);if(!world.interior&&(!population||population<1&&s.phase>Math.PI*2*population))return null;const people=world.people??=new Map();let p=people.get(s.id);if(!p){p={...nearestOpen(world,s,.2),at:time,next:0,path:[]};people.set(s.id,p);}const dt=Math.min(.1,Math.max(0,time-p.at));p.at=time;const panic=world.panic&&world.panic.until>f.minutes&&Math.hypot(p.x-world.panic.x,p.y-world.panic.y)<16;
  if(time>p.next||panic&&!p.panic){const a=panic?Math.atan2(p.y-world.panic.y,p.x-world.panic.x):hash(f.seed,Math.floor(time/14)+Math.round(s.phase*60))*Math.PI*2;const radius=world.interior?1.1:panic?5:2.5;let goal={x:(s.homeX??s.x)+Math.cos(a)*radius,y:(s.homeY??s.y)+Math.sin(a)*radius};if(panic)goal={x:p.x+Math.cos(a)*radius,y:p.y+Math.sin(a)*radius};const nextPath=localRoute(world,p,goal,.2);if(nextPath!==null){p.path=nextPath;p.next=time+(panic?1.5:8+s.phase);}}
@@ -51,6 +53,10 @@ export function trafficActors(world,f){
   const obstacles=[...result,...(f.life.expanse.swimming?[]:[f]),...(f.life.expanse.parked?[f.life.expanse.parked]:[]),...Array.from(world.people?.values()||[])];
   const obstacle=obstacles.find(o=>{const dx=o.x-car.x,dy=o.y-car.y,ahead=dx*Math.cos(car.angle)+dy*Math.sin(car.angle),side=Math.abs(-dx*Math.sin(car.angle)+dy*Math.cos(car.angle));return ahead>0&&ahead<3.4&&side<.9;});
   if(obstacle){m.delay+=dt;car=trafficAt({traffic:[vehicle]},f.minutes-m.delay)[0];car.stopped=true;}
+  const avoid=[...result,...(f.life.expanse.swimming?[]:[{x:f.x,y:f.y,radius:f.mounted?.48:.22}]),...(f.life.expanse.parked?[{...f.life.expanse.parked,radius:.48}]:[])];
+  if(world.tiles&&Math.hypot(car.x-f.x,car.y-f.y)<50&&(!canStand(world,car.x,car.y,car.radius||.55)||avoid.some(o=>Math.hypot(o.x-car.x,o.y-car.y)<(car.radius||.55)+(o.radius||.55)))){
+   const safe=findOpen(world,car,car.radius||.55,{maxDistance:4,avoid});if(safe)Object.assign(car,safe);else continue;
+  }
   result.push(car);
  }
  return result;

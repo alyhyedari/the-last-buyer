@@ -47,7 +47,8 @@ const bytes=assets.reduce((n,a)=>n+a.bytes,0),gzipBytes=assets.reduce((n,a)=>n+a
 // Detailed cockpits, physical access, touch and war scenarios add about 8 KiB to the lazy bundle.
 // Keep the game's ceiling unchanged. Production also includes the independently
 // bounded Speed Insights bootstrap, which is absent from local/Preview builds.
-const limits={totalGzipBytes:590*1024,scriptGzipBytes:238*1024,speedInsightsGzipBytes:1.5*1024};
+// Hill recovery plus the requested compact HUD and combat feedback add under 8 KiB.
+const limits={totalGzipBytes:598*1024,scriptGzipBytes:238*1024,speedInsightsGzipBytes:1.5*1024};
 const script=assets.find(a=>a.file===relative(out,resolve(root,js)).split(sep).join('/'));
 const initial=new Set();
 function visitInitial(path){if(initial.has(path))return;initial.add(path);for(const imported of result.metafile.outputs[path]?.imports||[])if(!imported.external&&imported.kind!=='dynamic-import')visitInitial(imported.path);}

@@ -7,6 +7,6 @@ export function recoverFooting(world,f,lastSafe,radius=.22){
  }
  // A penetrated collider can occur after loading older geometry. A local repair
  // is allowed only in that case, not to hop through walls while freely standing.
- if(!canStand(world,f.x,f.y,radius)){const p=nearestOpen(world,f,radius);if(Math.hypot(p.x-f.x,p.y-f.y)<8&&canStand(world,p.x,p.y,radius)){Object.assign(f,p);return true;}}
+ if(!canStand(world,f.x,f.y,radius)){const p=nearestOpen(world,f,radius);if(canStand(world,p.x,p.y,radius)){Object.assign(f,p);return true;}}
  for(let i=0;i<16;i++){const p={x:f.x,y:f.y},a=f.angle+Math.PI+i*Math.PI/8;moveInWorld(world,p,Math.cos(a)*.9,Math.sin(a)*.9,radius);if(Math.hypot(p.x-f.x,p.y-f.y)>.25){Object.assign(f,p);return true;}}return false;
 }

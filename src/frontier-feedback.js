@@ -1,0 +1,4 @@
+// Source coordinates stay in world space so the indicator follows camera turns.
+export function attackDirection(player,source){if(!source||!Number.isFinite(source.x)||!Number.isFinite(source.y))return null;const angle=Math.atan2(source.y-player.y,source.x-player.x)-player.angle;return{angle:Math.atan2(Math.sin(angle),Math.cos(angle)),pan:Math.sin(angle),behind:Math.cos(angle)<0,distance:Math.hypot(source.x-player.x,source.y-player.y)};}
+export const woundLevel=health=>Math.max(0,Math.min(1,(100-health)/100));
+export function urgentSupplies(state){const f=state.frontier,out=[];if(f.life.health<100)out.push('care');if(f.fuel<=25&&['car','motorcycle'].includes(state.village.vehicle))out.push('refuel');if(f.life.expanse.carHealth<=35&&state.village.vehicles.includes('car'))out.push('repairCar');if(f.energy<=20)out.push('food');return out;}

@@ -88,11 +88,12 @@ export function hurtPlayer(state,amount,{ignoreGrace=false,bypassVehicle=false}=
  if(!bypassVehicle&&f.mounted&&state.village.vehicle==='car'&&f.life.expanse.carHealth>0){damageCar(state,amount/3*(activeCyber(f,'aegis')?.45:1));return false;}
  f.life.health=Math.max(0,f.life.health-amount*(activeCyber(f,'aegis')?.45:1)/(1+(f.mounted&&state.village.vehicle==='motorcycle'?(f.life.cyber.tunes[14+f.life.cyber.motor]?.armor||0)*.22:0))*(hasBuy(f,14)?.88:1)*(hasGme(f,'cinder')?.85:1));if(f.life.health>0)return false;dropOnDeath(state);return true;
 }
-export function hostileHit(state,amount,victim){
+export function hostileHit(state,amount,victim,origin=null){
  const f=state.frontier,hp=f.life.health,hull=f.life.expanse.carHealth,died=hurtPlayer(state,amount);
- if(died)return{kind:'died',victim};
- if(f.life.expanse.carHealth<hull)return{kind:f.life.expanse.carHealth<=0?'carBroken':'carHit',victim};
- return f.life.health<hp?{kind:'attacked',victim}:null;
+ const source=origin&&Number.isFinite(origin.x)&&Number.isFinite(origin.y)?{x:origin.x,y:origin.y}:null;
+ if(died)return{kind:'died',victim,source};
+ if(f.life.expanse.carHealth<hull)return{kind:f.life.expanse.carHealth<=0?'carBroken':'carHit',victim,source};
+ return f.life.health<hp?{kind:'attacked',victim,source,damage:hp-f.life.health}:null;
 }
 export function dodgeStep(state,world,{forward=0,strafe=0}={}){
  const f=state.frontier;if(f.mounted||f.life.expanse.swimming||f.energy<8||f.minutes<(world.dodgeReadyAt||0))return false;
@@ -140,10 +141,10 @@ export function updateThreats(state,world,actors,dt,time){
   if(p.alert&&time-p.lastSeen>9){p.alert=false;p.windup=0;p.path=[];p.lastKnown=null;}
   if(!p.alert)continue;
   if(d<rule.reach+.2&&visible&&time>=p.nextAttack){
-   if(!p.windup){p.windup=time+(s.kind==='spore'||s.kind==='brute'?1.15:s.kind==='shade'?.9:s.kind==='runner'?.5:.65);events.push({kind:'windup',victim:s.kind});}
+   if(!p.windup){p.windup=time+(s.kind==='spore'||s.kind==='brute'?1.15:s.kind==='shade'?.9:s.kind==='runner'?.5:.65);events.push({kind:'windup',victim:s.kind,source:{x:p.x,y:p.y}});}
    if(time<p.windup)continue;
    p.windup=0;p.nextAttack=time+rule.delay;
-   const hit=hostileHit(state,rule.damage,s.kind);if(hit){if(s.kind==='vampire'&&hit.kind==='attacked')remember(f,s,Math.min(rule.hp,s.hp+12));events.push(hit);if(hit.kind==='died')return events;}continue;
+   const hit=hostileHit(state,rule.damage,s.kind,p);if(hit){if(s.kind==='vampire'&&hit.kind==='attacked')remember(f,s,Math.min(rule.hp,s.hp+12));events.push(hit);if(hit.kind==='died')return events;}continue;
   }
   p.windup=0;
   if(d>rule.reach){
@@ -162,13 +163,13 @@ export function updateProjectiles(state,world,actors,dt){
  const events=[],f=state.frontier;for(const p of world.projectiles||[]){p.age+=dt;let blocked=false;const steps=Math.max(1,Math.ceil(p.speed*dt/.1));for(let i=0;i<steps;i++){const old={x:p.x,y:p.y},move=p.speed*dt/steps;moveInWorld(world,p,Math.cos(p.angle)*move,Math.sin(p.angle)*move,.07);if(p.kind==='rocket'){p.z=(p.z??(terrainHeight(old.x,old.y)+.55))+(p.vz||0)*move;p.height=p.z-(world.interior?0:terrainHeight(p.x,p.y));if(p.height<.08){blocked=true;break;}}if(distance(old,p)<move*.5){blocked=true;break;}if(p.age>.07&&actors.some(a=>a.kind!=='playerGhost'&&!a.dead&&(a.animal||isScenery(a)||a.alien||HOSTILES[a.kind]||['resident','trialSeal'].includes(a.kind))&&distance(p,a)<.4)){blocked=true;break;}}
   if(p.kind==='grenade'){p.speed=Math.max(0,p.speed-dt*6);p.height=Math.max(.12,Math.sin(p.age/1.25*Math.PI)*.9);if(blocked){p.angle+=Math.PI*.7;p.speed*=.4;}}
   if(p.age>=p.ttl||blocked&&p.kind==='rocket'){p.done=true;(world.effects??=[]).push({kind:'explosion',x:p.x,y:p.y,age:0,ttl:.65,seed:p.id});events.push({kind:'explosion'});world.panic={x:p.x,y:p.y,until:f.minutes+12};blastFacades(state,world,p);for(const a of actors){const d=distance(p,a);if(a.kind!=='playerGhost'&&d<p.blast&&!a.dead&&(a.animal||isScenery(a)||a.alien||HOSTILES[a.kind]||['resident','companion','trialSeal'].includes(a.kind))&&bulletSight(world,p,a)){const hit=damageActor(state,world,a,p.damage*Math.max(.2,1-d/p.blast));if(hit)events.push(hit);}}
-   if(distance(p,f)<p.blast&&bulletSight(world,p,f)){const hit=hostileHit(state,p.damage*.6*(1-distance(p,f)/p.blast),'explosion');if(hit)events.push(hit);}
+   if(distance(p,f)<p.blast&&bulletSight(world,p,f)){const hit=hostileHit(state,p.damage*.6*(1-distance(p,f)/p.blast),'explosion',p);if(hit)events.push(hit);}
   }
  }world.projectiles=(world.projectiles||[]).filter(p=>!p.done);return events;
 }
 export function forestTreasure(state,world,cache){const f=state.frontier,c=f.life.combat;if(world.interior||distance(f,cache)>1.8||c.treasures.includes(cache.id))return false;c.treasures.push(cache.id);const reward=45+Math.floor(hash(f.seed,Number(cache.id.slice(6))+950)*90);earn(state,reward);f.life.ammo=Math.min(500,f.life.ammo+6);if(Number(cache.id.slice(6))%4===0)c.grenades=Math.min(99,c.grenades+1);return reward;}
 export function weatherHazard(f){const skyTime=worldTime(f),block=Math.floor(skyTime/180),storm=hash(f.seed,block+7721)<.22,local=skyTime%180,phase=local%42,thunder=storm&&phase<3,warning=storm&&phase>37,index=block*7+Math.floor(local/42)+(warning?1:0),strike=storm?{x:9+hash(f.seed,index+552)*44,y:77+hash(f.seed,index+553)*43}:null;const tornado=storm&&hash(f.seed,block+918)<.27&&local>70&&local<140?{x:15+local*.25,y:78+Math.sin(local*.04)*14}:null;return{storm,thunder,warning,tornado,strike,index};}
-export function tickWeather(state,world,dt,time){const f=state.frontier,h=weatherHazard(f),events=[];if(world.interior)return events;if(h.thunder&&world.thunderBlock!==h.index){world.thunderBlock=h.index;events.push({kind:'thunder'});if(distance(f,h.strike)<1.5){const hit=hostileHit(state,38,'thunder');if(hit){events.push(hit);if(hit.kind==='died')return events;}}}if(h.tornado&&distance(f,h.tornado)<3&&time>(world.windDamageAt||0)){world.windDamageAt=time+1;const hit=hostileHit(state,16,'tornado');if(hit)events.push(hit);if(hit?.kind!=='died'){const a=Math.atan2(f.y-h.tornado.y,f.x-h.tornado.x);moveInWorld(world,f,Math.cos(a)*.6,Math.sin(a)*.6,.22);}}return events;}
+export function tickWeather(state,world,dt,time){const f=state.frontier,h=weatherHazard(f),events=[];if(world.interior)return events;if(h.thunder&&world.thunderBlock!==h.index){world.thunderBlock=h.index;events.push({kind:'thunder'});if(distance(f,h.strike)<1.5){const hit=hostileHit(state,38,'thunder',h.strike);if(hit){events.push(hit);if(hit.kind==='died')return events;}}}if(h.tornado&&distance(f,h.tornado)<3&&time>(world.windDamageAt||0)){world.windDamageAt=time+1;const hit=hostileHit(state,16,'tornado',h.tornado);if(hit)events.push(hit);if(hit?.kind!=='died'){const a=Math.atan2(f.y-h.tornado.y,f.x-h.tornado.x);moveInWorld(world,f,Math.cos(a)*.6,Math.sin(a)*.6,.22);}}return events;}
 
 function markFacade(state,world,b,damage,point){const f=state.frontier,{id,hp,maxHp,old}=hitBuilding(state,world,b,damage,point);if(old>hp){f.life.heat=Math.min(100,f.life.heat+4);f.life.debts=Math.min(99999,f.life.debts+2);}(world.effects??=[]).push({kind:'sparks',x:point.x,y:point.y,age:0,ttl:.5,seed:old});return{kind:'objectHit',target:id,hp,maxHp,victim:'facade'};}
 function shootFacade(state,world,range,damage){const f=state.frontier;for(let d=.3;d<range;d+=.12){const x=f.x+Math.cos(f.angle)*d,y=f.y+Math.sin(f.angle)*d,t=tileAt(world,x,y);if(t<4)continue;const b=world.buildings?.find(b=>x>=b.left&&x<b.left+b.width&&y>=b.top&&y<b.top+b.depth);return b?markFacade(state,world,b,damage,{x:x-Math.cos(f.angle)*.15,y:y-Math.sin(f.angle)*.15}):null;}return null;}

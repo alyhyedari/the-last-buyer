@@ -121,7 +121,19 @@ export const solid=(world,x,y)=>{const t=tileAt(world,x,y);return t!==0&&t!==2;}
 export function canStand(world,x,y,radius=.22){if(!Number.isFinite(x)||!Number.isFinite(y))return false;if(world.arena&&Math.hypot(x-world.arena.x,y-world.arena.y)+radius>world.arena.radius)return false;for(let yy=Math.floor(y-radius);yy<=Math.floor(y+radius);yy++)for(let xx=Math.floor(x-radius);xx<=Math.floor(x+radius);xx++)if(solid(world,xx,yy)&&Math.hypot(x-Math.max(xx,Math.min(xx+1,x)),y-Math.max(yy,Math.min(yy+1,y)))<radius)return false;for(let yy=Math.floor(y)-2;yy<=Math.floor(y)+2;yy++)for(let xx=Math.floor(x)-2;xx<=Math.floor(x)+2;xx++)for(const o of world.buckets?.get(xx+','+yy)||[])if(Math.hypot(x-o.x,y-o.y)<radius+o.radius)return false;return true;}
 export function moveInWorld(world,f,dx,dy,radius=.22){if(![f.x,f.y,dx,dy,radius].every(Number.isFinite))return 0;const length=Math.hypot(dx,dy);if(length>(world.size||SIZE)*Math.SQRT2)return 0;const before={x:f.x,y:f.y},steps=Math.max(1,Math.ceil(Math.hypot(dx,dy)/.12));for(let i=0;i<steps;i++){if(canStand(world,f.x+dx/steps,f.y,radius))f.x+=dx/steps;if(canStand(world,f.x,f.y+dy/steps,radius))f.y+=dy/steps;}return Math.hypot(f.x-before.x,f.y-before.y);}
 export function clearSight(world,a,b){const d=Math.hypot(b.x-a.x,b.y-a.y),steps=Math.ceil(d/.1);for(let i=1;i<steps;i++)if(solid(world,a.x+(b.x-a.x)*i/steps,a.y+(b.y-a.y)*i/steps))return false;return true;}
-export function nearestOpen(world,point,radius=.22){if(canStand(world,point.x,point.y,radius))return{x:point.x,y:point.y};for(let r=.3;r<8;r+=.3)for(let a=0;a<Math.PI*2;a+=.3){const x=point.x+Math.cos(a)*r,y=point.y+Math.sin(a)*r;if(canStand(world,x,y,radius))return{x,y};}return{x:32.5,y:57.5};}
+export function findOpen(world,point,radius=.22,{avoid=[],maxDistance=16}={}){
+ const size=world.size||SIZE,x=Number.isFinite(point.x)?Math.max(1,Math.min(size-1,point.x)):size/2,y=Number.isFinite(point.y)?Math.max(1,Math.min(size-1,point.y)):size/2;
+ const free=(x,y)=>canStand(world,x,y,radius)&&avoid.every(o=>Math.hypot(x-o.x,y-o.y)>=radius+(o.radius??.55)+.15);
+ if(free(x,y))return{x,y};
+ // Bounded local rings: never scan the entire map during a frame.
+ for(let r=.5;r<=maxDistance;r+=.5){const count=Math.ceil(r*12);for(let i=0;i<count;i++){const a=i*Math.PI*2/count,px=x+Math.cos(a)*r,py=y+Math.sin(a)*r;if(free(px,py))return{x:px,y:py};}}return null;
+}
+export function nearestOpen(world,point,radius=.22){
+ // Preserve established NPC approach points; broaden only failed local repairs.
+ if(canStand(world,point.x,point.y,radius))return{x:point.x,y:point.y};
+ if(Number.isFinite(point.x)&&Number.isFinite(point.y))for(let r=.3;r<8;r+=.3)for(let a=0;a<Math.PI*2;a+=.3){const x=point.x+Math.cos(a)*r,y=point.y+Math.sin(a)*r;if(canStand(world,x,y,radius))return{x,y};}
+ return findOpen(world,point,radius)||findOpen(world,world.exit||world.arena||{x:32.5,y:57.5},radius)||{x:point.x,y:point.y};
+}
 export const elevationAt=terrainHeight;
 export function trafficAt(world,minutes){return(world.traffic||[]).map(v=>{const corners=v.corners||[[74.15,43.85],[85.15,43.85],[85.15,58.85],[74.15,58.85]],lengths=corners.map((a,i)=>Math.hypot(a[0]-corners[(i+1)%corners.length][0],a[1]-corners[(i+1)%corners.length][1])),total=lengths.reduce((a,b)=>a+b,0);let d=((minutes*1.1*v.speed+v.phase)%total+total)%total,i=0;while(d>lengths[i])d-=lengths[i++];const a=corners[i],b=corners[(i+1)%corners.length],t=d/lengths[i];return{...v,x:a[0]+(b[0]-a[0])*t,y:a[1]+(b[1]-a[1])*t,angle:Math.atan2(b[1]-a[1],b[0]-a[0])};});}
 export function* routeSearch(world,start,target,radius=.22,{maxNodes=12000,bounds=null}={}){

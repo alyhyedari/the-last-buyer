@@ -44,7 +44,7 @@ export function updateMyths(state,world,dt){
    else hit=targetDistance<(attack==='charge'?2.2:2.8);
    if(attack==='charge'){const dx=p.tx-p.x,dy=p.ty-p.y,length=Math.hypot(dx,dy),travel=Math.min(Math.max(0,length-1.25),phase===3?7:5);if(length)moveInWorld(world,p,dx/length*travel,dy/length*travel,.4);}
    (world.effects??=[]).push({kind:'sparks',x:p.tx,y:p.ty,age:0,ttl:.8,seed:b.variant});
-   if(hit&&clearSight(world,p,f)){const result=hostileHit(state,b.damage*[1,1.12,1.24][phase-1],b.kind);if(result){out.push(result);if(result.kind==='died')break;}}
+   if(hit&&clearSight(world,p,f)){const result=hostileHit(state,b.damage*[1,1.12,1.24][phase-1],b.kind,p);if(result){out.push(result);if(result.kind==='died')break;}}
    continue;
   }
   if(d<16&&f.minutes>=p.next&&clearSight(world,p,f)){
