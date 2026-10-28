@@ -22,7 +22,7 @@ export function drawTerrain(renderer,f,horizon,night=false){
  if(renderer.world.interior||f.life.expanse.swimming||f.x>152||f.y<182)return;
  const {c,w,h}=renderer;renderer.terrainActive=true;const depth=renderer.terrainDepth??=new Float32Array(w*h);depth.fill(Infinity);const eye=terrainHeight(f.x,f.y)+.8,columns=renderer.detail===2?12:renderer.low?8:4,palette=TERRAIN_TONES[night?1:0];
  // Height-map columns are bounded; they do not allocate a mesh each frame.
- for(let x=0;x<w;x+=columns){const side=(x/w-.5)*1.4,rx=Math.cos(f.angle)-Math.sin(f.angle)*side,ry=Math.sin(f.angle)+Math.cos(f.angle)*side;let ceiling=h;
+ for(let x=0;x<w;x+=columns){const side=(x/w-.5)*2*(renderer.fov||.7),rx=Math.cos(f.angle)-Math.sin(f.angle)*side,ry=Math.sin(f.angle)+Math.cos(f.angle)*side;let ceiling=h;
   for(let d=1;d<72;d+=d<16?.6:1.5){const wx=f.x+rx*d,wy=f.y+ry*d,z=terrainHeight(wx,wy),top=Math.floor(horizon+(eye-z)*h*.66/d);if(top>=ceiling)continue;
    const tile=renderer.world.tiles[Math.floor(wy)*renderer.world.size+Math.floor(wx)];const band=tile===2?4:z>20?3:z>13?2:z>6?1:0,grain=(Math.imul(Math.floor(wx*2),17)^Math.imul(Math.floor(wy*2),29))&3;c.fillStyle=palette[band][grain];c.globalAlpha=Math.max(.3,1-d/100);c.fillRect(x,Math.max(0,top),columns,ceiling-Math.max(0,top));for(let yy=Math.max(0,top);yy<Math.min(h,ceiling);yy++)depth.fill(d,yy*w+x,yy*w+Math.min(w,x+columns));ceiling=top;if(ceiling<0)break;
   }

@@ -27,7 +27,7 @@ export function arenaActors(world){const a=world.arena;if(!a)return[];return Arr
 // Marks use the attack's actual geometry, so the player can learn safe spaces.
 export function drawEncounterGround(renderer,f,horizon){
  const world=renderer.world,c=renderer.c,w=renderer.w,h=renderer.h,ca=Math.cos(f.angle),sa=Math.sin(f.angle);
- const project=p=>{const dx=p.x-f.x,dy=p.y-f.y,depth=dx*ca+dy*sa;return depth>.18?{x:w/2+(-dx*sa+dy*ca)/depth*w/1.4,y:horizon+h*.53/depth}:null;};
+ const project=p=>{const dx=p.x-f.x,dy=p.y-f.y,depth=dx*ca+dy*sa;return depth>.18?{x:w/2+(-dx*sa+dy*ca)/depth*w/(2*(renderer.fov||.7)),y:horizon+h*.53/depth}:null;};
  const line=(points,color,closed=false)=>{c.strokeStyle=color;c.lineWidth=2;c.beginPath();let started=false;for(const p of points){const s=project(p);if(!s){started=false;continue;}if(started)c.lineTo(s.x,s.y);else c.moveTo(s.x,s.y);started=true;}if(closed&&points.every(p=>project(p)))c.closePath();c.stroke();};
  const circle=(x,y,r,color)=>line(Array.from({length:49},(_,i)=>({x:x+Math.cos(i*Math.PI/24)*r,y:y+Math.sin(i*Math.PI/24)*r})),color);
  if(world.arena)circle(world.arena.x,world.arena.y,8.9,'#93cabb88');

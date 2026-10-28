@@ -43,6 +43,6 @@ export function drawForestPulse(renderer,f,time){
  c.strokeStyle='#b7ff7888';c.lineWidth=1;c.strokeRect(9,9,w-18,h-18);
  for(const coin of FOREST_COINS){if(q.coins.includes(coin.id)||Math.hypot(coin.x-q.pulseX,coin.y-q.pulseY)>echoRadius(f))continue;
   const a=Math.atan2(coin.y-f.y,coin.x-f.x)-f.angle,relative=Math.atan2(Math.sin(a),Math.cos(a));if(Math.abs(relative)>.64)continue;
-  const x=w/2+Math.tan(relative)*w/1.4,y=h*.4;c.strokeStyle='#b4ff61';c.strokeRect(Math.round(x)-4,y-4,8,8);c.fillStyle='#c9ff98';c.font='8px monospace';c.textAlign='center';c.fillText('BUY',x,y-9);c.textAlign='start';
+  const x=w/2+Math.tan(relative)*w/(2*(renderer.fov||.7)),y=h*.4;c.strokeStyle='#b4ff61';c.strokeRect(Math.round(x)-4,y-4,8,8);c.fillStyle='#c9ff98';c.font='8px monospace';c.textAlign='center';c.fillText('BUY',x,y-9);c.textAlign='start';
  }
 }

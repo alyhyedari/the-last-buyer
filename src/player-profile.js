@@ -1,0 +1,2 @@
+export const newPlayerProfile=()=>({name:'',age:null,asked:false});
+export function normalizePlayerProfile(value){if(value==null)return newPlayerProfile();if(typeof value!=='object'||Array.isArray(value))return null;const name=typeof value.name==='string'?value.name.trim().replace(/[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/g,'').slice(0,24):'';if(value.age!==null&&value.age!==undefined&&(!Number.isInteger(value.age)||value.age<3||value.age>120))return null;return{name,age:value.age??null,asked:value.asked===true};}
