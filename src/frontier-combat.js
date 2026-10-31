@@ -45,13 +45,13 @@ export function targetUnderCrosshair(f,world,actors,weapon='pistol',angle=f.angl
 function remember(f,s,hp){const records=f.life.combat.actors;if(Object.keys(records).length>=480&&!records[s.id]){for(const [id,a]of Object.entries(records)){if(id.startsWith('night-')&&f.minutes-a.at>1440)delete records[id];}}
  records[s.id]={x:s.x,y:s.y,hp:Math.max(0,hp),kind:s.kind,at:f.minutes};
 }
-export function actorWithHealth(f,s){if(s.owned)return{...s,hp:f.life.expanse.carHealth*3,maxHp:300,dead:f.life.expanse.carHealth<=0,scenery:true};const boss=MYTH_BOSSES.find(b=>'boss-'+b.id===s.id),max=boss?bossMaxHp(f,boss):actorMaxHealth(s),record=f.life.combat.actors[s.id],hp=record?.hp??max;return{...s,...(hp<=0&&record?{x:record.x,y:record.y}:{}),hp,maxHp:max,dead:hp<=0,scenery:isScenery(s)};}
+export function actorWithHealth(f,s){if(s.owned){const health=f.life.expanse.parked?.health??f.life.expanse.carHealth;return{...s,hp:health*3,maxHp:300,dead:health<=0,scenery:true};};const boss=MYTH_BOSSES.find(b=>'boss-'+b.id===s.id),max=boss?bossMaxHp(f,boss):actorMaxHealth(s),record=f.life.combat.actors[s.id],hp=record?.hp??max;return{...s,...(hp<=0&&record?{x:record.x,y:record.y}:{}),hp,maxHp:max,dead:hp<=0,scenery:isScenery(s)};}
 export function damageActor(state,world,s,damage,{crime=true}={}){
  // Network echoes never enter combat, even if a future caller passes visual records.
  if(s.kind==='playerGhost')return null;
  if(s.kind==='trialSeal')return breakTrialSeal(state,world,s);if(s.peaceful||s.kind==='child')return null;const f=state.frontier,l=f.life,current=s.owned?l.expanse.carHealth*3:l.combat.actors[s.id]?.hp??s.hp??actorMaxHealth(s);if(current<=0||damage<=0)return null;
  if(s.boss||s.id?.startsWith('boss-')){const t=f.life.pantheon.trials[s.id.slice(5)];damage*=t?.mode==='endurance'?(t.seals===7?(uvTouches(f,world,s)?1.6:1):.12):(uvTouches(f,world,s)?1.3:.65);}const hp=Math.max(0,current-damage),killed=hp===0;remember(f,s,hp);
- if(s.owned)l.expanse.carHealth=hp/3;const scenery=isScenery(s);if(s.alien){l.expanse.alienTrust=Math.max(-12,l.expanse.alienTrust-2);world.alienAlertUntil=f.minutes+30;}
+ if(s.owned){l.expanse.carHealth=hp/3;if(l.expanse.parked)l.expanse.parked.health=hp/3;}const scenery=isScenery(s);if(s.alien){l.expanse.alienTrust=Math.max(-12,l.expanse.alienTrust-2);world.alienAlertUntil=f.minutes+30;}
  const protectedTarget=s.domestic||['resident','companion'].includes(s.kind);
  if(protectedTarget&&crime){l.heat=Math.min(100,l.heat+40);l.debts=Math.min(99999,l.debts+60);state.village.reputation=Math.max(-9,state.village.reputation-2);f.trust=Math.max(0,f.trust-1);l.companion=false;}
  if(killed&&scenery)restoreScenery(world,f);if(scenery&&!s.owned&&s.kind.startsWith('traffic')&&crime){l.heat=Math.min(100,l.heat+12);l.debts=Math.min(99999,l.debts+25);}

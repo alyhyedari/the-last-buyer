@@ -1,15 +1,16 @@
 import {GHOST_MANIFEST,MAX_PEERS,validatePose,validSpace} from './ghost-protocol.js';
+import {emptyScene,validScene,validateSceneAction} from './ghost-scene.js';
 import {unpackSnapshot} from './ghost-wire.js';
 
-const BUFFER_LIMIT=6,RENDER_LIMIT=24,PACKET_LIMIT=MAX_PEERS*512+1024,EXPIRE_MS=8000;
+const BUFFER_LIMIT=6,RENDER_LIMIT=200,PACKET_LIMIT=MAX_PEERS*512+1024,EXPIRE_MS=8000;
 const ownKeys=(value,allowed)=>value!==null&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).every(k=>allowed.includes(k));
 const stamp=n=>Number.isSafeInteger(n)&&n>=0&&n<=8640000000000000;
 const wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));
 const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));
-const peerKeys=['id','seq','x','y','angle','space','vehicle','model','tone','paused','at'];
+const peerKeys=['id','seq','x','y','angle','space','vehicle','model','tone','paused','at','name'];
 const manifestKeys=Object.keys(GHOST_MANIFEST);
 const newer=(a,b)=>{const d=(a-b+2147483648)%2147483648;return d>0&&d<1073741824;};
-const changed=(a,b)=>!b||Math.hypot(a.x-b.x,a.y-b.y)>.02||Math.abs(wrap(a.angle-b.angle))>.01||['space','vehicle','model','tone','paused'].some(k=>a[k]!==b[k]);
+const changed=(a,b)=>!b||Math.hypot(a.x-b.x,a.y-b.y)>.02||Math.abs(wrap(a.angle-b.angle))>.01||['space','vehicle','model','tone','paused','name'].some(k=>a[k]!==b[k]);
 const safeCall=(fn,value)=>{try{fn?.(value);}catch{/* Host UI callbacks must not stop transport cleanup. */}};
 
 /** Presence only. Remote poses never enter inventory, collision, combat or saves. */
@@ -17,8 +18,12 @@ export class GhostClient{
  constructor({url,WebSocketImpl=globalThis.WebSocket,now=()=>globalThis.performance.now(),wallNow=Date.now,onStatus,onWelcome,random=Math.random,setTimeoutImpl=(fn,ms)=>globalThis.setTimeout(fn,ms),clearTimeoutImpl=id=>globalThis.clearTimeout(id)}={}){
   Object.assign(this,{url,WebSocketImpl,now,wallNow,onStatus,onWelcome,random,setTimeoutImpl,clearTimeoutImpl});
   this._status={state:'offline',pingMs:null,jitterMs:0,peers:0,room:GHOST_MANIFEST.room,reason:null};
-  this._peers=new Map();this._pings=new Map();this._visible=true;this._disposed=false;this._terminal=false;this._started=false;this._socket=null;this._timer=null;this._manifest=null;this._id=null;this._seq=0;this._nonce=0;this._attempt=0;this._retryAt=Infinity;this._pose=null;this._sentPose=null;this._sentAt=-Infinity;this._pingAt=-Infinity;this._lastPacket=0;this._lastSnapshot=-Infinity;this._serverAt=0;this._serverMono=0;this._lastClock=null;this._lastRtt=null;this._arrival=null;this._serverArrival=null;
+  this._scene=emptyScene();this._actionNonce=0;this._results=new Map();this._peers=new Map();this._pings=new Map();this._visible=true;this._disposed=false;this._terminal=false;this._started=false;this._socket=null;this._timer=null;this._manifest=null;this._id=null;this._seq=0;this._nonce=0;this._attempt=0;this._retryAt=Infinity;this._pose=null;this._sentPose=null;this._sentAt=-Infinity;this._pingAt=-Infinity;this._lastPacket=0;this._lastSnapshot=-Infinity;this._serverAt=0;this._serverMono=0;this._lastClock=null;this._lastRtt=null;this._arrival=null;this._serverArrival=null;
  }
+ get id(){return this._id;}
+ get scene(){const now=this._serverNow();return {...this._scene,effects:this._scene.effects.filter(e=>e.until>now),vehicles:this._scene.vehicles.filter(v=>v.until>now)};}
+ action(action){const m={...action,type:'sceneAction',nonce:++this._actionNonce};return this._status.state==='online'&&validateSceneAction(m)&&this._send(m)?m.nonce:null;}
+ result(nonce){const r=this._results.get(nonce);this._results.delete(nonce);return r;}
  get status(){return {...this._status};}
  get manifest(){return this._manifest?{...this._manifest}:null;}
  get interpolationMs(){return clamp(100+this._status.jitterMs*2,100,350);}
@@ -82,7 +87,7 @@ export class GhostClient{
  }
  update(pose){
   if(this._disposed||this._terminal||!pose)return false;
-  const clean=validatePose({type:'pose',seq:this._seq,x:pose.x,y:pose.y,angle:Number.isFinite(pose.angle)?wrap(pose.angle):pose.angle,space:pose.space,vehicle:pose.vehicle??'foot',model:pose.model??0,tone:pose.tone??0,paused:!!pose.paused});
+  const clean=validatePose({type:'pose',seq:this._seq,x:pose.x,y:pose.y,angle:Number.isFinite(pose.angle)?wrap(pose.angle):pose.angle,space:pose.space,vehicle:pose.vehicle??'foot',model:pose.model??0,tone:pose.tone??0,paused:!!pose.paused,name:pose.name||''});
   if(!clean)return false;this._pose=clean;this._publish(this.now());return true;
  }
  _publish(now){
@@ -108,9 +113,11 @@ export class GhostClient{
    if(!ownKeys(message,['type','id','shard','serverTime',...manifestKeys])||!Number.isInteger(message.shard)||message.shard<0||message.shard>=GHOST_MANIFEST.maxRooms||!stamp(message.serverTime)||typeof message.id!=='string'||!(/^[A-Za-z0-9_-]{1,64}$/).test(message.id)||!manifestKeys.every(k=>message[k]===GHOST_MANIFEST[k])){this._fail('incompatible_world');return;}
    if(this._manifest&&!manifestKeys.every(k=>message[k]===this._manifest[k])){this._fail('incompatible_world');return;}
    if(this._status.state==='online')return;
-   this._manifest=Object.fromEntries(manifestKeys.map(k=>[k,message[k]]));this._id=message.id;this._serverAt=message.serverTime;this._serverMono=now;this._lastPacket=now;this._attempt=0;this._peers.clear();const reconnect=new URL(this._url);reconnect.searchParams.set('room',message.shard);this._url=reconnect.href;this._setStatus({state:'online',reason:null,peers:0,room:message.room,shard:message.shard});if(this._disposed||this._terminal)return;safeCall(this.onWelcome,{...message});this._tick();return;
+   this._manifest=Object.fromEntries(manifestKeys.map(k=>[k,message[k]]));this._id=message.id;this._serverAt=message.serverTime;this._serverMono=now;this._lastPacket=now;this._attempt=0;this._peers.clear();this._scene=emptyScene();this._results.clear();const reconnect=new URL(this._url);reconnect.searchParams.set('room',message.shard);this._url=reconnect.href;this._setStatus({state:'online',reason:null,peers:0,room:message.room,shard:message.shard});if(this._disposed||this._terminal)return;safeCall(this.onWelcome,{...message});this._tick();return;
   }
   if(this._status.state!=='online')return;
+  if(message.type==='sceneResult'){if(Number.isSafeInteger(message.nonce)&&typeof message.ok==='boolean'&&(!message.reason||typeof message.reason==='string')){this._results.set(message.nonce,{ok:message.ok,reason:message.reason});if(this._results.size>16)this._results.delete(this._results.keys().next().value);}return;}
+  if(message.type==='scene'){if(stamp(message.serverTime)&&Math.abs(message.serverTime-this._serverNow())<30000&&validScene(message.scene,message.serverTime)&&message.scene.rev>=this._scene.rev)this._scene=message.scene;return;}
   if(message.type==='pong'){
    if(!ownKeys(message,['type','nonce','serverTime'])||!Number.isSafeInteger(message.nonce)||!stamp(message.serverTime)||Math.abs(message.serverTime-this._serverNow(now))>30000||!this._pings.has(message.nonce))return;
    const rtt=now-this._pings.get(message.nonce);this._pings.delete(message.nonce);if(rtt<0||rtt>15000)return;
@@ -126,7 +133,7 @@ export class GhostClient{
   const clean=[],ids=new Set();
   for(const p of message.peers){
    if(!ownKeys(p,peerKeys)||typeof p.id!=='string'||!(/^[A-Za-z0-9_-]{1,64}$/).test(p.id)||ids.has(p.id)||!stamp(p.at)||p.at>message.serverTime+1000||message.serverTime-p.at>30000)return;
-   const pose=validatePose({type:'pose',seq:p.seq,x:p.x,y:p.y,angle:p.angle,space:p.space,vehicle:p.vehicle,model:p.model,tone:p.tone,paused:p.paused});if(!pose)return;
+   const pose=validatePose({type:'pose',seq:p.seq,x:p.x,y:p.y,angle:p.angle,space:p.space,vehicle:p.vehicle,model:p.model,tone:p.tone,paused:p.paused,...(p.name!==undefined?{name:p.name}:{})});if(!pose)return;
    ids.add(p.id);if(p.id!==this._id)clean.push({id:p.id,...pose,at:now+p.at-this._serverNow(now)});
   }
   if(this._arrival!==null){const variation=Math.abs((now-this._arrival)-(message.serverTime-this._serverArrival));this._setStatus({jitterMs:Math.round(clamp(this._status.jitterMs*.9+variation*.1,0,1000))});}
@@ -158,7 +165,7 @@ export class GhostClient{
     if(!between&&samples.length>1&&!last.paused){const previous=samples.at(-2),elapsed=(last.at-previous.at)/1000;if(elapsed>.02){const vx=(last.x-previous.x)/elapsed,vy=(last.y-previous.y)/elapsed,scale=Math.min(1,32/(Math.hypot(vx,vy)||1)),seconds=clamp((target-last.at)/1000,0,.25);x=clamp(last.x+vx*scale*seconds,0,512);y=clamp(last.y+vy*scale*seconds,0,512);}}
    }
    const age=Math.max(0,at-last.at),fadeAt=last.paused?6000:1500,opacity=(last.paused?.68:1)*(1-clamp((age-fadeAt)/(EXPIRE_MS-fadeAt),0,1));
-   actors.push({kind:'playerGhost',id:'ghost-'+id,x,y,angle,vehicle:last.vehicle,model:last.model,tone:last.tone,paused:last.paused,opacity,variant:last.tone,distance:Math.hypot(x-view.x,y-view.y)});
+   actors.push({kind:'playerGhost',id:'ghost-'+id,peerId:id,name:last.name||'Echo '+id.slice(0,4),x,y,angle,vehicle:last.vehicle,model:last.model,tone:last.tone,paused:last.paused,opacity,variant:last.tone,distance:Math.hypot(x-view.x,y-view.y)});
   }
   actors.sort((a,b)=>a.distance-b.distance);return actors.slice(0,RENDER_LIMIT).map(({distance,...actor})=>actor);
  }

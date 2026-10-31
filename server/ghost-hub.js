@@ -6,7 +6,7 @@ import {createRateGate} from './ghost-security.js';
 // A hub owns this function instance's sockets only. Redis owns global occupancy
 // and pub/sub marks every instance dirty, so a cold start is never a new room.
 export function createGhostHub(store,{now=Date.now,rotationMs=240000,snapshotMs=200,matchmaking=true}={}){
- const clients=new Map(),dirty=new Set(),lastSnapshot=new Map();let ticking=false,timer=null,lastTouch=0;
+ const clients=new Map(),dirty=new Set(),lastSnapshot=new Map(),lastScene=new Map();let ticking=false,timer=null,lastTouch=0;
  const metrics={accepted:0,closed:0,roomFull:0,slowClosed:0,rateRejected:0,bytesSent:0,snapshots:0,peakConnections:0};
  const unsubscribe=store.subscribe(room=>{if(Number.isInteger(room))dirty.add(room);else for(const row of clients.values())dirty.add(row.shard);});
  const send=(socket,data)=>{
@@ -21,14 +21,14 @@ export function createGhostHub(store,{now=Date.now,rotationMs=240000,snapshotMs=
    const time=now();
    if(time-lastTouch>=5000){lastTouch=time;await Promise.all([...clients.values()].filter(row=>row.ready&&row.socket.readyState===1).map(async row=>{if(time-row.lastInput>15000){row.socket.close(1001,'heartbeat timeout');return;}if(!await store.touch(row.id,time))fail(row.socket);}));}
    const groups=new Map();for(const row of clients.values())if(row.ready){if(!groups.has(row.shard))groups.set(row.shard,[]);groups.get(row.shard).push(row);}
-   await Promise.all([...groups].map(async([shard,rows])=>{const elapsed=time-(lastSnapshot.get(shard)||0);if(elapsed<snapshotMs||!dirty.has(shard)&&elapsed<2000)return;dirty.delete(shard);lastSnapshot.set(shard,time);const peers=await store.peers(time,shard),packet=JSON.stringify(packSnapshot(peers,time));metrics.snapshots++;for(const row of rows)send(row.socket,packet);}));
+   await Promise.all([...groups].map(async([shard,rows])=>{const elapsed=time-(lastSnapshot.get(shard)||0);if(elapsed<snapshotMs||!dirty.has(shard)&&elapsed<2000)return;dirty.delete(shard);lastSnapshot.set(shard,time);const peers=await store.peers(time,shard),packet=JSON.stringify(packSnapshot(peers,time));metrics.snapshots++;for(const row of rows)send(row.socket,packet);if(store.scene&&time-(lastScene.get(shard)||0)>=500){lastScene.set(shard,time);const scene=await store.scene(time,shard),scenePacket=JSON.stringify({type:'scene',serverTime:time,scene});for(const row of rows)send(row.socket,scenePacket);}}));
   }catch{for(const row of clients.values())fail(row.socket);}
   finally{ticking=false;}
  }
  async function attach(socket,{preferredRoom=null}={}){
   if(clients.size>=MAX_PEERS*MAX_ROOMS){socket.close(1013,'instance capacity');return null;}
   const id=randomBytes(12).toString('base64url'),time=now();
-  const row={id,socket,shard:0,ready:false,closed:false,lastInput:time,seq:-1,pending:0,queue:Promise.resolve(),rate:createRateGate({now:time}),poses:createRateGate({rate:12,burst:18,now:time}),rotation:null};
+  const row={id,socket,shard:0,ready:false,closed:false,lastInput:time,seq:-1,pending:0,queue:Promise.resolve(),rate:createRateGate({now:time}),actions:createRateGate({rate:4,burst:8,now:time}),actionNonce:-1,poses:createRateGate({rate:12,burst:18,now:time}),rotation:null};
   clients.set(id,row);
   socket.on('error',()=>{});
   socket.on('close',()=>{
@@ -44,6 +44,7 @@ export function createGhostHub(store,{now=Date.now,rotationMs=240000,snapshotMs=
    row.lastInput=now();
    if(message.type==='bye'){socket.close(1000,'leaving');return;}
    if(message.type==='ping'){send(socket,{type:'pong',nonce:message.nonce,serverTime:now()});return;}
+   if(message.type==='sceneAction'){if(message.nonce<=row.actionNonce)return;row.actionNonce=message.nonce;if(!row.actions(now())){send(socket,{type:'sceneResult',nonce:message.nonce,ok:false,reason:'rate_limit'});return;}row.pending++;row.queue=row.queue.then(async()=>{if(row.closed)return;const result=await store.action(id,message,now());send(socket,{type:'sceneResult',nonce:message.nonce,...result});}).catch(()=>fail(socket)).finally(()=>row.pending--);return;}
    if(!row.poses(now())){metrics.rateRejected++;socket.close(1008,'pose rate limit');return;}
    if(message.seq<=row.seq)return;
    row.seq=message.seq;row.pending++;
