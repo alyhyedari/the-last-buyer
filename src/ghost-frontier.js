@@ -9,6 +9,7 @@ export function createGhostOverlay({client,state,settings,root,header,panelShow,
  const visibility=()=>client.setVisible(!document.hidden);document.addEventListener('visibilitychange',visibility);visibility();
  function show(){const s=client.status;panelShow(text('title'),text('intro'),r=>{
   const metrics=h('div',{class:'ghost-metrics'});metrics.append(h('p',{},text('ping'),' ',h('bdi',{dir:'ltr'},s.pingMs==null?'—':Math.round(s.pingMs)+' ms')),h('p',{},text('players'),' ',h('bdi',{dir:'ltr'},s.peers)));
+  const roster=client.sample({space:ghostSpace(f),x:f.x,y:f.y});r.append(h('details',{},h('summary',{},document.documentElement.lang==='fa'?'نام پژواک‌ها':'Echo names'),...roster.map(p=>h('p',{},p.name))));
   r.append(h('p',{},(document.documentElement.lang==='fa'?'اتاق ':'Room ')+(Number.isInteger(s.shard)?s.shard+1:'—')+' / 5 · '+(document.documentElement.lang==='fa'?'ظرفیت هر اتاق: ۲۰۰':'200 seats per room')),h('p',{class:'ghost-status'},text(s.state)),metrics,h('p',{},text('ownProgress')),h('p',{class:'ghost-help'},text('latencyHelp')),button(text('leave'),onLeave,'btn secondary'),button(tr('close'),closePanel,'btn primary'));
  });}
  function sync(paused,now=performance.now()){

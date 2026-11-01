@@ -9,6 +9,7 @@ export function createComfortHUD({root,header,combat,tools,state,ft,settings,per
  nav.addEventListener('click',event=>{if(event.target.closest('button'))closeMenu();});
  const vitals=tools.querySelector('.frontier-vitals');header.append(vitals);nav.append(header.querySelector('.frontier-clock'));header.append(root.querySelector('.frontier-waypoint'));
  const rail=h('div',{class:'hud-message-rail'});for(const item of [caption,root.querySelector('.boundary-warning'),root.querySelector('.narrator-card'),hint,reloadStatus])if(item)rail.append(item);header.append(rail);
+ const context=h('div',{class:'hud-context',hidden:true});root.append(context);let contextual=null;
  const needs=h('div',{class:'hud-needs','aria-label':document.documentElement.lang==='fa'?'خرید سریع ضروریات':'Quick supplies'});header.append(needs);
  const chips=new Map();for(const item of ['care','refuel','repairCar','food'].map(id=>SUPPLIES.find(s=>s.id===id))){const chip=button('',()=>{if(buySupply(state,item.id)){onBuy();persist();update();announce(ft('complete'));}else announce(ft('noMoney'));},'frontier-btn',{'data-urgent':item.id});chips.set(item.id,chip);needs.append(chip);}
  const directions=h('div',{class:'hud-damage-direction','aria-live':'polite'}),arrows=Array.from({length:4},()=>h('span',{class:'hud-hit',hidden:true,'aria-hidden':'true'},'▲'));directions.append(...arrows);root.append(directions);let hits=[],serial=0,needsKey='';
@@ -23,5 +24,5 @@ export function createComfortHUD({root,header,combat,tools,state,ft,settings,per
   for(let i=0;i<arrows.length;i++){const arrow=arrows[i],entry=hits[i],d=entry&&attackDirection(f,entry.source);arrow.hidden=paused||!d;if(!d)continue;arrow.style.left=(50+Math.sin(d.angle)*43)+'%';arrow.style.top=(50-Math.cos(d.angle)*40)+'%';arrow.style.rotate=d.angle+'rad';arrow.dataset.hull=String(entry.hull);arrow.style.opacity=String(Math.min(1,(entry.until-time)*2));}
   directions.dataset.active=String(paused?0:hits.length);rail.hidden=paused;
  }
- return{update,hit,closeMenu,get open(){return !nav.hidden;},dispose(){rail.remove();needs.remove();directions.remove();}};
+ return{update,hit,closeMenu,context(node,paused){if(node!==contextual){if(contextual)nav.append(contextual);contextual=node;if(node)context.append(node);}context.hidden=paused||!node||node.hidden;},get open(){return !nav.hidden;},dispose(){context.remove();rail.remove();needs.remove();directions.remove();}};
 }

@@ -317,3 +317,15 @@ Speed Insights در build با VERCEL_ENV=production بسته‌بندی شد؛ 
 - تغییر نمونه‌برداری nearestOpen یک رگرسیون در تعقیب NPC ایجاد کرد؛ نمونه‌های قبلی حفظ شدند و فقط شکست جست‌وجوی قدیمی از fallback جدید استفاده می‌کند. کل تست‌ها پس از اصلاح پاس شدند.
 - هزینهٔ بستهٔ Production حدود ۵۹۱٫۹ KiB gzip؛ سقف کل با allowance محدود چهار KiB به ۵۹۴ رسید. سقف JavaScript اولیه ثابت ماند: بازی ۲۳۷٫۵ و SDK حدود ۱ KiB.
 - اصلاح قبلی گیرندهٔ Window در تایمر GhostClient نیز در ۲۲۲ تست پایه و اتصال مرورگر تأیید شده بود. آزمون ۱۰۰۰ اتصال حافظه‌ای قبلی جای آزمون Redis و استقرار عمومی را نمی‌گیرد.
+
+## 2026-11-01 — controls, logistics and echo V3
+
+Implemented four control presets, local optional age/display name, wider landscape projection, stable parked model/health, safe delivery and recovery, dynamic quick actions, directional hit feedback, lower fuel burn, boundary warnings and fictional Vlad assistance. Echo V3 has 5 × 200 nominal admission, bounded temporary visuals, three car seats/one motorcycle seat and atomic unoccupied vehicle handoff. Remote effects never mutate local health, inventory or collision.
+
+Validation: 252 unit/integration tests passed; 232 JS files checked; local Vercel development/Preview/Production assets/adapters passed. Real two-client WebSocket test covers seat sharing, occupied theft denial, NPC defeat echo, parked handoff/model, floor isolation and cleanup. Chrome isolated QA: bought Razor for 1450, assisted arrival charged 6 only on arrival, remount/save resume kept model 8; landscape 844×390 and portrait 390×844 inspected, no runtime errors. Test fixture initialization can exceed browser tool's 3-second input timeout, but subsequent inspection confirmed initialization and valid state. Physical mobile/gamepad not tested.
+
+Load: artifacts/network-load-200.json, 45 seconds, memory store, one room, 200/200 throughout, no terminal failures or leaks, ping p95 432ms, snapshot p95 524ms, 522.9MiB received, server RSS 120.4MiB, cleanup zero. This is a capacity smoke test, not proof of production smoothness. Accelerated 12-second rotation run temporarily dropped to 47 online (all recovered); Redis and real hosting remain unvalidated.
+
+Highway browser check (isolated Razor/model 8): 12 seconds, valid state, distance 220.87 world units, 1718 RAF samples, frame gap p95 7.1ms / peak 14ms, work p95 6.3ms, high detail; artifacts/driving-final.json. Desktop Chrome only.
+
+Word guide rebuilt; RTL/geometry and accessibility structure passed. Runtime render reported no office-to-PDF backend (empty attempts); visual DOCX QA unavailable.

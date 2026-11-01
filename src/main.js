@@ -1,3 +1,5 @@
+import {installGameSurface} from './game-surface.js';
+installGameSurface(document);
 import {CITY_ENTRY_TEXT} from './metropolis-entry-text.js';
 import {MENU_TEXT} from './menu-text.js';
 import {ft} from './frontier-entry-text.js';

@@ -1,10 +1,16 @@
 import {GHOST_VEHICLES,MAX_PEERS} from './ghost-protocol.js';
-// Version 2 compact frames omit repeated field names. Validation stays in the
+// Version 3 compact frames omit repeated field names. Validation stays in the
 // client after decoding, so compact input never bypasses pose checks.
-export function packSnapshot(peers,serverTime){return{type:'frame',serverTime,peers:peers.map(p=>[p.id,p.seq,p.x,p.y,p.angle,p.space==='outdoor'?0:p.space,GHOST_VEHICLES.indexOf(p.vehicle),p.model,p.tone,p.paused?1:0,p.at-serverTime,p.name||''])};}
+export function packSnapshot(peers,serverTime){return{type:'frame',serverTime,peers:peers.map(p=>[p.id,p.seq,Math.round(p.x*100)/100,Math.round(p.y*100)/100,Math.round(p.angle*1000)/1000,p.space==='outdoor'?0:p.space,GHOST_VEHICLES.indexOf(p.vehicle),p.model,p.tone,p.paused?1:0,p.at-serverTime,p.name||''])};}
 export function unpackSnapshot(message){
  if(message?.type!=='frame')return message;
  if(Object.keys(message).some(k=>!['type','serverTime','peers'].includes(k))||!Array.isArray(message.peers)||message.peers.length>MAX_PEERS)return null;
  const peers=[];for(const p of message.peers){if(!Array.isArray(p)||p.length!==12||!Number.isInteger(p[6])||p[6]<0||p[6]>=GHOST_VEHICLES.length||![0,1].includes(p[9])||!Number.isFinite(p[10])||p[10]<-30000||p[10]>1000)return null;peers.push({id:p[0],...(p[11]?{name:p[11]}:{}),seq:p[1],x:p[2],y:p[3],angle:p[4],space:p[5]===0?'outdoor':p[5],vehicle:GHOST_VEHICLES[p[6]],model:p[7],tone:p[8],paused:p[9]===1,at:message.serverTime+p[10]});}
  return{type:'snapshot',serverTime:message.serverTime,peers};
 }
+
+// Scene deltas retain reliable WebSocket ordering; fresh sockets get a full base.
+const effectTuple=e=>[e.id,e.owner,e.kind,e.victim||'air',e.target,e.x,e.y,e.angle,e.space,e.at,e.until];
+const vehicleTuple=v=>[v.id,v.owner,v.driver,v.vehicle,v.model,v.x,v.y,v.angle,v.space,v.until,v.riders];
+export function packScene(scene,serverTime,previous=null){const diff=(a,b)=>a.filter(v=>!b.some(old=>old.id===v.id&&JSON.stringify(old)===JSON.stringify(v))),removed=(a,b)=>b.filter(v=>!a.some(n=>n.id===v.id)).map(v=>v.id);return{type:'sceneDelta',serverTime,base:previous?.rev??null,rev:scene.rev,effects:(previous?diff(scene.effects,previous.effects):scene.effects).map(effectTuple),vehicles:(previous?diff(scene.vehicles,previous.vehicles):scene.vehicles).map(vehicleTuple),removeEffects:previous?removed(scene.effects,previous.effects):[],removeVehicles:previous?removed(scene.vehicles,previous.vehicles):[]};}
+export function unpackScene(m,current){if(m?.type!=='sceneDelta'||m.base!==null&&m.base!==current.rev||!Array.isArray(m.effects)||m.effects.length>96||!Array.isArray(m.vehicles)||m.vehicles.length>200||!Array.isArray(m.removeEffects)||m.removeEffects.length>96||!Array.isArray(m.removeVehicles)||m.removeVehicles.length>200)return null;const effects=[],vehicles=[];for(const e of m.effects){if(!Array.isArray(e)||e.length!==11)return null;effects.push({id:e[0],owner:e[1],kind:e[2],victim:e[3],target:e[4],x:e[5],y:e[6],angle:e[7],space:e[8],at:e[9],until:e[10]});}for(const v of m.vehicles){if(!Array.isArray(v)||v.length!==11)return null;vehicles.push({id:v[0],owner:v[1],driver:v[2],vehicle:v[3],model:v[4],x:v[5],y:v[6],angle:v[7],space:v[8],until:v[9],riders:v[10]});}const merge=(old,add,removed)=>[...(m.base===null?[]:old.filter(e=>!removed.includes(e.id)&&!add.some(n=>n.id===e.id))),...add];return{rev:m.rev,effects:merge(current.effects,effects,m.removeEffects),vehicles:merge(current.vehicles,vehicles,m.removeVehicles)};}

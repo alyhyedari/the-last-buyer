@@ -42,7 +42,7 @@ test('ghost protocol accepts only bounded poses and never authority over gamepla
 
 test('shared room has a fixed world seed and server anchored clock',()=>{
  const welcome=makeWelcome('server-id',GHOST_MANIFEST.epochMs+10000);
- assert.equal(welcome.seed,20261018);assert.equal(welcome.room,'afterlight');assert.equal(welcome.worldVersion,'coast-1');assert.equal(welcome.maxPeers,32);
+ assert.equal(welcome.seed,20261018);assert.equal(welcome.room,'afterlight');assert.equal(welcome.worldVersion,'coast-1');assert.equal(welcome.maxPeers,MAX_PEERS);
  assert.equal(sharedWorldMinutes(welcome.serverTime),492);assert.equal(sharedWorldMinutes(GHOST_MANIFEST.epochMs-1000),480);
  assert.equal(welcome.type,'welcome');assert.equal(welcome.id,'server-id');
 });

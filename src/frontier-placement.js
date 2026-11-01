@@ -12,5 +12,6 @@ export function repairPlacements(world,state,actors=[]){
    const safe=findOpen(world,p,VEHICLES.car.radius,{avoid});if(safe){Object.assign(p,safe);changed=true;}
   }
  }
+if(!world.interior)for(const drop of f.life.combat.drops){if(!canStand(world,drop.x,drop.y,.22)){const safe=findOpen(world,drop,.22);if(safe){Object.assign(drop,safe);changed=true;}}}
 return changed;
 }

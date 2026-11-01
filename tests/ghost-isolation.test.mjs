@@ -71,7 +71,7 @@ test('renderer accepts bounded visual echoes without inserting them into actor o
   const ghosts=Object.freeze(Array.from({length:40},(_,i)=>Object.freeze({...forged(),id:'peer-'+i,x:13.5+i*.01,dead:true,opacity:.8})));
   const saved=structuredClone(state),before=structuredClone(ghosts);
   renderer.render(state,1,{actors,ghosts});
-  assert.equal(canvas.dataset.ghosts,'24');assert.equal(actors.length,0);assert.equal(world.sprites.length,0);assert.equal(world.colliders.length,0);assert.equal(world.buckets.size,0);
+  assert.equal(canvas.dataset.ghosts,'40');assert.equal(actors.length,0);assert.equal(world.sprites.length,0);assert.equal(world.colliders.length,0);assert.equal(world.buckets.size,0);
   assert.deepEqual(state,saved);assert.deepEqual(ghosts,before);assert.ok(canvas.context.images.length>0,'echo sprites are rendered');
   assert.ok(canvas.context.images.every(call=>call.alpha>0&&call.alpha<=.8*.56),'rendered echoes retain bounded translucency');
   assert.ok(canvas.context.images.every(call=>call.args.slice(1).every(Number.isFinite)));

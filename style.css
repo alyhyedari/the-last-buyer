@@ -176,3 +176,8 @@ body[data-accent=violet]{--green:#d2a6ff;--gold:#f0b6d0}
 .encounter-meter{display:flex;justify-content:space-between;align-items:center;color:#9fb991;border:1px solid #354e40;background:#10211d;padding:8px 10px;font:11px monospace;direction:ltr;margin:13px 0}
 .encounter-meter b{color:#d7e9b1;font-weight:400}
 @media(max-width:560px){.village-shop-card{grid-template-columns:1fr}.village-shop-card .choice,.village-project .choice{width:100%}.village-wallet{font-size:11px!important}.encounter-meter{font-size:10px}}
+
+/* Game controls must never open text-selection handles on a long press. */
+html,body,body *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+input,textarea,[contenteditable=""],[contenteditable="true"]{-webkit-user-select:text;user-select:text}
+img,canvas{-webkit-user-drag:none}

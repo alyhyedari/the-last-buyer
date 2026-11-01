@@ -63,8 +63,8 @@ test('invalid, malicious, stale and oversized snapshots are rejected before stor
  h.advance(200);h.snapshot([peer({seq:2,x:11,at:base+200})]);h.snapshot([peer({seq:3,x:80,at:base+100})],base+100);h.snapshot([peer({seq:1,x:90,at:base+200})]);h.advance(100);assert.ok(h.client.sample(view)[0].x<12);h.client.dispose();
 });
 
-test('peer memory is bounded and only the nearest twenty-four ghosts are rendered',()=>{
- const h=harness();h.online();h.snapshot(Array.from({length:MAX_PEERS},(_,i)=>peer({id:'peer-'+i,x:10+i})));const actors=h.client.sample(view);assert.equal(h.client.status.peers,32);assert.equal(actors.length,24);assert.equal(actors[0].x,10);assert.equal(actors.at(-1).x,33);h.client.dispose();
+test('peer memory is bounded and room peers remain bounded at two hundred',()=>{
+ const h=harness();h.online();h.snapshot(Array.from({length:MAX_PEERS},(_,i)=>peer({id:'peer-'+i,x:10+i})));const actors=h.client.sample(view);assert.equal(h.client.status.peers,MAX_PEERS);assert.equal(actors.length,MAX_PEERS);assert.equal(actors[0].x,10);assert.equal(actors.at(-1).x,10+MAX_PEERS-1);h.client.dispose();
 });
 
 test('ping RTT, jitter and interpolation adapt without accepting spoofed pong nonces',()=>{
@@ -125,4 +125,14 @@ test('default timers preserve the browser Window receiver',()=>{
  const originalSet=globalThis.setTimeout,originalClear=globalThis.clearTimeout;let scheduled=false,cleared=false;
  try{globalThis.setTimeout=function(fn,ms){assert.equal(this,globalThis);scheduled=true;return 17;};globalThis.clearTimeout=function(id){assert.equal(this,globalThis);assert.equal(id,17);cleared=true;};const client=new GhostClient({url:'ws://localhost/api/ghost-socket'});const handle=client.setTimeoutImpl(()=>{},20);client.clearTimeoutImpl(handle);assert.ok(scheduled&&cleared);}
  finally{globalThis.setTimeout=originalSet;globalThis.clearTimeout=originalClear;}
+});
+
+import {packScene} from '../src/ghost-wire.js';
+test('scene delta transport rejects a missing base and recovers after server scene expiry',()=>{
+ const h=harness(),socket=h.online(),first={rev:7,effects:[],vehicles:[{id:'other',owner:'other',driver:'other',vehicle:'car',model:8,x:10,y:10,angle:0,space:'outdoor',until:base+30000,riders:[]}]};
+ socket.receive(packScene(first,base));assert.equal(h.client.scene.vehicles[0].model,8);
+ const next={...first,rev:8,vehicles:[]};socket.receive(packScene(next,base,{...first,rev:3}));assert.equal(h.client.scene.rev,7);
+ socket.receive(packScene(next,base,first));assert.equal(h.client.scene.vehicles.length,0);
+ socket.receive(packScene({rev:0,effects:[],vehicles:[]},base));assert.equal(h.client.scene.rev,0);
+ const bad=structuredClone(first);bad.vehicles[0].model=100;socket.receive(packScene(bad,base));assert.equal(h.client.scene.rev,0);h.client.dispose();
 });

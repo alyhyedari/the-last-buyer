@@ -1,6 +1,6 @@
 import {GHOST_MANIFEST,MAX_PEERS,validatePose,validSpace} from './ghost-protocol.js';
 import {emptyScene,validScene,validateSceneAction} from './ghost-scene.js';
-import {unpackSnapshot} from './ghost-wire.js';
+import {unpackSnapshot,unpackScene} from './ghost-wire.js';
 
 const BUFFER_LIMIT=6,RENDER_LIMIT=200,PACKET_LIMIT=MAX_PEERS*512+1024,EXPIRE_MS=8000;
 const ownKeys=(value,allowed)=>value!==null&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).every(k=>allowed.includes(k));
@@ -117,6 +117,7 @@ export class GhostClient{
   }
   if(this._status.state!=='online')return;
   if(message.type==='sceneResult'){if(Number.isSafeInteger(message.nonce)&&typeof message.ok==='boolean'&&(!message.reason||typeof message.reason==='string')){this._results.set(message.nonce,{ok:message.ok,reason:message.reason});if(this._results.size>16)this._results.delete(this._results.keys().next().value);}return;}
+  if(message.type==='sceneDelta'){if(!stamp(message.serverTime)||Math.abs(message.serverTime-this._serverNow())>=30000)return;const scene=unpackScene(message,this._scene);if(scene&&validScene(scene,message.serverTime)&&(message.base===null||scene.rev>=this._scene.rev))this._scene=scene;return;}
   if(message.type==='scene'){if(stamp(message.serverTime)&&Math.abs(message.serverTime-this._serverNow())<30000&&validScene(message.scene,message.serverTime)&&message.scene.rev>=this._scene.rev)this._scene=message.scene;return;}
   if(message.type==='pong'){
    if(!ownKeys(message,['type','nonce','serverTime'])||!Number.isSafeInteger(message.nonce)||!stamp(message.serverTime)||Math.abs(message.serverTime-this._serverNow(now))>30000||!this._pings.has(message.nonce))return;
