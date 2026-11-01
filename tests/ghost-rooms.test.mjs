@@ -7,22 +7,30 @@ import {MAX_PEERS,MAX_ROOMS,PRESENCE_TTL,makeWelcome} from '../src/ghost-protoco
 import {packSnapshot,unpackSnapshot} from '../src/ghost-wire.js';
 const pose={seq:1,x:100,y:200,angle:0,space:'outdoor',vehicle:'foot',model:0,tone:0,paused:false};
 class Socket extends EventEmitter{constructor(){super();this.readyState=1;this.bufferedAmount=0;this.messages=[];}send(raw){this.messages.push(unpackSnapshot(JSON.parse(raw)));}close(code){if(this.readyState!==1)return;this.code=code;this.readyState=3;this.emit('close');}}
-test('atomic local matchmaking holds 1000 reservations across five rooms and releases capacity',async()=>{
- const store=createMemoryGhostStore({local:true});const assigned=await Promise.all(Array.from({length:MAX_PEERS*MAX_ROOMS},(_,i)=>store.allocate('p'+i,1000)));
- assert.equal(assigned.length,MAX_PEERS*MAX_ROOMS);assert.deepEqual(await store.occupancy(1000),Array(MAX_ROOMS).fill(MAX_PEERS));assert.equal(await store.allocate('overflow',1000),-1);assert.equal(await store.allocate('p1',1000),-1);
- await store.remove('p'+MAX_PEERS);assert.equal(await store.allocate('replacement',1001,1),1);assert.equal(await store.write('replacement',pose,1002),true);assert.equal((await store.peers(1002,1)).length,1);assert.equal((await store.peers(1002,0)).length,0);
- assert.equal((await store.occupancy(1003+PRESENCE_TTL)).reduce((a,b)=>a+b,0),0);await store.close();
+test('five global reservations reject concurrent overflow and release exactly one place',async()=>{
+ const store=createMemoryGhostStore({local:true});assert.equal(MAX_PEERS,5);assert.equal(MAX_ROOMS,1);
+ const assigned=await Promise.all(Array.from({length:30},(_,i)=>store.allocate('p'+i,1000)));
+ assert.equal(assigned.filter(r=>r===0).length,5);assert.equal(assigned.filter(r=>r===-1).length,25);assert.deepEqual(await store.occupancy(1000),[5]);
+ assert.equal(await store.allocate('p1',1000),-1);await store.remove('p0');
+ assert.equal(await store.allocate('replacement',1001),0);assert.equal(await store.allocate('overflow',1001),-1);
+ assert.equal(await store.write('replacement',pose,1002),true);assert.equal((await store.peers(1002,0)).length,1);
+ assert.deepEqual(await store.occupancy(1003+PRESENCE_TTL),[0]);await store.close();
 });
-test('separate hubs route snapshots only to assigned rooms and reuse bounded room packets',async()=>{
- const store=createMemoryGhostStore({local:true}),a=createGhostHub(store),b=createGhostHub(store),sockets=[];
- try{for(let i=0;i<MAX_PEERS+2;i++){const s=new Socket();sockets.push(s);await (i%2?a:b).attach(s);s.emit('message',Buffer.from(JSON.stringify({type:'pose',...pose,x:100+i})),false);}await new Promise(r=>setTimeout(r,240));await Promise.all([a.tick(),b.tick()]);
- const ids=new Map(sockets.map(s=>{const w=s.messages.find(m=>m.type==='welcome');return[w.id,w.shard];}));assert.equal(new Set(ids.values()).size,2);
- for(const s of sockets){const w=s.messages.find(m=>m.type==='welcome'),snap=s.messages.filter(m=>m.type==='snapshot').at(-1);assert.ok(snap);assert.ok(snap.peers.length<=MAX_PEERS);for(const p of snap.peers)assert.equal(ids.get(p.id),w.shard);}
+test('concurrent admissions across two hubs never exceed five and overflow is terminal',async()=>{
+ const store=createMemoryGhostStore({local:true}),a=createGhostHub(store),b=createGhostHub(store),sockets=Array.from({length:20},()=>new Socket());
+ try{await Promise.all(sockets.map((s,i)=>(i%2?a:b).attach(s)));
+ const accepted=sockets.filter(s=>s.messages.some(m=>m.type==='welcome'));assert.equal(accepted.length,5);assert.deepEqual(await store.occupancy(Date.now()),[5]);
+ for(const s of sockets.filter(s=>!accepted.includes(s)))assert.equal(s.code,4003);
+ for(const s of accepted)s.emit('message',Buffer.from(JSON.stringify({type:'pose',...pose})),false);
+ await new Promise(r=>setTimeout(r,240));await Promise.all([a.tick(),b.tick()]);
+ for(const s of accepted){const snap=s.messages.filter(m=>m.type==='snapshot').at(-1);assert.equal(snap.peers.length,5);assert.equal(s.messages.find(m=>m.type==='welcome').shard,0);}
+ accepted[0].close(1000);const replacement=new Socket();await b.attach(replacement);assert.ok(replacement.messages.some(m=>m.type==='welcome'));assert.deepEqual(await store.occupancy(Date.now()),[5]);
  }finally{await Promise.all([a.close(),b.close()]);await store.close();}
 });
-test('preferred room survives reconnect, full preference falls back, and welcome stays bounded',async()=>{
- const store=createMemoryGhostStore({local:true});assert.equal(await store.allocate('first',1000,4),4);await store.remove('first');assert.equal(await store.allocate('again',1001,4),4);
- for(let i=1;i<MAX_PEERS;i++)assert.equal(await store.reserve('full'+i,1001,4),true);assert.equal(await store.allocate('overflow-preference',1001,4),0);assert.equal(makeWelcome('id',1001,4).shard,4);await store.close();
+test('invalid room preferences cannot create extra rooms and expired leases free capacity',async()=>{
+ const store=createMemoryGhostStore({local:true});assert.equal(await store.reserve('invalid',1000,1),false);
+ for(let i=0;i<5;i++)assert.equal(await store.allocate('p'+i,1000,4),0);
+ assert.equal(await store.allocate('overflow',1001,999),-1);assert.equal(await store.allocate('expired-replacement',1001+PRESENCE_TTL,0),0);await store.close();
 });
 test('a slow socket is disconnected without preventing a healthy peer snapshot',async()=>{
  const store=createMemoryGhostStore({local:true}),hub=createGhostHub(store),slow=new Socket(),fast=new Socket();

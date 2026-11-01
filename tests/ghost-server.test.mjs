@@ -73,7 +73,7 @@ test('memory store is explicitly local, bounded, expiring and returns isolated p
  assert.equal(await store.reserve('new',17000),true);
  assert.equal((await store.peers(25001)).length,0);
  assert.equal(await store.touch('id1',25001),false);
- assert.ok(changes>=33);unsubscribe();await store.close();
+ assert.ok(changes>=MAX_PEERS+1);unsubscribe();await store.close();
 });
 
 test('production room advertises unavailable without credentials or memory fallback',async()=>{
@@ -138,4 +138,12 @@ test('room limit is shared by reservations and function rotation is reconnectabl
  const a=f.connect();const welcome=await a.wait(m=>m.type==='welcome');const overflow=f.connect();assert.equal((await overflow.closed).code,4003);
  const retry=(await a.wait(m=>m.type==='reconnect')).retryAfter;assert.ok(retry>=500&&retry<1500);assert.equal((await a.closed).code,1012);
  await delay(20);const next=f.connect();const resumed=await next.wait(m=>m.type==='welcome');assert.notEqual(resumed.id,welcome.id);assert.equal(resumed.seed,welcome.seed);assert.equal(resumed.epochMs,welcome.epochMs);
+});
+
+test('five real sockets fill the server; sixth is rejected and one departure frees one slot',async t=>{
+ const f=await fixture(t,{matchmaking:true}),players=Array.from({length:5},()=>f.connect());await Promise.all(players.map(p=>p.wait(m=>m.type==='welcome')));
+ let info=await (await fetch(f.origin+'/api/ghost-room')).json();assert.equal(info.online,5);assert.equal(info.capacity,5);assert.equal(info.full,true);assert.equal(info.enabled,true);
+ const extra=f.connect();assert.equal((await extra.closed).code,4003);assert.equal(extra.messages.some(m=>m.type==='welcome'),false);
+ players[0].send({type:'bye'});await players[0].closed;await delay(30);info=await (await fetch(f.origin+'/api/ghost-room')).json();assert.equal(info.online,4);assert.equal(info.full,false);
+ const replacement=f.connect();await replacement.wait(m=>m.type==='welcome');assert.equal((await f.connect().closed).code,4003);
 });

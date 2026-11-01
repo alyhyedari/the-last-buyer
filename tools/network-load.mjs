@@ -1,4 +1,4 @@
-// Isolated local load only: never send a thousand connections to an arbitrary URL.
+// Isolated local load only: never send load-test connections to an arbitrary URL.
 import {fork} from 'node:child_process';
 import {once} from 'node:events';
 import {mkdir,writeFile} from 'node:fs/promises';
@@ -10,7 +10,7 @@ import {GhostClient} from '../src/ghost-client.js';
 import {unpackSnapshot} from '../src/ghost-wire.js';
 import {MAX_PEERS,MAX_ROOMS} from '../src/ghost-protocol.js';
 const option=(name,fallback)=>Number(process.argv.find(a=>a.startsWith('--'+name+'='))?.split('=')[1]??fallback);
-const count=option('clients',1000),duration=option('seconds',40),rotationMs=option('rotation-ms',12000);assert.ok(rotationMs>=10000&&rotationMs<=240000);
+const count=option('clients',MAX_PEERS),duration=option('seconds',40),rotationMs=option('rotation-ms',12000);assert.ok(rotationMs>=10000&&rotationMs<=240000);
 assert.ok(Number.isInteger(count)&&count>=2&&count<=MAX_ROOMS*MAX_PEERS);assert.ok(duration>=15&&duration<=3600);
 if(process.argv.some(a=>a.startsWith('--url=')))throw Error('This load tool only targets its own isolated local server. Use a staging load generator for public deployments.');
 const child=fork(new URL('./network-load-server.mjs',import.meta.url),process.argv.includes('--dist')?['--dist']:[],{stdio:['ignore','inherit','inherit','ipc'],env:{...process.env,LOAD_NAMESPACE:'load-'+randomUUID(),LOAD_ROTATION_MS:String(rotationMs)}});

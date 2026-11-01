@@ -1,12 +1,14 @@
 import {createServer} from 'node:http';
 import {WebSocketServer} from 'ws';
-import {MAX_PAYLOAD,MAX_ROOMS,roomInfo} from '../src/ghost-protocol.js';
+import {MAX_PAYLOAD,MAX_PEERS,MAX_ROOMS,roomInfo} from '../src/ghost-protocol.js';
 import {allowedGhostOrigin} from './ghost-security.js';
 import {createGhostHub} from './ghost-hub.js';
 
 export const JSON_HEADERS={'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'};
 export async function ghostRoomResponse(getStore,{now=Date.now()}={}){
- try{const store=await getStore(),enabled=Boolean(store?.healthy());return {status:enabled?200:503,body:roomInfo({enabled,reason:enabled?undefined:store?'unavailable':'not_configured',now})};}
+ try{const store=await getStore(),enabled=Boolean(store?.healthy());if(!enabled)return {status:503,body:roomInfo({enabled:false,reason:store?'unavailable':'not_configured',now})};
+  const rooms=await store.occupancy(now);if(!Array.isArray(rooms)||rooms.length!==MAX_ROOMS||rooms.some(n=>!Number.isInteger(n)||n<0))throw Error('Invalid occupancy');
+  const online=rooms.reduce((a,b)=>a+b,0),capacity=MAX_PEERS*MAX_ROOMS;return {status:200,body:{...roomInfo({now}),online,capacity,full:online>=capacity}};}
  catch{return {status:503,body:roomInfo({enabled:false,reason:'unavailable',now})};}
 }
 export async function handleGhostRoom(req,res,getStore,{local=false}={}){

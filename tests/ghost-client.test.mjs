@@ -144,3 +144,9 @@ test('server cadence advice is validated, slows publishing and resets on reconne
  for(const patch of [{intervalMs:1},{serverPingMs:-1},{mode:'fake'},{damage:10}])s.receive({type:'network',serverPingMs:1,intervalMs:200,mode:'normal',...patch});assert.equal(h.client.status.intervalMs,600);
  s.receive({type:'reconnect',retryAfter:500});h.advance(750);const next=h.sockets.at(-1);next.open();next.receive(makeWelcome('new-self',base+h.time));assert.equal(h.client.status.intervalMs,200);h.client.dispose();
 });
+
+test('five-player packet limit still accepts a full scene with 96 temporary effects',async()=>{
+ const {emptyScene,reduceScene}=await import('../src/ghost-scene.js'),{packScene}=await import('../src/ghost-wire.js');const h=harness(),socket=h.online();let scene=emptyScene();
+ for(let i=0;i<96;i++)scene=reduceScene(scene,[peer()], 'other',{type:'sceneAction',action:'effect',nonce:i,kind:'down',target:'night-npc',x:10,y:10,angle:0},base).scene;
+ const packet=packScene(scene,base);assert.ok(JSON.stringify(packet).length>MAX_PEERS*512+1024);socket.receive(packet);assert.equal(h.client.scene.effects.length,96);h.client.dispose();
+});

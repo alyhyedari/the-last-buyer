@@ -6,7 +6,7 @@ Vercel فایل‌های بازی را می‌سازد و منتشر می‌کن
 
 ## رفع خطای Production در ۲۱ اکتبر ۲۰۲۶
 
-خطای `Production size budget exceeded ... initial scripts 238.4 KiB` در همین پروژه بازتولید و اصلاح شد. ابزار Speed Insights فقط در Production اضافه می‌شود؛ حجم تقریباً ۱ KiB آن اکنون سقف مستقل ۱٫۵ KiB دارد. سقف خود بازی ۲۳۸ KiB و سقف کل خروجی ۵۹۰ KiB همچنان بررسی می‌شوند. `npm run test:vercel` هر سه حالت محلی، Preview و Production را می‌سازد و دارایی‌ها و ورودی‌های API را بررسی می‌کند؛ CI نیز این دستور را اجرا می‌کند.
+خطای `Production size budget exceeded ... initial scripts 238.4 KiB` در همین پروژه بازتولید و اصلاح شد. ابزار Speed Insights فقط در Production اضافه می‌شود؛ حجم تقریباً ۱ KiB آن اکنون سقف مستقل ۱٫۵ KiB دارد. سقف خود بازی ۲۳۸ KiB و سقف کل خروجی ۶۱۲ KiB همچنان بررسی می‌شوند. `npm run test:vercel` هر سه حالت محلی، Preview و Production را می‌سازد و دارایی‌ها و ورودی‌های API را بررسی می‌کند؛ CI نیز این دستور را اجرا می‌کند.
 
 برای انتشار اصلاح: سورس تازه شامل tools/build.mjs، tools/verify-vercel.mjs، tests/vercel-adapters.test.mjs، package.json و vercel.json را در مخزن متصل قرار بده و Deploy جدید بگیر. Redeploy یک commit قدیمی شامل اصلاحات محلی نمی‌شود. تنظیم‌های جدول پایین را حفظ کن؛ Build Command همان `npm run build` است. بدون لاگ یا URL حساب شما، موفقیت Deploy ابری در این جلسه تأیید نشده است.
 
@@ -117,3 +117,17 @@ npm run test:vercel
 - https://vercel.com/docs/project-configuration/vercel-json
 - https://vercel.com/docs/git
 - https://vercel.com/docs/git/vercel-for-github
+
+## نسخهٔ نهایی پنج‌نفره — ۱ نوامبر ۲۰۲۶
+
+فقط یک اتاق با حداکثر ۵ اتصال هم‌زمان فعال است. پس از پر شدن، ورود نفر ششم هم در لابی و هم در سرور بسته می‌شود. دکمهٔ تلاش دوباره ظرفیت را مجدداً بررسی می‌کند؛ خروج عادی یک جایگاه آزاد می‌کند. هیچ متغیر محیطی برای افزایش ظرفیت این نسخه وجود ندارد.
+
+برای فعال‌شدن پس از push، یک بار مخزن را در Settings → Git به پروژه وصل کن و REDIS_URL دارای اتصال TCP/TLS و GHOST_NAMESPACE=production را برای Production تنظیم کن. سرویس Redis باید Lua و Pub/Sub داشته باشد؛ نشانی REST کافی نیست. برای Preview از namespace جدا استفاده کن. همهٔ نمونه‌های Production باید یک Redis و namespace مشترک داشته باشند. از ایجاد چند پروژهٔ جدا با Redis متفاوت برای همان سرور خودداری کن؛ هر namespace سرور مستقلی است.
+
+ساخت بازی بدون Redis موفق می‌شود، ولی آنلاین با پیام «سرور هنوز تنظیم نشده» غیرفعال می‌ماند. push به‌تنهایی بدون این اتصال اولیه حساب Redis ایجاد نمی‌کند. فایل‌های api، server، src، tools، package.json، package-lock.json و vercel.json باید در مخزن باشند؛ فقط dist کافی نیست. مقدار محرمانهٔ REDIS_URL را commit نکن.
+
+پس از Deploy، /api/ghost-room باید enabled:true، capacity:5، maxPeers:5 و maxRooms:1 نشان دهد. online تعداد فعلی و full وضعیت پر بودن است. در حالت full:true سرور سالم است و پاسخ ۲۰۰ طبیعی است. شمارندهٔ لابی در زمان دریافت صفحه اندازه‌گیری می‌شود؛ تصمیم نهایی ورود همیشه در سرور اتمی است.
+
+گردش‌کار ci.yml تست‌ها، سه ساخت Vercel، Redis واقعی موقت و آزمون دو کلاینت را روی GitHub اجرا می‌کند. آن Redis فقط برای تست CI است و سرور عمومی بازی نیست. انتشار خودکار Vercel از اتصال Git انجام می‌شود و به نتیجهٔ CI وابسته نشده است؛ پیش از انتشار نتیجهٔ هر دو را بررسی کن.
+
+این تغییر ظرفیت هزینهٔ صفر دائمی را تضمین نمی‌کند؛ مصرف و سهمیه را در داشبوردها بررسی کن. اجرای ابری و اتصال Redis واقعی حساب شما در این جلسه تأیید نشده است.

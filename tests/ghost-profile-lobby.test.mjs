@@ -67,3 +67,8 @@ test('lobby rejects mismatched worlds and cross-origin socket redirection',async
 test('lobby connection deadline releases a stalled client without leaving a hidden retry loop',async()=>withLobby(async h=>{
  await h.respond();h.button('join').click();h.advance(15000);assert.equal(h.clients[0].disposed,1);assert.equal(h.button('retry').hidden,false);assert.equal(h.timers.size,0);h.lobby.dispose();h.advance(60000);assert.equal(h.clients.length,1);
 }));
+
+test('full lobby disables join and rechecks capacity only when requested',async()=>withLobby(async h=>{
+ await h.respond({...roomInfo(),online:5,capacity:5,full:true});assert.equal(h.button('join').disabled,true);assert.equal(h.status(),GT.roomFull.en);assert.equal(h.clients.length,0);assert.equal(h.button('retry').hidden,false);
+ h.advance(60000);assert.equal(h.requests.length,1);h.button('retry').click();await h.respond({...roomInfo(),online:4,capacity:5,full:false});assert.equal(h.button('join').disabled,false);assert.ok(h.status().includes('4/5'));h.button('join').click();h.clients[0].fail('room_full');assert.equal(h.status(),GT.roomFull.en);
+}));

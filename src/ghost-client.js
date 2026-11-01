@@ -2,7 +2,7 @@ import {GHOST_MANIFEST,MAX_PEERS,validatePose,validSpace} from './ghost-protocol
 import {emptyScene,validScene,validateSceneAction} from './ghost-scene.js';
 import {unpackSnapshot,unpackScene} from './ghost-wire.js';
 
-const BUFFER_LIMIT=6,RENDER_LIMIT=200,PACKET_LIMIT=MAX_PEERS*512+1024,EXPIRE_MS=8000;
+const BUFFER_LIMIT=6,RENDER_LIMIT=MAX_PEERS,PACKET_LIMIT=128*1024,EXPIRE_MS=8000;
 const ownKeys=(value,allowed)=>value!==null&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).every(k=>allowed.includes(k));
 const stamp=n=>Number.isSafeInteger(n)&&n>=0&&n<=8640000000000000;
 const wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));

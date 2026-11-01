@@ -26,8 +26,9 @@ export function mountGhostLobby(root,{onJoin,onClose,fetchImpl=globalThis.fetch,
    if(!Object.keys(GHOST_MANIFEST).every(key=>info[key]===GHOST_MANIFEST[key])){unavailable('incompatibleWorld');return;}
    // A discovered room cannot redirect presence to an arbitrary third-party host.
    if(info.socket!=='/api/ghost-socket')throw Error('Unexpected endpoint');
+   if(info.full===true){unavailable('roomFull');return;}
    url=new URL(info.socket,globalThis.location.href);url.protocol=globalThis.location.protocol==='https:'?'wss:':'ws:';
-   status.textContent=text(info.localOnly?'localOnly':'sharedWorld');join.disabled=false;
+   status.textContent=text(info.localOnly?'localOnly':'sharedWorld')+(Number.isInteger(info.online)?` · ${info.online}/${GHOST_MANIFEST.maxPeers}`:'');join.disabled=false;
   }catch{if(alive&&token===generation)unavailable('connectionFailed');}
  }
  function connect(){

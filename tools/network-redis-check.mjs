@@ -16,7 +16,7 @@ try{
  const pose={seq:1,x:100,y:200,angle:0,space:'outdoor',vehicle:'car',model:10,tone:0,paused:false};
  assert.equal(await stores[0].write(ids[0],pose,now),true);
  assert.equal((await stores[1].peers(now,rooms[0]))[0].id,ids[0]);
- assert.equal((await stores[1].peers(now,(rooms[0]+1)%MAX_ROOMS)).length,0);
+ assert.equal((await stores[1].peers(now,MAX_ROOMS)).length,0);
  const deadline=Date.now()+3000;while(!events.includes(rooms[0])&&Date.now()<deadline)await new Promise(r=>setTimeout(r,20));
  assert.ok(events.includes(rooms[0]),'Cross-process Pub/Sub absent');
  const riders=ids.map((id,i)=>({id,i})).filter(r=>r.i>0&&rooms[r.i]===rooms[0]).slice(0,2);
