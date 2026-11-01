@@ -1,12 +1,13 @@
+import {validAvatar} from './avatar-schema.js';
 import {validateSceneAction} from './ghost-scene.js';
 // No age, inventory, damage values or save data travels in presence.
 export const MAX_PEERS=5;
 export const MAX_ROOMS=1;
 export const MAX_PAYLOAD=2048;
 export const PRESENCE_TTL=15000;
-export const GHOST_MANIFEST=Object.freeze({v:3,room:'afterlight',seed:20261018,worldVersion:'coast-1',epochMs:Date.UTC(2026,9,18),baseMinutes:480,clockRate:1.2,maxPeers:MAX_PEERS,maxRooms:MAX_ROOMS});
+export const GHOST_MANIFEST=Object.freeze({v:4,room:'afterlight',seed:20261018,worldVersion:'coast-1',epochMs:Date.UTC(2026,9,18),baseMinutes:480,clockRate:1.2,maxPeers:MAX_PEERS,maxRooms:MAX_ROOMS});
 export const GHOST_VEHICLES=Object.freeze(['foot','bike','motorcycle','car','horse','swim']);
-const poseKeys=new Set(['type','seq','x','y','angle','space','vehicle','model','tone','paused','name']);
+const poseKeys=new Set(['type','seq','x','y','angle','space','vehicle','model','tone','paused','name','avatar','pet']);
 const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
 const integer=(n,min,max)=>Number.isInteger(n)&&n>=min&&n<=max;
 const finite=(n,min,max)=>Number.isFinite(n)&&n>=min&&n<=max;
@@ -15,7 +16,8 @@ export function validatePose(message){
  if(!object(message)||message.type!=='pose'||Object.keys(message).some(key=>!poseKeys.has(key)))return null;
  if(!integer(message.seq,0,2147483647)||!finite(message.x,0,512)||!finite(message.y,0,512)||!finite(message.angle,-1000,1000)||!validSpace(message.space)||!GHOST_VEHICLES.includes(message.vehicle)||!integer(message.model,0,13)||!integer(message.tone,0,3)||typeof message.paused!=='boolean')return null;
  if(message.name!==undefined&&(typeof message.name!=='string'||message.name.length>24||/[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/.test(message.name)))return null;
- return {...(message.name!==undefined?{name:message.name}:{}),seq:message.seq,x:Math.round(message.x*1000)/1000,y:Math.round(message.y*1000)/1000,angle:Math.round(Math.atan2(Math.sin(message.angle),Math.cos(message.angle))*10000)/10000,space:message.space,vehicle:message.vehicle,model:message.model,tone:message.tone,paused:message.paused};
+ if(message.avatar!==undefined&&!validAvatar(message.avatar)||message.pet!==undefined&&!['dog','cat',''].includes(message.pet))return null;
+ return {...(message.avatar?{avatar:[...message.avatar]}:{}),...(message.pet!==undefined?{pet:message.pet}:{}),...(message.name!==undefined?{name:message.name}:{}),seq:message.seq,x:Math.round(message.x*1000)/1000,y:Math.round(message.y*1000)/1000,angle:Math.round(Math.atan2(Math.sin(message.angle),Math.cos(message.angle))*10000)/10000,space:message.space,vehicle:message.vehicle,model:message.model,tone:message.tone,paused:message.paused};
 }
 export function parseClientMessage(raw){
  if(typeof raw!=='string'||raw.length>MAX_PAYLOAD)return null;

@@ -4,7 +4,7 @@ const id=s=>typeof s==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(s);
 const n=(v,min,max)=>Number.isFinite(v)&&v>=min&&v<=max;
 export function validateSceneAction(m){
  if(!m||typeof m!=='object'||m.type!=='sceneAction'||!Number.isSafeInteger(m.nonce)||m.nonce<0)return null;
- if(m.action==='effect'&&Object.keys(m).every(k=>['type','nonce','action','kind','target','x','y','angle','victim'].includes(k))&&['shot','hit','down','break'].includes(m.kind)&&(!m.victim||['zombie','jinn','vampire','watcher','robber','sentinel','runner','brute','resident','trafficCar','tree','facade','air'].includes(m.victim))&&id(m.target)&&!m.target.startsWith('ghost-')&&n(m.x,0,512)&&n(m.y,0,512)&&n(m.angle,-1000,1000))return {...m};
+ if(m.action==='effect'&&Object.keys(m).every(k=>['type','nonce','action','kind','target','x','y','angle','victim'].includes(k))&&['shot','hit','down','break'].includes(m.kind)&&(!m.victim||['zombie','jinn','vampire','watcher','robber','sentinel','runner','brute','resident','venomSnake','anaconda','crocodile','trafficCar','tree','facade','air'].includes(m.victim))&&id(m.target)&&!m.target.startsWith('ghost-')&&n(m.x,0,512)&&n(m.y,0,512)&&n(m.angle,-1000,1000))return {...m};
  if(['join','take','exit','withdraw'].includes(m.action)&&Object.keys(m).every(k=>['type','nonce','action','vehicleId'].includes(k))&&id(m.vehicleId))return {...m};
  if(m.action==='vehicle'&&Object.keys(m).every(k=>['type','nonce','action','vehicleId','vehicle','model','parked','x','y','angle'].includes(k))&&id(m.vehicleId)&&['car','motorcycle'].includes(m.vehicle)&&Number.isInteger(m.model)&&n(m.model,0,13)&&typeof m.parked==='boolean'&&n(m.x,0,512)&&n(m.y,0,512)&&n(m.angle,-1000,1000))return {...m};
  return null;

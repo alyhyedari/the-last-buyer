@@ -2,6 +2,8 @@ import {tr} from './i18n.js';
 import {LIFE_TEXT} from './frontier-life-text.js';
 // Eight complete UI locales. Numbers and key sequences are rendered separately LTR.
 const rows={
+ amazon:['Amazon reserve','ذخیره‌گاه آمازون','Amazon','Amazon','Amazonas','Amazon','Amazonie','Amazônia'],amazonRiver:['River bridge','پل رود آمازون','River bridge','River bridge','Puente del río','River bridge','Pont du fleuve','Ponte do rio'],amazonCanopy:['Canopy trail','مسیر سایه‌بان جنگل','Canopy trail','Canopy trail','Sendero del dosel','Canopy trail','Sentier de la canopée','Trilha da copa'],
+
  clickControls:['Click or tap the ground to walk there; drag to turn. Use the map for longer routes.','روی زمین کلیک یا لمس کن تا به آنجا بروی؛ برای چرخش بکش. مسیرهای بلند را از نقشه انتخاب کن.','点击地面前往，拖动转向。长途可使用地图。','انقر الأرض للحركة واسحب للدوران. استخدم الخريطة للطرق البعيدة.','Toca el suelo para caminar, arrastra para girar. Usa el mapa para rutas largas.','ज़मीन पर टैप करके चलें; घुमाने के लिए खींचें। लंबे रास्तों के लिए नक्शा।','Touchez le sol pour avancer, glissez pour tourner. Carte pour les longs trajets.','Toque o chão para andar, arraste para virar. Use o mapa para rotas longas.'],
  deer:['Deer','گوزن','鹿','غزال','Ciervo','हिरण','Cerf','Cervo'],fox:['Fox','روباه','狐狸','ثعلب','Zorro','लोमड़ी','Renard','Raposa'],rabbit:['Rabbit','خرگوش','兔子','أرنب','Conejo','खरगोश','Lapin','Coelho'],boar:['Boar','گراز','野猪','خنزير بري','Jabalí','जंगली सूअर','Sanglier','Javali'],owl:['Owl','جغد','猫头鹰','بومة','Búho','उल्लू','Hibou','Coruja'],heron:['Heron','حواصیل','苍鹭','مالك الحزين','Garza','बगुला','Héron','Garça'],
  title:['Afterlight County','شهرستان پس‌تاب','余晖郡','مقاطعة الشفق','Condado del Ocaso','साँझ का इलाका','Comté du Crépuscule','Condado do Poente'],

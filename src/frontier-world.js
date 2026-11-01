@@ -1,3 +1,4 @@
+import {RAIN_PLACES,buildRainforest} from './rainforest.js';
 import {WORLD_SIZE} from './cyber-state.js';
 import {buildCoast} from './cyber-world.js';
 import {terrainHeight} from './frontier-terrain.js';
@@ -10,7 +11,7 @@ import {inDeepForest} from './frontier-forest-data.js';
 import {MYTH_BOSSES,MYTH_TRAILS} from './frontier-myth-data.js';
 export const SIZE=WORLD_SIZE;
 export const LAKES=[{id:'mirrorwater',x:54,y:19,rx:12,ry:9,shore:{x:61.5,y:29.5},entry:{x:58.5,y:24.5}},{id:'bluebasin',x:150,y:164,rx:18,ry:14,shore:{x:149.5,y:181.5},entry:{x:149.5,y:173.5}},{id:'glasswater',x:490,y:320,rx:15,ry:180,shore:{x:472.5,y:260.5},entry:{x:480.5,y:260.5}}];
-export const PLACES=[...MYTH_TRAILS,...CITY_DESTINATIONS,
+export const PLACES=[...RAIN_PLACES,...MYTH_TRAILS,...CITY_DESTINATIONS,
  {id:'gate',x:32.5,y:57.5,color:'#c8e397',kind:'gate'},
  {id:'garage',x:28.5,y:49.5,color:'#dba05f',kind:'garage'},
  {id:'market',x:36.5,y:43.5,color:'#bddc83',kind:'market'},
@@ -102,6 +103,7 @@ export function makeFrontierWorld(seed){
  const city=buildMetropolis({tiles,size:SIZE,sprites,buildings,road,seed,hash});
  growForest(sprites,tiles,SIZE,seed);
  const coastTraffic=buildCoast({tiles,size:SIZE,sprites,buildings});for(const b of buildings.filter(b=>b.id.startsWith('coast-tower-')))city.buildings.set(b.id,b);
+ buildRainforest({tiles,size:SIZE,sprites,road,seed,hash});
  // Wide, open ritual grounds; pillars frame the arena without sealing exits.
  for(const b of MYTH_BOSSES)for(let i=0;i<8;i++){const a=i*Math.PI/4,x=b.x+Math.cos(a)*8.5,y=b.y+Math.sin(a)*8.5;sprites.push({id:'pillar-'+b.id+'-'+i,kind:'mythPillar',x,y,variant:b.variant,radius:.3});}
  sprites.push(...familyResidents(buildings,seed));

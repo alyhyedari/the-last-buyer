@@ -1,3 +1,4 @@
+import {handleAccount} from './account-http.js';
 import {createServer} from 'node:http';
 import {pathToFileURL} from 'node:url';
 import {createStaticServer} from '../server.mjs';
@@ -6,6 +7,7 @@ import {attachGhostWebSockets,handleGhostRoom,JSON_HEADERS} from './ghost-http.j
 export async function createNetworkServer({local=false,production=!local,getStore,rotationMs}={}){
  const memory=local&&!getStore?createMemoryGhostStore({local:true}):null,storeProvider=getStore||(memory?async()=>memory:getProductionGhostStore),staticServer=await createStaticServer({production});
  const server=createServer((req,res)=>{let pathname;try{pathname=new URL(req.url,'http://localhost').pathname;}catch{res.writeHead(400);res.end();return;}
+  if(pathname==='/api/account'){void handleAccount(req,res);return;}
   if(pathname==='/api/ghost-room'){void handleGhostRoom(req,res,storeProvider,{local});return;}
   if(pathname==='/healthz'){if(req.method!=='GET'&&req.method!=='HEAD'){res.writeHead(405,{Allow:'GET, HEAD'});res.end();return;}void Promise.resolve().then(storeProvider).then(store=>{const healthy=!!store?.healthy();res.writeHead(healthy?200:503,JSON_HEADERS);res.end(req.method==='HEAD'?undefined:JSON.stringify({ok:healthy,service:'neon-coast-presence',mode:local?'local':'production'}));}).catch(()=>{res.writeHead(503,JSON_HEADERS);res.end(JSON.stringify({ok:false}));});return;}
   staticServer.emit('request',req,res);

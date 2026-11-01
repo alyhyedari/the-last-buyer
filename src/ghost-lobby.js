@@ -4,13 +4,14 @@ import {GT} from './ghost-text.js';
 import {GhostClient} from './ghost-client.js';
 import {GHOST_MANIFEST} from './ghost-protocol.js';
 
-export function mountGhostLobby(root,{onJoin,onClose,fetchImpl=globalThis.fetch,Client=GhostClient,setTimeoutImpl=globalThis.setTimeout,clearTimeoutImpl=globalThis.clearTimeout}){
+export function mountGhostLobby(root,{onJoin,onClose,nickname='',onNickname=()=>{},fetchImpl=globalThis.fetch,Client=GhostClient,setTimeoutImpl=globalThis.setTimeout,clearTimeoutImpl=globalThis.clearTimeout}){
  let alive=true,client=null,request=null,timer=null,generation=0,url=null;const text=key=>tr(GT[key]);
+ const fa=document.documentElement.lang==='fa',name=h('input',{type:'text',value:nickname,maxlength:24,required:true,autocomplete:'nickname','aria-label':fa?'نام مستعار لازم است':'Nickname required'});
  const status=h('p',{class:'ghost-status',role:'status'},text('loading'));
  const join=button(text('join'),connect,'btn primary',{disabled:true}),retry=button(text('retry'),load,'btn secondary',{hidden:true});
  root.classList.add('ghost-lobby');root.append(h('h2',{},text('title')),h('p',{class:'body-copy'},text('intro')),
  h('article',{class:'ghost-card'},h('strong',{},text('sharedWorld')),h('p',{},text('ownProgress')),h('p',{class:'ghost-help'},text('latencyHelp'))),
- status,h('p',{class:'ghost-privacy'},text('privacy')),h('div',{class:'ghost-actions'},join,retry,button(text('returnSolo'),()=>{dispose();onClose();},'btn secondary')));
+ h('label',{},fa?'نام مستعار':'Nickname',name),status,h('p',{class:'ghost-privacy'},text('privacy')),h('div',{class:'ghost-actions'},join,retry,button(text('returnSolo'),()=>{dispose();onClose();},'btn secondary')));
  function clearTimer(){if(timer!==null)clearTimeoutImpl(timer);timer=null;}
  function releaseClient(){const previous=client;client=null;if(previous){previous.onStatus=null;previous.onWelcome=null;previous.dispose();}}
  function unavailable(reason='connectionFailed'){
@@ -32,7 +33,7 @@ export function mountGhostLobby(root,{onJoin,onClose,fetchImpl=globalThis.fetch,
   }catch{if(alive&&token===generation)unavailable('connectionFailed');}
  }
  function connect(){
-  if(!url||client||!alive)return;join.disabled=true;retry.hidden=true;status.textContent=text('connecting');
+  if(!url||client||!alive)return;const nick=name.value.replace(/[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/g,'').trim().slice(0,24);if(!nick){status.textContent=fa?'برای ورود یک نام مستعار بنویس.':'Enter a nickname to join.';name.focus();return;}onNickname(nick);join.disabled=true;retry.hidden=true;status.textContent=text('connecting');
   client=new Client({url:url.href,onStatus:s=>{
    if(!alive)return;if(s.state==='unavailable'){const key=s.reason==='room_full'?'roomFull':s.reason==='incompatible_world'?'incompatibleWorld':s.reason==='protocol_rejected'?'protocolRejected':'connectionFailed';unavailable(key);return;}
    status.textContent=text(GT[s.state]?s.state:'connecting');

@@ -50,7 +50,8 @@ const bytes=assets.reduce((n,a)=>n+a.bytes,0),gzipBytes=assets.reduce((n,a)=>n+a
 // Hill recovery plus the requested compact HUD and combat feedback add under 8 KiB.
 // Four control styles and local player profile add 5 KiB to the lazy bundle.
 // Echo scenes, pocket delivery, assisted recovery and Vlad add 9 KiB, all lazy.
-const limits={totalGzipBytes:612*1024,scriptGzipBytes:238*1024,speedInsightsGzipBytes:1.5*1024};
+// Avatar/cloud schema adds <=1 KiB initial; editor, rainforest and pet art stay lazy (+12 KiB total).
+const limits={totalGzipBytes:624*1024,scriptGzipBytes:239*1024,speedInsightsGzipBytes:1.5*1024};
 const script=assets.find(a=>a.file===relative(out,resolve(root,js)).split(sep).join('/'));
 const initial=new Set();
 function visitInitial(path){if(initial.has(path))return;initial.add(path);for(const imported of result.metafile.outputs[path]?.imports||[])if(!imported.external&&imported.kind!=='dynamic-import')visitInitial(imported.path);}

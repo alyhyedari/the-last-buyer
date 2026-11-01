@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {newState,validateState,defaultSettings,readSettings,SETTINGS_KEY} from '../src/state.js';
+import {DEFAULT_AVATAR} from '../src/avatar.js';
 import {normalizePlayerProfile} from '../src/player-profile.js';
 import {applyControlPreset,readGamepad} from '../src/frontier-controls.js';
 import {parkCar,expanseActors} from '../src/frontier-expanse.js';
@@ -10,7 +11,7 @@ import {buyRide} from '../src/cyber-systems.js';
 import {assistedStep,travelFare,safeDestination} from '../src/frontier-logistics.js';
 import {vladHelp} from '../src/frontier-vlad.js';
 import {TouchState} from '../src/touch-state.js';
-test('optional local age and nickname migrate, sanitize and survive a save',()=>{const s=newState();delete s.player;assert.deepEqual(validateState(s).player,{name:'',age:null,asked:false});s.player=normalizePlayerProfile({name:'  آرین\u202e  ',age:99,asked:true});const saved=validateState(JSON.parse(JSON.stringify(s)));assert.equal(saved.player.name,'آرین');assert.equal(saved.player.age,99);for(const age of [-1,2,121,3.5,Infinity,'30'])assert.equal(normalizePlayerProfile({name:'Test',age}),null);});
+test('optional local age and nickname migrate, sanitize and survive a save',()=>{const s=newState();delete s.player;assert.deepEqual(validateState(s).player,{name:'',age:null,asked:false,avatar:[...DEFAULT_AVATAR]});s.player=normalizePlayerProfile({name:'  آرین\u202e  ',age:99,asked:true});const saved=validateState(JSON.parse(JSON.stringify(s)));assert.equal(saved.player.name,'آرین');assert.equal(saved.player.age,99);for(const age of [-1,2,121,3.5,Infinity,'30'])assert.equal(normalizePlayerProfile({name:'Test',age}),null);});
 test('all four control styles save; simple mode reduces motion and tap mode routes',()=>{for(const preset of ['standard','simple','tap','gamepad']){const settings=defaultSettings();assert.ok(applyControlPreset(settings,preset));const saved=readSettings({getItem:key=>key===SETTINGS_KEY?JSON.stringify(settings):null});assert.equal(saved.controlPreset,preset);if(preset==='simple')assert.ok(saved.reducedMotion&&saved.lookSensitivity<1);if(preset==='tap')assert.equal(saved.inputMode,'click');}assert.equal(applyControlPreset({},'unknown'),false);});
 test('standard gamepads use a dead zone and independent gas, look, brake and buttons',()=>{const pad={connected:true,mapping:'standard',axes:[.1,-1,.59,-.59],buttons:Array.from({length:17},()=>({pressed:false,value:0}))};pad.buttons[0]={pressed:true,value:1};pad.buttons[7]={pressed:true,value:.7};const input=readGamepad(pad);assert.equal(input.forward,1);assert.equal(input.strafe,0);assert.ok(Math.abs(input.look-.5)<.001);assert.equal(input.gas,.7);assert.equal(input.buttons[0],true);assert.equal(readGamepad(null).forward,0);assert.equal(readGamepad({...pad,connected:false}).gas,0);});
 test('four touches remain independent when one pointer is cancelled',()=>{const t=new TouchState();for(const [i,role]of ['gas','steer','look','fire'].entries())assert.ok(t.claim(i,role));t.release(1);assert.ok(t.has('gas')&&t.has('look')&&t.has('fire'));assert.ok(!t.has('steer'));assert.equal(t.claim(8,'look'),false);t.clear();assert.equal(t.pointers.size,0);});

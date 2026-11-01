@@ -181,3 +181,5 @@ body[data-accent=violet]{--green:#d2a6ff;--gold:#f0b6d0}
 html,body,body *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 input,textarea,[contenteditable=""],[contenteditable="true"]{-webkit-user-select:text;user-select:text}
 img,canvas{-webkit-user-drag:none}
+
+#echo-server{cursor:pointer;border:1px solid #81e8cb;border-radius:14px;padding:12px 22px;background:linear-gradient(120deg,#123e42,#214c4c);color:#dcfff1;font-weight:700;box-shadow:0 0 18px #70d9bb22}#echo-server:hover,#echo-server:focus-visible{background:#286260;outline:2px solid #a2f3d8;outline-offset:3px}.avatar-preview{width:144px;height:192px;image-rendering:pixelated;display:block;margin:8px auto;background:#132c35;border-radius:12px}.avatar-controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}.avatar-controls label{display:grid;gap:5px}.avatar-controls select,.profile-fields input{min-height:44px;max-width:100%}.profile-fields{display:grid;gap:10px}.account-status{white-space:pre-line}.pet-badge{color:#aadfbe}

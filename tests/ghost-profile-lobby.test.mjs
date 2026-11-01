@@ -31,15 +31,16 @@ class Element{
  setAttribute(name,value){this.attrs[name]=value;if(name==='disabled')this.disabled=true;if(name==='hidden')this.hidden=true;}
  set textContent(value){this._text=value;this.children=[];}
  get textContent(){return this._text+this.children.map(c=>c.textContent??String(c)).join('');}
+ focus(){}
  click(){if(!this.disabled&&!this.hidden)return this.listeners.click?.({});}
  all(){return[this,...this.children.flatMap(c=>c instanceof Element?c.all():[])];}
 }
 const flush=async()=>{for(let i=0;i<5;i++)await Promise.resolve();};
 async function withLobby(run){
- const previous={document:globalThis.document,Node:globalThis.Node,location:globalThis.location};globalThis.document={createElement:t=>new Element(t),createTextNode:t=>new Element('',t)};globalThis.Node=Element;globalThis.location=new URL('https://example.test/game');setLanguage('en');
+ const previous={document:globalThis.document,Node:globalThis.Node,location:globalThis.location};globalThis.document={documentElement:{lang:'en'},createElement:t=>new Element(t),createTextNode:t=>new Element('',t)};globalThis.Node=Element;globalThis.location=new URL('https://example.test/game');setLanguage('en');
  let time=0,next=0;const timers=new Map(),requests=[],clients=[],joined=[];let closed=0;
  class Client{constructor(options){Object.assign(this,options);this.disposed=0;clients.push(this);}connect(){this.onStatus?.({state:'connecting'});}dispose(){this.disposed++;this.onStatus?.({state:'offline'});}welcome(){this.onWelcome?.(makeWelcome('test'));}fail(reason){this.onStatus?.({state:'unavailable',reason});}}
- const root=new Element('main');const lobby=mountGhostLobby(root,{onJoin:c=>joined.push(c),onClose:()=>closed++,Client,fetchImpl:(_url,options)=>new Promise((resolve,reject)=>requests.push({resolve,reject,signal:options.signal})),setTimeoutImpl:(fn,delay)=>{const id=++next;timers.set(id,{fn,at:time+delay});return id;},clearTimeoutImpl:id=>timers.delete(id)});
+ const root=new Element('main');const lobby=mountGhostLobby(root,{nickname:'Test player',onJoin:c=>joined.push(c),onClose:()=>closed++,Client,fetchImpl:(_url,options)=>new Promise((resolve,reject)=>requests.push({resolve,reject,signal:options.signal})),setTimeoutImpl:(fn,delay)=>{const id=++next;timers.set(id,{fn,at:time+delay});return id;},clearTimeoutImpl:id=>timers.delete(id)});
  const advance=ms=>{time+=ms;for(const [id,t]of timers)if(t.at<=time){timers.delete(id);t.fn();}};
  const respond=async(info=roomInfo(),index=requests.length-1)=>{requests[index].resolve({ok:true,text:async()=>JSON.stringify(info)});await flush();};
  const button=key=>root.all().find(e=>e.tag==='button'&&e.textContent===GT[key].en),status=()=>root.all().find(e=>e.attrs.role==='status').textContent;

@@ -1,11 +1,11 @@
 import {GHOST_VEHICLES,MAX_PEERS} from './ghost-protocol.js';
-// Version 3 compact frames omit repeated field names. Validation stays in the
+// Version 4 compact frames omit repeated field names. Validation stays in the
 // client after decoding, so compact input never bypasses pose checks.
-export function packSnapshot(peers,serverTime){return{type:'frame',serverTime,peers:peers.map(p=>[p.id,p.seq,Math.round(p.x*100)/100,Math.round(p.y*100)/100,Math.round(p.angle*1000)/1000,p.space==='outdoor'?0:p.space,GHOST_VEHICLES.indexOf(p.vehicle),p.model,p.tone,p.paused?1:0,p.at-serverTime,p.name||''])};}
+export function packSnapshot(peers,serverTime){return{type:'frame',serverTime,peers:peers.map(p=>[p.id,p.seq,Math.round(p.x*100)/100,Math.round(p.y*100)/100,Math.round(p.angle*1000)/1000,p.space==='outdoor'?0:p.space,GHOST_VEHICLES.indexOf(p.vehicle),p.model,p.tone,p.paused?1:0,p.at-serverTime,p.name||'',p.avatar||null,p.pet||''])};}
 export function unpackSnapshot(message){
  if(message?.type!=='frame')return message;
  if(Object.keys(message).some(k=>!['type','serverTime','peers'].includes(k))||!Array.isArray(message.peers)||message.peers.length>MAX_PEERS)return null;
- const peers=[];for(const p of message.peers){if(!Array.isArray(p)||p.length!==12||!Number.isInteger(p[6])||p[6]<0||p[6]>=GHOST_VEHICLES.length||![0,1].includes(p[9])||!Number.isFinite(p[10])||p[10]<-30000||p[10]>1000)return null;peers.push({id:p[0],...(p[11]?{name:p[11]}:{}),seq:p[1],x:p[2],y:p[3],angle:p[4],space:p[5]===0?'outdoor':p[5],vehicle:GHOST_VEHICLES[p[6]],model:p[7],tone:p[8],paused:p[9]===1,at:message.serverTime+p[10]});}
+ const peers=[];for(const p of message.peers){if(!Array.isArray(p)||![12,14].includes(p.length)||!Number.isInteger(p[6])||p[6]<0||p[6]>=GHOST_VEHICLES.length||![0,1].includes(p[9])||!Number.isFinite(p[10])||p[10]<-30000||p[10]>1000)return null;peers.push({id:p[0],...(p[12]?{avatar:p[12]}:{}),...(p[13]?{pet:p[13]}:{}),...(p[11]?{name:p[11]}:{}),seq:p[1],x:p[2],y:p[3],angle:p[4],space:p[5]===0?'outdoor':p[5],vehicle:GHOST_VEHICLES[p[6]],model:p[7],tone:p[8],paused:p[9]===1,at:message.serverTime+p[10]});}
  return{type:'snapshot',serverTime:message.serverTime,peers};
 }
 

@@ -7,10 +7,10 @@ const ownKeys=(value,allowed)=>value!==null&&typeof value==='object'&&!Array.isA
 const stamp=n=>Number.isSafeInteger(n)&&n>=0&&n<=8640000000000000;
 const wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));
 const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));
-const peerKeys=['id','seq','x','y','angle','space','vehicle','model','tone','paused','at','name'];
+const peerKeys=['id','seq','x','y','angle','space','vehicle','model','tone','paused','at','name','avatar','pet'];
 const manifestKeys=Object.keys(GHOST_MANIFEST);
 const newer=(a,b)=>{const d=(a-b+2147483648)%2147483648;return d>0&&d<1073741824;};
-const changed=(a,b)=>!b||Math.hypot(a.x-b.x,a.y-b.y)>.02||Math.abs(wrap(a.angle-b.angle))>.01||['space','vehicle','model','tone','paused','name'].some(k=>a[k]!==b[k]);
+const changed=(a,b)=>!b||Math.hypot(a.x-b.x,a.y-b.y)>.02||Math.abs(wrap(a.angle-b.angle))>.01||['space','vehicle','model','tone','paused','name','pet'].some(k=>a[k]!==b[k])||JSON.stringify(a.avatar)!==JSON.stringify(b.avatar);
 const safeCall=(fn,value)=>{try{fn?.(value);}catch{/* Host UI callbacks must not stop transport cleanup. */}};
 
 /** Presence only. Remote poses never enter inventory, collision, combat or saves. */
@@ -87,7 +87,7 @@ export class GhostClient{
  }
  update(pose){
   if(this._disposed||this._terminal||!pose)return false;
-  const clean=validatePose({type:'pose',seq:this._seq,x:pose.x,y:pose.y,angle:Number.isFinite(pose.angle)?wrap(pose.angle):pose.angle,space:pose.space,vehicle:pose.vehicle??'foot',model:pose.model??0,tone:pose.tone??0,paused:!!pose.paused,name:pose.name||''});
+  const clean=validatePose({type:'pose',seq:this._seq,x:pose.x,y:pose.y,angle:Number.isFinite(pose.angle)?wrap(pose.angle):pose.angle,space:pose.space,vehicle:pose.vehicle??'foot',model:pose.model??0,tone:pose.tone??0,paused:!!pose.paused,name:pose.name||'',...(pose.avatar?{avatar:pose.avatar}:{}),...(pose.pet!==undefined?{pet:pose.pet}:{})});
   if(!clean)return false;this._pose=clean;this._publish(this.now());return true;
  }
  _publish(now){
@@ -138,7 +138,7 @@ export class GhostClient{
   const clean=[],ids=new Set();
   for(const p of message.peers){
    if(!ownKeys(p,peerKeys)||typeof p.id!=='string'||!(/^[A-Za-z0-9_-]{1,64}$/).test(p.id)||ids.has(p.id)||!stamp(p.at)||p.at>message.serverTime+1000||message.serverTime-p.at>30000)return;
-   const pose=validatePose({type:'pose',seq:p.seq,x:p.x,y:p.y,angle:p.angle,space:p.space,vehicle:p.vehicle,model:p.model,tone:p.tone,paused:p.paused,...(p.name!==undefined?{name:p.name}:{})});if(!pose)return;
+   const pose=validatePose({type:'pose',seq:p.seq,x:p.x,y:p.y,angle:p.angle,space:p.space,vehicle:p.vehicle,model:p.model,tone:p.tone,paused:p.paused,...(p.avatar?{avatar:p.avatar}:{}),...(p.pet!==undefined?{pet:p.pet}:{}),...(p.name!==undefined?{name:p.name}:{})});if(!pose)return;
    ids.add(p.id);if(p.id!==this._id)clean.push({id:p.id,...pose,at:now+p.at-this._serverNow(now)});
   }
   if(this._arrival!==null){const variation=Math.abs((now-this._arrival)-(message.serverTime-this._serverArrival));this._setStatus({jitterMs:Math.round(clamp(this._status.jitterMs*.9+variation*.1,0,1000))});}
@@ -170,7 +170,7 @@ export class GhostClient{
     if(!between&&samples.length>1&&!last.paused){const previous=samples.at(-2),elapsed=(last.at-previous.at)/1000;if(elapsed>.02){const vx=(last.x-previous.x)/elapsed,vy=(last.y-previous.y)/elapsed,scale=Math.min(1,32/(Math.hypot(vx,vy)||1)),seconds=clamp((target-last.at)/1000,0,.25);x=clamp(last.x+vx*scale*seconds,0,512);y=clamp(last.y+vy*scale*seconds,0,512);}}
    }
    const age=Math.max(0,at-last.at),fadeAt=last.paused?6000:1500,opacity=(last.paused?.68:1)*(1-clamp((age-fadeAt)/(EXPIRE_MS-fadeAt),0,1));
-   actors.push({kind:'playerGhost',id:'ghost-'+id,peerId:id,name:last.name||'Echo '+id.slice(0,4),x,y,angle,vehicle:last.vehicle,model:last.model,tone:last.tone,paused:last.paused,opacity,variant:last.tone,distance:Math.hypot(x-view.x,y-view.y)});
+   actors.push({kind:'playerGhost',id:'ghost-'+id,peerId:id,name:last.name||'Echo '+id.slice(0,4),x,y,angle,vehicle:last.vehicle,model:last.model,tone:last.tone,avatar:last.avatar,pet:last.pet,paused:last.paused,opacity,variant:last.tone,distance:Math.hypot(x-view.x,y-view.y)});
   }
   actors.sort((a,b)=>a.distance-b.distance);return actors.slice(0,RENDER_LIMIT).map(({distance,...actor})=>actor);
  }
