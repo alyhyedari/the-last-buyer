@@ -17,7 +17,7 @@ export function createMemoryGhostStore({local=false}={}){
  return {
   kind:'local-memory',healthy:()=>true,
   async action(id,m,now){const room=membership.get(id);if(room===undefined)return {ok:false,reason:'expired'};const peers=await this.peers(now,room),r=reduceScene(scenes[room],peers,id,m,now);scenes[room]=r.scene;notify(room);return {ok:r.ok,reason:r.reason};},
-  async scene(now,room){return pruneScene(scenes[room],await this.peers(now,room),now);},
+  async scene(now,room,peers){return pruneScene(scenes[room],peers||await this.peers(now,room),now);},
   async allocate(id,now,preferred=null){return allocate(id,now,preferred);},
   async reserve(id,now,room=0){return allocate(id,now,room,true)>=0;},
   async write(id,pose,now){const room=membership.get(id);if(room===undefined)return false;prune(room,now);const row=rooms[room].get(id);if(!row)return false;row.pose={id,...pose,at:now};row.expires=now+PRESENCE_TTL;notify(room);return true;},
@@ -79,7 +79,7 @@ export async function createRedisGhostStore(url,{namespace='public'}={}){
  return {
   kind:'redis',healthy:()=>commands.status==='ready'&&subscriber.status==='ready',
   async action(id,m,now){const room=membership.get(id);if(room===undefined)return {ok:false,reason:'expired'};const key=base+':r'+room+':scene';for(let i=0;i<12;i++){const raw=await commands.get(key),peers=await this.peers(now,room),r=reduceScene(raw?JSON.parse(raw):emptyScene(),peers,id,m,now);if(!r.ok)return {ok:false,reason:r.reason};const ok=await commands.eval("if (redis.call('GET',KEYS[1]) or '')~=ARGV[1] then return 0 end; redis.call('SET',KEYS[1],ARGV[2],'EX',60); redis.call('PUBLISH',KEYS[2],ARGV[3]); return 1",2,key,events,raw||'',JSON.stringify(r.scene),room);if(ok)return {ok:true};}return {ok:false,reason:'busy'};},
-  async scene(now,room){const raw=await commands.get(base+':r'+room+':scene');return pruneScene(raw?JSON.parse(raw):emptyScene(),await this.peers(now,room),now);},
+  async scene(now,room,peers){const raw=await commands.get(base+':r'+room+':scene');return pruneScene(raw?JSON.parse(raw):emptyScene(),peers||await this.peers(now,room),now);},
   async allocate(id,now,preferred=null){return allocate(id,now,preferred,false);},
   async reserve(id,now,room=0){return (await allocate(id,now,room,true))>=0;},
   async write(id,pose,now){const room=membership.get(id);return room!==undefined&&(await run(room,writeScript,now,id,now+PRESENCE_TTL,JSON.stringify({id,...pose,at:now}),room))===1;},

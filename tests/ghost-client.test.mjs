@@ -136,3 +136,11 @@ test('scene delta transport rejects a missing base and recovers after server sce
  socket.receive(packScene({rev:0,effects:[],vehicles:[]},base));assert.equal(h.client.scene.rev,0);
  const bad=structuredClone(first);bad.vehicles[0].model=100;socket.receive(packScene(bad,base));assert.equal(h.client.scene.rev,0);h.client.dispose();
 });
+
+test('server cadence advice is validated, slows publishing and resets on reconnect',()=>{
+ const h=harness(),s=h.online();h.client.update(pose());
+ s.receive({type:'network',serverPingMs:120,intervalMs:600,mode:'recovery'});assert.equal(h.client.status.serverPingMs,120);assert.equal(h.client.interpolationMs,300);
+ h.advance(200);h.client.update(pose({x:11}));assert.equal(s.sent.filter(m=>m.type==='pose').length,1);h.advance(400);h.client.update(pose({x:12}));assert.equal(s.sent.filter(m=>m.type==='pose').length,2);
+ for(const patch of [{intervalMs:1},{serverPingMs:-1},{mode:'fake'},{damage:10}])s.receive({type:'network',serverPingMs:1,intervalMs:200,mode:'normal',...patch});assert.equal(h.client.status.intervalMs,600);
+ s.receive({type:'reconnect',retryAfter:500});h.advance(750);const next=h.sockets.at(-1);next.open();next.receive(makeWelcome('new-self',base+h.time));assert.equal(h.client.status.intervalMs,200);h.client.dispose();
+});

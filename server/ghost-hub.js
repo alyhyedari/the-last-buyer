@@ -36,7 +36,7 @@ export function createGhostHub(store,{now=Date.now,rotationMs=240000,snapshotMs=
    if(time-lastTouch>=5000){lastTouch=time;await Promise.all(live.map(async row=>{if(time-row.lastInput>15000){row.socket.close(1001,'heartbeat timeout');return;}if(!await store.touch(row.id,time))fail(row.socket);}));}
    const groups=new Map();for(const row of live){if(!groups.has(row.shard))groups.set(row.shard,[]);groups.get(row.shard).push(row);}
    await Promise.all([...groups].map(async([shard,rows])=>{
-    const elapsed=time-(lastSnapshot.get(shard)||0);if(elapsed<governor.interval||!dirty.has(shard)&&elapsed<2000)return;
+    const elapsed=time-(lastSnapshot.get(shard)||0);if(elapsed<governor.interval||!dirty.has(shard)&&elapsed<2000&&!rows.some(row=>!row.sceneReady))return;
     dirty.delete(shard);lastSnapshot.set(shard,time);const peers=await store.peers(time,shard),packet=encode(packSnapshot(peers,time));metrics.snapshots++;
     for(const row of rows){const interval=row.rtt>700?Math.max(400,governor.interval):governor.interval;if(time-row.frameAt<interval)continue;if(send(row.socket,packet,true))row.frameAt=time;}
     if(store.scene&&time-(lastScene.get(shard)||0)>=Math.max(500,governor.interval)){
@@ -46,7 +46,7 @@ export function createGhostHub(store,{now=Date.now,rotationMs=240000,snapshotMs=
     }
    }));
   }catch{for(const row of clients.values())fail(row.socket);}
-  finally{governor.observe({now:time,workMs:performance.now()-started,lagMs:lag,pressure});ticking=false;}
+  finally{const before=governor.interval;governor.observe({now:time,workMs:performance.now()-started,lagMs:lag,pressure});if(before!==governor.interval)for(const row of clients.values())if(row.ready)send(row.socket,{type:'network',serverPingMs:row.rtt===null?null:Math.round(row.rtt),intervalMs:Math.max(governor.interval,row.rtt>700?400:0),mode:governor.mode});ticking=false;}
  }
  async function attach(socket,{preferredRoom=null}={}){
   if(clients.size>=MAX_PEERS*MAX_ROOMS){socket.close(1013,'instance capacity');return null;}
@@ -54,7 +54,7 @@ export function createGhostHub(store,{now=Date.now,rotationMs=240000,snapshotMs=
   const row={id,socket,shard:0,ready:false,closed:false,lastInput:time,seq:-1,pending:0,queue:Promise.resolve(),rate:createRateGate({now:time}),actions:createRateGate({rate:4,burst:8,now:time}),actionNonce:-1,poses:createRateGate({rate:12,burst:18,now:time}),rotation:null,rtt:null,pingToken:null,pingAt:0,nextPing:time+5000+Math.floor(Math.random()*10000),frameAt:-Infinity};
   clients.set(id,row);
   socket.on('error',()=>{});
-  socket.on('pong',data=>{if(!row.pingToken||data?.length>32||String(data)!==row.pingToken)return;const rtt=Math.max(0,now()-row.pingAt);row.rtt=row.rtt===null?rtt:row.rtt*.7+rtt*.3;row.pingToken=null;metrics.serverPongs++;send(socket,{type:'network',serverPingMs:Math.round(row.rtt),intervalMs:governor.interval,mode:governor.mode});});
+  socket.on('pong',data=>{if(!row.pingToken||data?.length>32||String(data)!==row.pingToken)return;const rtt=Math.max(0,now()-row.pingAt);row.rtt=row.rtt===null?rtt:row.rtt*.7+rtt*.3;row.pingToken=null;metrics.serverPongs++;send(socket,{type:'network',serverPingMs:Math.round(row.rtt),intervalMs:Math.max(governor.interval,row.rtt>700?400:0),mode:governor.mode});});
   socket.on('close',()=>{
    row.closed=true;clearTimeout(row.rotation);clients.delete(id);metrics.closed++;void store.remove(id).catch(()=>{});
    if(!clients.size){clearInterval(timer);timer=null;lastTick=null;sceneBases.clear();lastScene.clear();lastSnapshot.clear();}

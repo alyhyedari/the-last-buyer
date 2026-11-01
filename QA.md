@@ -329,3 +329,11 @@ Load: artifacts/network-load-200.json, 45 seconds, memory store, one room, 200/2
 Highway browser check (isolated Razor/model 8): 12 seconds, valid state, distance 220.87 world units, 1718 RAF samples, frame gap p95 7.1ms / peak 14ms, work p95 6.3ms, high detail; artifacts/driving-final.json. Desktop Chrome only.
 
 Word guide rebuilt; RTL/geometry and accessibility structure passed. Runtime render reported no office-to-PDF backend (empty attempts); visual DOCX QA unavailable.
+
+## 2026-11-01 — text callouts and adaptive networking
+
+Game surface disables selection, copy/cut, drag and context menus; form controls retain selection/editing. No attempt to disable browser developer tools or claim content DRM. Chrome fixture verified actual computed styles, cancellation of copy/contextmenu/selectstart, successful name editing and native server ping (1ms locally). Physical iOS long press not tested.
+
+Server: staggered 15s native pings, matched pong tokens, 10s timeout; shared serialization, reused Redis peer reads, linear scene diff lookup. Sustained work/lag/queue pressure steps cadence 200/400/600ms, 10s healthy recovery; client publish and interpolation adapt. Soft queue skips replaceable frames; a missed scene delta forces a full resync. 257 tests passed, Vercel all local modes passed without raising size budgets; 235 JS files checked before adding the isolated UI fixture. Live two-client WebSocket scene checks passed.
+
+200-client 45s memory load: 200 online throughout, 600 native ping/pongs, zero terminal failures/leaks, zero occupancy after cleanup, ping p95 327ms, snapshot age p95 290ms, 630.35MiB aggregate received, RSS 121.4MiB. Governor stayed normal (work 11ms); pressure/recovery tested deterministically. Baseline preserved separately; results do not establish public Internet/Redis performance or lower bandwidth.

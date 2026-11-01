@@ -17,7 +17,7 @@ const safeCall=(fn,value)=>{try{fn?.(value);}catch{/* Host UI callbacks must not
 export class GhostClient{
  constructor({url,WebSocketImpl=globalThis.WebSocket,now=()=>globalThis.performance.now(),wallNow=Date.now,onStatus,onWelcome,random=Math.random,setTimeoutImpl=(fn,ms)=>globalThis.setTimeout(fn,ms),clearTimeoutImpl=id=>globalThis.clearTimeout(id)}={}){
   Object.assign(this,{url,WebSocketImpl,now,wallNow,onStatus,onWelcome,random,setTimeoutImpl,clearTimeoutImpl});
-  this._status={state:'offline',pingMs:null,jitterMs:0,peers:0,room:GHOST_MANIFEST.room,reason:null};
+  this._status={state:'offline',serverPingMs:null,intervalMs:200,networkMode:'normal',pingMs:null,jitterMs:0,peers:0,room:GHOST_MANIFEST.room,reason:null};
   this._scene=emptyScene();this._actionNonce=0;this._results=new Map();this._peers=new Map();this._pings=new Map();this._visible=true;this._disposed=false;this._terminal=false;this._started=false;this._socket=null;this._timer=null;this._manifest=null;this._id=null;this._seq=0;this._nonce=0;this._attempt=0;this._retryAt=Infinity;this._pose=null;this._sentPose=null;this._sentAt=-Infinity;this._pingAt=-Infinity;this._lastPacket=0;this._lastSnapshot=-Infinity;this._serverAt=0;this._serverMono=0;this._lastClock=null;this._lastRtt=null;this._arrival=null;this._serverArrival=null;
  }
  get id(){return this._id;}
@@ -26,7 +26,7 @@ export class GhostClient{
  result(nonce){const r=this._results.get(nonce);this._results.delete(nonce);return r;}
  get status(){return {...this._status};}
  get manifest(){return this._manifest?{...this._manifest}:null;}
- get interpolationMs(){return clamp(100+this._status.jitterMs*2,100,350);}
+ get interpolationMs(){return clamp(Math.max(100,this._status.intervalMs/2)+this._status.jitterMs*2,100,Math.max(350,this._status.intervalMs/2+100));}
  get roomClock(){
   if(!this._manifest)return null;
   const m=this._manifest,value=m.baseMinutes+Math.max(0,this._serverNow()-m.epochMs)/1000*m.clockRate;
@@ -91,7 +91,7 @@ export class GhostClient{
   if(!clean)return false;this._pose=clean;this._publish(this.now());return true;
  }
  _publish(now){
-  if(!this._pose||this._status.state!=='online'||now-this._sentAt<200)return;
+  if(!this._pose||this._status.state!=='online'||now-this._sentAt<Math.max(200,this._status.intervalMs))return;
   const pose={...this._pose,paused:!this._visible||this._pose.paused,seq:this._seq};
   const heartbeat=this._visible?1000:5000;
   if(!this._visible&&this._sentPose?.paused&&now-this._sentAt<heartbeat)return;
@@ -113,9 +113,13 @@ export class GhostClient{
    if(!ownKeys(message,['type','id','shard','serverTime',...manifestKeys])||!Number.isInteger(message.shard)||message.shard<0||message.shard>=GHOST_MANIFEST.maxRooms||!stamp(message.serverTime)||typeof message.id!=='string'||!(/^[A-Za-z0-9_-]{1,64}$/).test(message.id)||!manifestKeys.every(k=>message[k]===GHOST_MANIFEST[k])){this._fail('incompatible_world');return;}
    if(this._manifest&&!manifestKeys.every(k=>message[k]===this._manifest[k])){this._fail('incompatible_world');return;}
    if(this._status.state==='online')return;
-   this._manifest=Object.fromEntries(manifestKeys.map(k=>[k,message[k]]));this._id=message.id;this._serverAt=message.serverTime;this._serverMono=now;this._lastPacket=now;this._attempt=0;this._peers.clear();this._scene=emptyScene();this._results.clear();const reconnect=new URL(this._url);reconnect.searchParams.set('room',message.shard);this._url=reconnect.href;this._setStatus({state:'online',reason:null,peers:0,room:message.room,shard:message.shard});if(this._disposed||this._terminal)return;safeCall(this.onWelcome,{...message});this._tick();return;
+   this._manifest=Object.fromEntries(manifestKeys.map(k=>[k,message[k]]));this._id=message.id;this._serverAt=message.serverTime;this._serverMono=now;this._lastPacket=now;this._attempt=0;this._peers.clear();this._scene=emptyScene();this._results.clear();const reconnect=new URL(this._url);reconnect.searchParams.set('room',message.shard);this._url=reconnect.href;this._setStatus({state:'online',reason:null,peers:0,serverPingMs:null,intervalMs:200,networkMode:'normal',room:message.room,shard:message.shard});if(this._disposed||this._terminal)return;safeCall(this.onWelcome,{...message});this._tick();return;
   }
   if(this._status.state!=='online')return;
+  if(message.type==='network'){
+   if(!ownKeys(message,['type','serverPingMs','intervalMs','mode'])||!(message.serverPingMs===null||Number.isInteger(message.serverPingMs)&&message.serverPingMs>=0&&message.serverPingMs<=10000)||!Number.isInteger(message.intervalMs)||message.intervalMs<200||message.intervalMs>1000||!['normal','balanced','recovery'].includes(message.mode))return;
+   this._setStatus({serverPingMs:message.serverPingMs,intervalMs:message.intervalMs,networkMode:message.mode});this._lastPacket=now;return;
+  }
   if(message.type==='sceneResult'){if(Number.isSafeInteger(message.nonce)&&typeof message.ok==='boolean'&&(!message.reason||typeof message.reason==='string')){this._results.set(message.nonce,{ok:message.ok,reason:message.reason});if(this._results.size>16)this._results.delete(this._results.keys().next().value);}return;}
   if(message.type==='sceneDelta'){if(!stamp(message.serverTime)||Math.abs(message.serverTime-this._serverNow())>=30000)return;const scene=unpackScene(message,this._scene);if(scene&&validScene(scene,message.serverTime)&&(message.base===null||scene.rev>=this._scene.rev))this._scene=scene;return;}
   if(message.type==='scene'){if(stamp(message.serverTime)&&Math.abs(message.serverTime-this._serverNow())<30000&&validScene(message.scene,message.serverTime)&&message.scene.rev>=this._scene.rev)this._scene=message.scene;return;}

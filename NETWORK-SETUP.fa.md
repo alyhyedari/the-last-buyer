@@ -97,3 +97,7 @@ node tools/network-smoke.mjs --url=https://game.example.com
 - Caddy WebSocket reverse proxy: `https://caddyserver.com/docs/caddyfile/directives/reverse_proxy`
 - Caddy automatic HTTPS: `https://caddyserver.com/docs/automatic-https`
 - Redis / ioredis connection: `https://redis.io/docs/latest/develop/clients/ioredis/connect/`
+
+## تنظیم خودکار شبکه — ۱ نوامبر ۲۰۲۶
+
+پینگ WebSocket از سرور هر ۱۵ ثانیه با شروع پخش‌شده بین کاربران انجام می‌شود. حالت عادی ۵ Hz است؛ فشار پایدار، فاصلهٔ هماهنگی را به ۴۰۰ یا ۶۰۰ ms تغییر می‌دهد و پس از ۱۰ ثانیه سلامت، تدریجی برمی‌گردد. کلاینت نرخ ارسال و interpolation را هماهنگ می‌کند. سقف نرم صف ۳۲ KiB و سقف سخت ۱۲۸ KiB است؛ بعد از حذف پیام‌های کهنه، صحنه با base کامل بازیابی می‌شود. نتیجه و محدودیت‌های بار در SERVER-GUIDE.fa.md ثبت شده‌اند.
