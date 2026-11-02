@@ -2,6 +2,7 @@ import {tr} from './i18n.js';
 import {LIFE_TEXT} from './frontier-life-text.js';
 // Eight complete UI locales. Numbers and key sequences are rendered separately LTR.
 const rows={
+ robinhood:['Robin Hood / Feather Hall','برج رابین هود / تالار پَر','Robin Hood','Robin Hood','Robin Hood','Robin Hood','Robin Hood','Robin Hood'],
  amazon:['Amazon reserve','ذخیره‌گاه آمازون','Amazon','Amazon','Amazonas','Amazon','Amazonie','Amazônia'],amazonRiver:['River bridge','پل رود آمازون','River bridge','River bridge','Puente del río','River bridge','Pont du fleuve','Ponte do rio'],amazonCanopy:['Canopy trail','مسیر سایه‌بان جنگل','Canopy trail','Canopy trail','Sendero del dosel','Canopy trail','Sentier de la canopée','Trilha da copa'],
 
  clickControls:['Click or tap the ground to walk there; drag to turn. Use the map for longer routes.','روی زمین کلیک یا لمس کن تا به آنجا بروی؛ برای چرخش بکش. مسیرهای بلند را از نقشه انتخاب کن.','点击地面前往，拖动转向。长途可使用地图。','انقر الأرض للحركة واسحب للدوران. استخدم الخريطة للطرق البعيدة.','Toca el suelo para caminar, arrastra para girar. Usa el mapa para rutas largas.','ज़मीन पर टैप करके चलें; घुमाने के लिए खींचें। लंबे रास्तों के लिए नक्शा।','Touchez le sol pour avancer, glissez pour tourner. Carte pour les longs trajets.','Toque o chão para andar, arraste para virar. Use o mapa para rotas longas.'],

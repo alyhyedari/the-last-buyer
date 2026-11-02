@@ -3,7 +3,7 @@ import {validateSceneAction} from './ghost-scene.js';
 // No age, inventory, damage values or save data travels in presence.
 export const MAX_PEERS=5;
 export const MAX_ROOMS=1;
-export const MAX_PAYLOAD=2048;
+export const MAX_PAYLOAD=8192;
 export const PRESENCE_TTL=15000;
 export const GHOST_MANIFEST=Object.freeze({v:4,room:'afterlight',seed:20261018,worldVersion:'coast-1',epochMs:Date.UTC(2026,9,18),baseMinutes:480,clockRate:1.2,maxPeers:MAX_PEERS,maxRooms:MAX_ROOMS});
 export const GHOST_VEHICLES=Object.freeze(['foot','bike','motorcycle','car','horse','swim']);

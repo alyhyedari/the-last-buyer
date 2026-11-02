@@ -35,7 +35,7 @@ test('ghost protocol accepts only bounded poses and never authority over gamepla
  for(const changes of [{money:999},{seed:1},{damage:10},{id:'someone-else'},{x:Infinity},{x:-1},{y:513},{seq:-1},{seq:2**31},{model:14},{tone:4},{space:'home:../secret:0'},{space:'home:cabin:100'},{vehicle:'tank'},{paused:1}])assert.equal(validatePose(pose(changes)),null,JSON.stringify(changes));
  assert.equal(validatePose(pose({space:'home:aurora_2:12',angle:Math.PI*5})).space,'home:aurora_2:12');
  assert.ok(Math.abs(validatePose(pose({angle:Math.PI*5})).angle)<=Math.PI+.0001);
- for(const raw of ['null','[]','{}','{"type":"shoot"}','x'.repeat(2049),'not-json','{"type":"ping","nonce":-1}','{"type":"ping","nonce":1,"save":{}}'])assert.equal(parseClientMessage(raw),null);
+ for(const raw of ['null','[]','{}','{"type":"shoot"}','x'.repeat(8193),'not-json','{"type":"ping","nonce":-1}','{"type":"ping","nonce":1,"save":{}}'])assert.equal(parseClientMessage(raw),null);
  assert.deepEqual(parseClientMessage('{"type":"ping","nonce":7}'),{type:'ping',nonce:7});
  assert.deepEqual(parseClientMessage('{"type":"bye"}'),{type:'bye'});
 });
@@ -128,7 +128,7 @@ test('websocket origin, payload, binary and message flood protections are enforc
  const rejected=await new Promise(resolve=>bad.socket.once('unexpected-response',(_,res)=>{res.resume();resolve(res.statusCode);}));assert.equal(rejected,403);bad.socket.terminate();
  const hostile=await fetch(f.origin+'/api/ghost-room',{headers:{Origin:'https://evil.example'}});assert.equal(hostile.status,403);
  const binary=f.connect();await binary.wait(m=>m.type==='welcome');binary.socket.send(Buffer.from('binary'));assert.equal((await binary.closed).code,1003);
- const large=f.connect();await large.wait(m=>m.type==='welcome');large.socket.send('x'.repeat(4096));assert.equal((await large.closed).code,1009);
+ const large=f.connect();await large.wait(m=>m.type==='welcome');large.socket.send('x'.repeat(8193));assert.equal((await large.closed).code,1009);
  const flood=f.connect();await flood.wait(m=>m.type==='welcome');for(let i=0;i<50;i++)flood.send({type:'ping',nonce:i});assert.equal((await flood.closed).code,1008);
 });
 

@@ -1,0 +1,11 @@
+let portrait;
+export function drawVlad(c){const r=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(x,y,w,h);};c.save();c.scale(.5,.5);
+ // Long swept hair, warm face, moustache and small goatee; an original game costume.
+ r(28,92,17,32,'#23303d');r(53,92,17,32,'#23303d');r(24,119,24,7,'#a5c79b');r(52,119,24,7,'#a5c79b');
+ r(18,53,59,44,'#ded0ae');r(12,60,12,40,'#cabd9b');r(74,60,11,40,'#cabd9b');r(12,96,10,12,'#d9ad89');r(76,96,10,12,'#d9ad89');r(38,54,20,41,'#1f2c34');r(33,57,6,33,'#f1dfba');r(57,57,5,33,'#f1dfba');r(42,69,13,2,'#c5ff51');
+ r(27,16,43,40,'#c18a67');r(31,19,36,32,'#e4b995');r(34,46,30,13,'#d3a17c');r(29,19,8,28,'#f0c7a1');r(66,24,6,19,'#cc9875');
+ r(22,12,9,45,'#352b2c');r(20,24,7,42,'#423331');r(63,12,11,45,'#3b2e2d');r(72,25,6,39,'#302a2b');r(29,6,36,11,'#332a2a');r(24,11,24,9,'#47352e');r(31,15,12,7,'#48392e');r(29,20,7,8,'#302a2b');r(47,8,18,4,'#655044');
+ r(36,29,9,2,'#594032');r(54,28,10,2,'#594032');r(38,33,4,2,'#37443c');r(57,32,4,2,'#37443c');r(48,32,3,10,'#bc8968');r(43,43,16,4,'#533a2c');r(39,44,7,4,'#4a3329');r(57,44,7,4,'#4a3329');r(46,48,11,2,'#f4d3b0');r(48,52,7,6,'#4a332b');r(35,50,5,5,'#8d634a');r(61,49,4,5,'#8d634a');
+ r(64,66,6,11,'#bcff42');r(67,63,6,6,'#bcff42');r(63,76,2,6,'#bcff42');c.restore();return true;}
+export function vladPortrait(){if(portrait)return portrait;portrait=document.createElement('canvas');portrait.width=96;portrait.height=128;const c=portrait.getContext('2d');c.scale(2,2);drawVlad(c);return portrait;}
+export function drawFeathers(renderer,f,point,time,reduced){if(!point)return;const {c,w,h}=renderer,dx=point.x-f.x,dy=point.y-f.y,depth=dx*Math.cos(f.angle)+dy*Math.sin(f.angle);if(depth<.4||depth>20)return;const sx=w/2+(-dx*Math.sin(f.angle)+dy*Math.cos(f.angle))*w/(2*.7*depth),sy=h*.4;if(sx<0||sx>w||depth>renderer.z[Math.floor(sx)])return;const count=renderer.detail===2?4:8;c.save();c.strokeStyle='#d7ff8f';c.fillStyle='#c3ff39';for(let i=0;i<count;i++){const a=i/count*Math.PI*2+(reduced?0:time*.5),x=sx+Math.cos(a)*52/depth,y=sy+Math.sin(a)*24/depth;c.save();c.translate(x,y);c.rotate(a+.8);c.beginPath();c.moveTo(0,5);c.quadraticCurveTo(-8,-1,0,-11);c.quadraticCurveTo(7,-4,0,5);c.fill();c.beginPath();c.moveTo(0,8);c.lineTo(0,-8);c.stroke();c.restore();}c.restore();}

@@ -1,3 +1,4 @@
+import {ROBIN_PLACE,buildRobinTower} from './robin-tower.js';
 import {RAIN_PLACES,buildRainforest} from './rainforest.js';
 import {WORLD_SIZE} from './cyber-state.js';
 import {buildCoast} from './cyber-world.js';
@@ -11,7 +12,7 @@ import {inDeepForest} from './frontier-forest-data.js';
 import {MYTH_BOSSES,MYTH_TRAILS} from './frontier-myth-data.js';
 export const SIZE=WORLD_SIZE;
 export const LAKES=[{id:'mirrorwater',x:54,y:19,rx:12,ry:9,shore:{x:61.5,y:29.5},entry:{x:58.5,y:24.5}},{id:'bluebasin',x:150,y:164,rx:18,ry:14,shore:{x:149.5,y:181.5},entry:{x:149.5,y:173.5}},{id:'glasswater',x:490,y:320,rx:15,ry:180,shore:{x:472.5,y:260.5},entry:{x:480.5,y:260.5}}];
-export const PLACES=[...RAIN_PLACES,...MYTH_TRAILS,...CITY_DESTINATIONS,
+export const PLACES=[ROBIN_PLACE,...RAIN_PLACES,...MYTH_TRAILS,...CITY_DESTINATIONS,
  {id:'gate',x:32.5,y:57.5,color:'#c8e397',kind:'gate'},
  {id:'garage',x:28.5,y:49.5,color:'#dba05f',kind:'garage'},
  {id:'market',x:36.5,y:43.5,color:'#bddc83',kind:'market'},
@@ -101,6 +102,7 @@ export function makeFrontierWorld(seed){
  sprites.push({id:'paper-target',kind:'target',x:17.5,y:35.5,radius:.25});
  sprites.push({x:30.4,y:45.5,kind:'stranger',id:'stranger'},{x:14.5,y:17.5,kind:'ghost',id:'ghost'});
  const city=buildMetropolis({tiles,size:SIZE,sprites,buildings,road,seed,hash});
+ buildRobinTower({tiles,size:SIZE,sprites,buildings,road,city});
  growForest(sprites,tiles,SIZE,seed);
  const coastTraffic=buildCoast({tiles,size:SIZE,sprites,buildings});for(const b of buildings.filter(b=>b.id.startsWith('coast-tower-')))city.buildings.set(b.id,b);
  buildRainforest({tiles,size:SIZE,sprites,road,seed,hash});
@@ -116,7 +118,7 @@ export function makeFrontierWorld(seed){
  traffic.push(...city.traffic,...coastTraffic);for(let i=0;i<12;i++)traffic.push({id:'traffic-highway-'+i,kind:'trafficCar',phase:i*41,speed:2.8+i%3*.3,radius:.55,model:i%8,corners:[[74.15,194.15],[128.15,194.15],[128.15,374.15],[74.15,374.15]]});
  const spriteBuckets=new Map();for(const s of filtered){const k=Math.floor(s.x/8)+','+Math.floor(s.y/8);if(!spriteBuckets.has(k))spriteBuckets.set(k,[]);spriteBuckets.get(k).push(s);}
  const playTiles=new Set();for(const child of filtered.filter(s=>s.kind==='child'&&s.id.endsWith('-0')))for(let dy=0;dy<3;dy++)for(let dx=0;dx<2;dx++){const x=Math.floor(child.x)+dx,y=Math.floor(child.y)+dy;if([0,2].includes(tiles[y*SIZE+x]))playTiles.add(y*SIZE+x);}
- const facadeTiles=new Map();for(const b of buildings)for(let y=b.top;y<b.top+b.depth;y++)for(let x=b.left;x<b.left+b.width;x++)facadeTiles.set(y*SIZE+x,b.id);return{spatialCollision:true,playTiles,size:SIZE,tiles,sprites:filtered,seed,colliders,buckets,buildings,traffic,treasures,facadeTiles,spriteBuckets,cityBuildings:city.buildings,coastBuildings:buildings.filter(b=>b.id.startsWith('coast-tower-'))};
+ const facadeTiles=new Map();for(const b of buildings)for(let y=b.top;y<b.top+b.depth;y++)for(let x=b.left;x<b.left+b.width;x++)facadeTiles.set(y*SIZE+x,b.id);return{spatialCollision:true,playTiles,size:SIZE,tiles,originalTiles:tiles.slice(),sprites:filtered,seed,colliders,buckets,buildings,traffic,treasures,facadeTiles,spriteBuckets,cityBuildings:city.buildings,coastBuildings:buildings.filter(b=>b.id.startsWith('coast-tower-'))};
 }
 export const tileAt=(world,x,y)=>{const size=world.size||SIZE;return x<0||y<0||x>=size||y>=size?1:world.tiles[Math.floor(y)*size+Math.floor(x)];};
 export const solid=(world,x,y)=>{const t=tileAt(world,x,y);return t!==0&&t!==2;};

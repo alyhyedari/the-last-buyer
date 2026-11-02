@@ -1,0 +1,16 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {validTour,captureTour,tourActors} from '../src/ride-tour.js';
+import {emptyScene,reduceScene,validScene,pruneScene,validateSceneAction} from '../src/ghost-scene.js';
+import {packScene,unpackScene} from '../src/ghost-wire.js';
+import {newState,validateState} from '../src/state.js';
+import {makeFrontierWorld,canStand,route} from '../src/frontier-world.js';
+import {ROBIN_TOWER,ROBIN_PLACE} from '../src/robin-tower.js';
+const peers=[{id:'driver',x:32,y:57,space:'outdoor',vehicle:'car',model:0,paused:false},{id:'guest',x:33,y:57,space:'outdoor',vehicle:'foot',model:0,paused:false}];
+const action=(action,extra={})=>({type:'sceneAction',nonce:1,action,vehicleId:'driver',...extra});
+function joined(){let scene=reduceScene(emptyScene(),peers,'driver',action('vehicle',{vehicle:'car',model:0,parked:false,x:32,y:57,angle:0}),1000).scene;return reduceScene(scene,peers,'guest',action('join'),1001).scene;}
+const tour={minutes:480,actors:[['test-zombie','zombie',34,57,0,0,0]],open:[[34,58]]};
+test('host view requires an occupied owned vehicle and cannot carry inventories or oversized data',()=>{const scene=joined();assert.ok(validateSceneAction(action('tour',{tour})));assert.equal(validTour({...tour,actors:Array(21).fill(tour.actors[0])}),false);assert.equal(validTour({...tour,open:Array(49).fill([1,1])}),false);assert.equal(validTour({...tour,actors:[['a','script',1,2,3,0,0]]}),false);assert.equal(reduceScene(scene,peers,'guest',action('tour',{tour}),1100).ok,false);assert.equal(reduceScene(scene,peers,'driver',action('tour',{tour:{...tour,actors:[['a','zombie',400,400,10,0,0]]}}),1100).ok,false);assert.equal(validateSceneAction(action('tour',{tour,money:999})),null);});
+test('host snapshots rate limit, roundtrip, expire and vanish after leaving',()=>{const original=joined(),r=reduceScene(original,peers,'driver',action('tour',{tour}),1200);assert.ok(r.ok);assert.equal(original.tours.length,0);assert.ok(validScene(r.scene,1200));assert.equal(reduceScene(r.scene,peers,'driver',action('tour',{tour}),1500).ok,false);const decoded=unpackScene(packScene(r.scene,1200),emptyScene());assert.deepEqual(decoded.tours,r.scene.tours);assert.equal(pruneScene(structuredClone(r.scene),peers,5201).tours.length,0);const left=reduceScene(r.scene,peers,'guest',action('exit'),1600).scene;assert.equal(pruneScene(left,peers,1601).tours.length,0);});
+test('render view never mutates local actor health or player save',()=>{const local=[{id:'test-zombie',kind:'zombie',hp:100,x:34,y:57},{id:'tree-x',kind:'tree',hp:100,x:30,y:59}],copy=structuredClone(local),view=tourActors(local,tour);assert.equal(view.find(a=>a.id==='test-zombie').dead,true);assert.deepEqual(local,copy);assert.ok(view.some(a=>a.id==='tree-x'));});
+test('landmark is taller than city towers with an accessible car-sized approach and valid save id',()=>{const world=makeFrontierWorld(15),s=newState();assert.ok(world.cityBuildings.has('robinhood'));assert.ok(world.buildings.every(b=>b.id==='robinhood'||(b.height||0)<ROBIN_TOWER.height));assert.ok(canStand(world,ROBIN_PLACE.x,ROBIN_PLACE.y,.48));assert.ok(route(world,{x:144.5,y:119.5},ROBIN_PLACE,.48).length);s.frontier.target='robinhood';s.frontier.visits.push('robinhood');assert.ok(validateState(s));});

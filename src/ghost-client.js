@@ -21,7 +21,7 @@ export class GhostClient{
   this._scene=emptyScene();this._actionNonce=0;this._results=new Map();this._peers=new Map();this._pings=new Map();this._visible=true;this._disposed=false;this._terminal=false;this._started=false;this._socket=null;this._timer=null;this._manifest=null;this._id=null;this._seq=0;this._nonce=0;this._attempt=0;this._retryAt=Infinity;this._pose=null;this._sentPose=null;this._sentAt=-Infinity;this._pingAt=-Infinity;this._lastPacket=0;this._lastSnapshot=-Infinity;this._serverAt=0;this._serverMono=0;this._lastClock=null;this._lastRtt=null;this._arrival=null;this._serverArrival=null;
  }
  get id(){return this._id;}
- get scene(){const now=this._serverNow();return {...this._scene,effects:this._scene.effects.filter(e=>e.until>now),vehicles:this._scene.vehicles.filter(v=>v.until>now)};}
+ get scene(){const now=this._serverNow();return {...this._scene,tours:(this._scene.tours||[]).filter(t=>t.until>now),effects:this._scene.effects.filter(e=>e.until>now),vehicles:this._scene.vehicles.filter(v=>v.until>now)};}
  action(action){const m={...action,type:'sceneAction',nonce:++this._actionNonce};return this._status.state==='online'&&validateSceneAction(m)&&this._send(m)?m.nonce:null;}
  result(nonce){const r=this._results.get(nonce);this._results.delete(nonce);return r;}
  get status(){return {...this._status};}
